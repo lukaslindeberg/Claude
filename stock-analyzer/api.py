@@ -1,7 +1,6 @@
 """FastAPI backend for the Stock DCF Analyzer mobile PWA."""
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import sys
@@ -55,53 +54,29 @@ _cache: dict[str, dict] = {}
 # ─── SSE helper ──────────────────────────────────────────────────────────────
 
 def _sse_stream(sync_gen_func, *args, **kwargs) -> StreamingResponse:
-    """Wrap a synchronous generator as a Server-Sent Events stream."""
-    loop = asyncio.new_event_loop()
-    queue: asyncio.Queue = asyncio.Queue()
+    """Wrap a synchronous generator as a true chunk-by-chunk SSE stream."""
+    import queue as q_module
+
+    chunk_q: q_module.Queue = q_module.Queue()
 
     def producer():
         try:
             for chunk in sync_gen_func(*args, **kwargs):
-                asyncio.run_coroutine_threadsafe(queue.put(chunk), loop)
+                chunk_q.put(chunk)
         finally:
-            asyncio.run_coroutine_threadsafe(queue.put(None), loop)
+            chunk_q.put(None)  # sentinel signals end
 
-    async def sse_generator():
+    def sync_sse():
         t = threading.Thread(target=producer, daemon=True)
         t.start()
         while True:
-            chunk = await queue.get()
+            chunk = chunk_q.get()  # blocks per chunk — not until all done
             if chunk is None:
                 break
             payload = json.dumps({"content": chunk})
             yield f"data: {payload}\n\n"
         yield "data: [DONE]\n\n"
         t.join(timeout=5)
-
-    # Run the async generator in the current event loop
-    async def run():
-        async for item in sse_generator():
-            yield item
-
-    # Use a simpler sync approach: collect in thread, stream
-    def sync_sse():
-        result_queue = []
-        done_event = threading.Event()
-
-        def collect():
-            try:
-                for chunk in sync_gen_func(*args, **kwargs):
-                    result_queue.append(chunk)
-            finally:
-                done_event.set()
-
-        t = threading.Thread(target=collect, daemon=True)
-        t.start()
-        t.join()
-        for chunk in result_queue:
-            payload = json.dumps({"content": chunk})
-            yield f"data: {payload}\n\n"
-        yield "data: [DONE]\n\n"
 
     return StreamingResponse(
         sync_sse(),

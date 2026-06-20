@@ -164,6 +164,58 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
   border: 1px solid #c7d2fe; border-radius: 12px;
   padding: 1rem 1.3rem; margin-bottom: 1rem;
 }
+
+/* ── Verdict banner ── */
+.verdict-banner {
+  border-radius: 20px; padding: 2.2rem 2.4rem 2rem;
+  margin-bottom: 1.6rem; color: white;
+  position: relative; overflow: hidden;
+}
+.verdict-banner::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 80% 0%, rgba(255,255,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.verdict-label {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 5px;
+}
+.verdict-word {
+  font-size: 3.2rem; font-weight: 900; letter-spacing: -1.5px; line-height: 1;
+  color: white !important;
+}
+.verdict-sub {
+  font-size: 1rem; color: rgba(255,255,255,0.75); margin-top: 6px; font-weight: 500;
+}
+.verdict-pill {
+  border-radius: 12px; padding: 0.8rem 1.2rem;
+  text-align: center; backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px); min-width: 110px;
+}
+.verdict-pill-lbl {
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 3px;
+}
+.verdict-pill-val {
+  font-size: 1.55rem; font-weight: 800; color: white; line-height: 1.1;
+}
+.verdict-pill-sub {
+  font-size: 0.68rem; color: rgba(255,255,255,0.65); margin-top: 2px;
+}
+.verdict-stat {
+  background: rgba(0,0,0,0.22); border-radius: 12px;
+  padding: 0.85rem 1rem; min-width: 0;
+}
+.verdict-stat-lbl {
+  font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: rgba(255,255,255,0.5); margin-bottom: 4px;
+}
+.verdict-stat-val {
+  font-size: 1.35rem; font-weight: 800; color: white; line-height: 1.1;
+}
+.verdict-stat-sub {
+  font-size: 0.68rem; color: rgba(255,255,255,0.6); margin-top: 2px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -231,30 +283,39 @@ def render_sidebar() -> tuple[str | None, dict]:
 
         st.markdown("---")
 
-        # Preset buttons
-        st.markdown("### DCF PRESETS")
-        c1, c2, c3 = st.columns(3)
-        preset = None
-        with c1:
-            if st.button("Bear", use_container_width=True):  preset = "bear"
-        with c2:
-            if st.button("Base", use_container_width=True):  preset = "base"
-        with c3:
-            if st.button("Bull", use_container_width=True):  preset = "bull"
+        with st.expander("⚙️  DCF Assumptions", expanded=False):
+            # Preset buttons
+            st.markdown(
+                '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;'
+                'letter-spacing:1.5px;color:#64748b;margin-bottom:8px;">Scenario Presets</div>',
+                unsafe_allow_html=True,
+            )
+            c1, c2, c3 = st.columns(3)
+            preset = None
+            with c1:
+                if st.button("🐻 Bear", use_container_width=True):  preset = "bear"
+            with c2:
+                if st.button("📊 Base", use_container_width=True):  preset = "base"
+            with c3:
+                if st.button("🐂 Bull", use_container_width=True):  preset = "bull"
 
-        if preset == "bear":
-            st.session_state["_preset"] = {"rf": 5.0, "mrp": 6.5, "tg": 1.5, "ga": -5.0}
-        elif preset == "base":
-            st.session_state["_preset"] = {"rf": 4.5, "mrp": 5.5, "tg": 2.5, "ga":  0.0}
-        elif preset == "bull":
-            st.session_state["_preset"] = {"rf": 3.5, "mrp": 4.5, "tg": 3.5, "ga":  5.0}
-        p = st.session_state.get("_preset", {})
+            if preset == "bear":
+                st.session_state["_preset"] = {"rf": 5.0, "mrp": 6.5, "tg": 1.5, "ga": -5.0}
+            elif preset == "base":
+                st.session_state["_preset"] = {"rf": 4.5, "mrp": 5.5, "tg": 2.5, "ga":  0.0}
+            elif preset == "bull":
+                st.session_state["_preset"] = {"rf": 3.5, "mrp": 4.5, "tg": 3.5, "ga":  5.0}
+            p = st.session_state.get("_preset", {})
 
-        st.markdown("### DCF ASSUMPTIONS")
-        rf  = st.slider("Risk-Free Rate (%)",      1.0, 8.0, p.get("rf",  4.5), 0.1) / 100
-        mrp = st.slider("Market Risk Premium (%)",  3.0, 9.0, p.get("mrp", 5.5), 0.1) / 100
-        tg  = st.slider("Terminal Growth (%)",      0.5, 5.0, p.get("tg",  2.5), 0.1) / 100
-        ga  = st.slider("Growth Adjustment (%)", -15.0,15.0, p.get("ga",  0.0), 0.5) / 100
+            st.markdown(
+                '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;'
+                'letter-spacing:1.5px;color:#64748b;margin:12px 0 6px;">Parameters</div>',
+                unsafe_allow_html=True,
+            )
+            rf  = st.slider("Risk-Free Rate (%)",      1.0, 8.0, p.get("rf",  4.5), 0.1) / 100
+            mrp = st.slider("Market Risk Premium (%)",  3.0, 9.0, p.get("mrp", 5.5), 0.1) / 100
+            tg  = st.slider("Terminal Growth (%)",      0.5, 5.0, p.get("tg",  2.5), 0.1) / 100
+            ga  = st.slider("Growth Adjustment (%)", -15.0,15.0, p.get("ga",  0.0), 0.5) / 100
 
         assumptions = {
             "risk_free_rate": rf, "market_risk_premium": mrp,
@@ -405,6 +466,121 @@ def render_topbar(model: str | None):
                       "ai_dcf","ai_news","ai_val","advanced_done"):
                 st.session_state[k] = None
             st.rerun()
+
+
+# ─── Verdict banner (verdict-first design) ────────────────────────────────────
+def render_verdict_banner():
+    dcf  = st.session_state.dcf_results
+    conf = st.session_state.confidence
+    sc   = st.session_state.scores or {}
+    if not dcf:
+        return
+
+    iv     = dcf.get("intrinsic_value") or 0
+    cp     = dcf.get("current_price")   or 0
+    upside = dcf.get("upside_pct")      or 0
+    mc     = dcf.get("monte_carlo")     or {}
+    rank   = sc.get("rank", {})
+
+    if upside > 15:
+        gradient   = "linear-gradient(135deg,#064e3b 0%,#065f46 45%,#059669 100%)"
+        shadow     = "rgba(5,150,105,0.40)"
+        pill_bg    = "rgba(16,185,129,0.22)"
+        pill_bd    = "rgba(16,185,129,0.45)"
+        verdict    = "UNDERVALUED"
+        verdict_sub = f"DCF suggests {upside:+.1f}% upside to fair value"
+    elif upside < -15:
+        gradient   = "linear-gradient(135deg,#7f1d1d 0%,#991b1b 45%,#dc2626 100%)"
+        shadow     = "rgba(220,38,38,0.40)"
+        pill_bg    = "rgba(239,68,68,0.22)"
+        pill_bd    = "rgba(239,68,68,0.45)"
+        verdict    = "OVERVALUED"
+        verdict_sub = f"Market price appears {abs(upside):.1f}% above fair value"
+    else:
+        gradient   = "linear-gradient(135deg,#1e1b4b 0%,#312e81 45%,#4f46e5 100%)"
+        shadow     = "rgba(99,102,241,0.40)"
+        pill_bg    = "rgba(99,102,241,0.22)"
+        pill_bd    = "rgba(99,102,241,0.45)"
+        verdict    = "FAIRLY VALUED"
+        verdict_sub = f"Intrinsic value and market price are closely aligned ({upside:+.1f}%)"
+
+    # Confidence pill
+    conf_score = conf["score"] if conf else "—"
+    conf_level = conf["level"] if conf else "N/A"
+
+    # Monte Carlo range
+    p10 = mc.get("p10"); p90 = mc.get("p90")
+    mc_str = f"${p10:.2f} – ${p90:.2f}" if (p10 and p90) else "N/A"
+
+    # StockRank
+    grade_str = f"Grade {rank['grade']}" if rank.get("grade") else ""
+
+    st.markdown(
+        f'<div class="verdict-banner" style="background:{gradient};'
+        f'box-shadow:0 24px 64px {shadow};">'
+
+        # ── Top row: verdict + confidence pill ──
+        f'<div style="display:flex;justify-content:space-between;'
+        f'align-items:flex-start;margin-bottom:1.6rem;gap:1.5rem;">'
+
+        f'<div>'
+        f'<div class="verdict-label">DCF Valuation Verdict</div>'
+        f'<div class="verdict-word">{verdict}</div>'
+        f'<div class="verdict-sub">{verdict_sub}</div>'
+        f'</div>'
+
+        f'<div style="display:flex;gap:0.75rem;flex-shrink:0;">'
+        # Confidence pill
+        f'<div class="verdict-pill" style="background:{pill_bg};border:1px solid {pill_bd};">'
+        f'<div class="verdict-pill-lbl">Confidence</div>'
+        f'<div class="verdict-pill-val">{conf_score}<span style="font-size:0.85rem;'
+        f'font-weight:500;color:rgba(255,255,255,0.6)">/10</span></div>'
+        f'<div class="verdict-pill-sub">{conf_level}</div>'
+        f'</div>'
+        + (
+            f'<div class="verdict-pill" style="background:{pill_bg};border:1px solid {pill_bd};">'
+            f'<div class="verdict-pill-lbl">StockRank</div>'
+            f'<div class="verdict-pill-val">{rank.get("rank","—")}<span style="font-size:0.85rem;'
+            f'font-weight:500;color:rgba(255,255,255,0.6)">/100</span></div>'
+            f'<div class="verdict-pill-sub">{grade_str}</div>'
+            f'</div>'
+            if rank.get("rank") is not None else ""
+        ) +
+
+        f'</div>'  # end pills
+        f'</div>'  # end top row
+
+        # ── Bottom row: 4 stat boxes ──
+        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.85rem;">'
+
+        f'<div class="verdict-stat">'
+        f'<div class="verdict-stat-lbl">Intrinsic Value</div>'
+        f'<div class="verdict-stat-val">${iv:.2f}</div>'
+        f'<div class="verdict-stat-sub">DCF model</div>'
+        f'</div>'
+
+        f'<div class="verdict-stat">'
+        f'<div class="verdict-stat-lbl">Market Price</div>'
+        f'<div class="verdict-stat-val">${cp:.2f}</div>'
+        f'<div class="verdict-stat-sub">Last close</div>'
+        f'</div>'
+
+        f'<div class="verdict-stat">'
+        f'<div class="verdict-stat-lbl">Upside / Downside</div>'
+        f'<div class="verdict-stat-val">{upside:+.1f}%</div>'
+        f'<div class="verdict-stat-sub">vs fair value</div>'
+        f'</div>'
+
+        f'<div class="verdict-stat">'
+        f'<div class="verdict-stat-lbl">Monte Carlo P10–P90</div>'
+        f'<div class="verdict-stat-val" style="font-size:1.05rem;">{mc_str}</div>'
+        f'<div class="verdict-stat-sub">1,500 simulations</div>'
+        f'</div>'
+
+        f'</div>'  # end stat grid
+        f'</div>',  # end banner
+        unsafe_allow_html=True,
+    )
 
 
 # ─── Load & cache company data ────────────────────────────────────────────────
@@ -1110,6 +1286,7 @@ def render_analysis(model: str | None, assumptions: dict):
         return
 
     render_topbar(model)
+    render_verdict_banner()
     render_overview()
 
     t1, t2, t3, t4, t5 = st.tabs([
