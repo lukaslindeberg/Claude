@@ -24,198 +24,320 @@ from modules.scores import (
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Stock DCF Analyzer",
-    page_icon="📊",
+    page_title="Intrinsic — Know what it's really worth",
+    page_icon="◆",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+# ─── Plotly dark theme ────────────────────────────────────────────────────────
+import plotly.io as pio
+
+_INK        = "#e8edf7"
+_INK_MUTED  = "#8a93a8"
+_GRID       = "rgba(148,163,184,0.10)"
+_ACCENT     = "#7c6cff"
+_CHART_SEQ  = ["#7c6cff", "#22d3ee", "#34d399", "#f59e0b", "#f43f5e", "#a855f7"]
+
+pio.templates["intrinsic"] = go.layout.Template(
+    layout=dict(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, sans-serif", color=_INK, size=12),
+        colorway=_CHART_SEQ,
+        xaxis=dict(gridcolor=_GRID, zerolinecolor=_GRID, linecolor=_GRID,
+                   tickfont=dict(color=_INK_MUTED)),
+        yaxis=dict(gridcolor=_GRID, zerolinecolor=_GRID, linecolor=_GRID,
+                   tickfont=dict(color=_INK_MUTED)),
+        legend=dict(font=dict(color=_INK_MUTED)),
+        hoverlabel=dict(bgcolor="#161d33", font=dict(color=_INK),
+                        bordercolor="rgba(124,108,255,0.4)"),
+    )
+)
+pio.templates.default = "intrinsic"
+
 # ─── Design tokens & CSS ──────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
 
-/* ── Global ── */
+/* ════════════════════════════════════════════════════════════════
+   INTRINSIC — dark cinematic fintech design system
+   ──────────────────────────────────────────────────────────────
+   ink        #e8edf7   muted #8a93a8   faint #5a6379
+   canvas     #0a0e1a   surface #11162a  raised #161d33
+   accent     #7c6cff   cyan #22d3ee     violet #a855f7
+   pos #34d399  neg #fb7185  warn #fbbf24
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ink:#e8edf7; --muted:#8a93a8; --faint:#5a6379;
+  --canvas:#0a0e1a; --surface:#11162a; --raised:#161d33;
+  --line:rgba(148,163,184,0.10); --line-2:rgba(148,163,184,0.16);
+  --accent:#7c6cff; --accent-2:#a855f7; --cyan:#22d3ee;
+  --pos:#34d399; --neg:#fb7185; --warn:#fbbf24;
+}
+
 *, *::before, *::after {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-  box-sizing: border-box;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important;
+  box-sizing:border-box;
 }
-[data-testid="stAppViewContainer"] { background: #f0f4f8 !important; }
-[data-testid="stHeader"] { display: none !important; }
-[data-testid="stSidebar"] > div { background: #0f172a !important; }
-[data-testid="stSidebar"] * { color: #cbd5e1 !important; }
-[data-testid="stSidebar"] h2 { color: #64748b !important; font-size: 0.65rem !important;
-  text-transform: uppercase; letter-spacing: 1.5px; }
-[data-testid="stSidebar"] .stSuccess, [data-testid="stSidebar"] .stError,
-[data-testid="stSidebar"] .stWarning, [data-testid="stSidebar"] .stInfo {
-  border-radius: 8px !important; font-size: 0.8rem !important;
-}
-footer, #MainMenu { visibility: hidden !important; }
 
-/* ── Hero section ── */
-.hero {
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #4f46e5 80%, #6366f1 100%);
-  border-radius: 20px; padding: 3.5rem 2rem 3rem; text-align: center;
-  color: white; margin-bottom: 1.8rem;
-  box-shadow: 0 20px 60px rgba(99,102,241,0.35);
+/* ── App canvas with cinematic glow ── */
+[data-testid="stAppViewContainer"] {
+  background:
+    radial-gradient(1100px 520px at 78% -8%, rgba(124,108,255,0.16) 0%, transparent 60%),
+    radial-gradient(900px 480px at 8% 4%, rgba(34,211,238,0.07) 0%, transparent 55%),
+    #0a0e1a !important;
 }
+[data-testid="stHeader"] { display:none !important; }
+.block-container { padding-top:2.2rem !important; max-width:1240px; }
+footer, #MainMenu { visibility:hidden !important; }
+
+::-webkit-scrollbar { width:10px; height:10px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(124,108,255,0.28); border-radius:99px;
+  border:2px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-thumb:hover { background:rgba(124,108,255,0.5); background-clip:padding-box; }
+
+h1,h2,h3,h4 { color:var(--ink); }
+a { color:var(--accent); }
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] > div {
+  background:linear-gradient(180deg,#0b1020 0%, #0a0e1a 100%) !important;
+  border-right:1px solid var(--line);
+}
+[data-testid="stSidebar"] * { color:#c4cce0; }
+[data-testid="stSidebar"] .stCaption, [data-testid="stSidebar"] small { color:var(--faint) !important; }
+.brand { display:flex; align-items:center; gap:11px; padding:2px 2px 4px; }
+.brand-mark {
+  width:34px; height:34px; border-radius:10px; flex-shrink:0;
+  background:linear-gradient(135deg,#7c6cff 0%, #a855f7 60%, #22d3ee 130%);
+  box-shadow:0 6px 20px rgba(124,108,255,0.45), inset 0 1px 1px rgba(255,255,255,0.4);
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-weight:800; font-size:1.05rem;
+  font-family:'Space Grotesk',sans-serif !important;
+}
+.brand-name {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.22rem; font-weight:700; color:#fff !important; letter-spacing:-0.3px;
+}
+.brand-tag { font-size:0.62rem; color:var(--faint) !important; letter-spacing:1.6px;
+  text-transform:uppercase; margin-top:-2px; }
+[data-testid="stSidebar"] hr { border-color:var(--line) !important; margin:0.9rem 0 !important; }
+.side-h { font-size:0.62rem !important; font-weight:700; color:var(--faint) !important;
+  text-transform:uppercase; letter-spacing:2px; margin:0.2rem 0 0.4rem; }
+
+/* ── Status chips in sidebar ── */
+.status-chip {
+  display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:600;
+  padding:9px 12px; border-radius:10px; margin-bottom:2px;
+}
+.status-ok  { background:rgba(52,211,153,0.10); border:1px solid rgba(52,211,153,0.28); color:#6ee7b7 !important; }
+.status-off { background:rgba(251,113,133,0.09); border:1px solid rgba(251,113,133,0.26); color:#fda4af !important; }
+.dot { width:7px; height:7px; border-radius:99px; flex-shrink:0; }
+.dot-ok  { background:#34d399; box-shadow:0 0 8px #34d399; }
+.dot-off { background:#fb7185; box-shadow:0 0 8px #fb7185; }
+
+/* ── Hero (landing) ── */
+.hero { text-align:center; padding:2.4rem 1rem 1.4rem; margin-bottom:0.5rem; }
 .hero-badge {
-  display: inline-block;
-  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 999px; padding: 5px 18px; font-size: 0.7rem; font-weight: 600;
-  letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 1rem;
-  color: rgba(255,255,255,0.9) !important;
+  display:inline-flex; align-items:center; gap:7px;
+  background:rgba(124,108,255,0.10); border:1px solid rgba(124,108,255,0.30);
+  border-radius:999px; padding:6px 16px; font-size:0.68rem; font-weight:600;
+  letter-spacing:1.4px; text-transform:uppercase; margin-bottom:1.4rem;
+  color:#b9b1ff !important;
 }
 .hero h1 {
-  font-size: 2.8rem; font-weight: 800; margin: 0 0 0.6rem;
-  letter-spacing: -0.5px; color: white !important;
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:3.6rem; font-weight:700; margin:0 0 0.7rem; line-height:1.02;
+  letter-spacing:-1.5px; color:var(--ink) !important;
 }
-.hero p { font-size: 1.05rem; color: rgba(255,255,255,0.75) !important; margin: 0; }
+.hero h1 .grad {
+  background:linear-gradient(110deg,#a78bfa 0%, #7c6cff 35%, #22d3ee 100%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.hero p { font-size:1.12rem; color:var(--muted) !important; margin:0 auto; max-width:620px; line-height:1.6; }
 
 /* ── KPI cards ── */
 .kpi {
-  background: white; border-radius: 14px; padding: 1.1rem 1.3rem;
-  box-shadow: 0 2px 16px rgba(15,23,42,0.07);
-  border: 1px solid #f1f5f9;
-  transition: box-shadow 0.2s, transform 0.2s;
-  height: 100%;
+  background:linear-gradient(180deg, rgba(22,29,51,0.9) 0%, rgba(17,22,42,0.9) 100%);
+  border:1px solid var(--line); border-radius:16px; padding:1.05rem 1.25rem;
+  height:100%; transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.kpi:hover { box-shadow: 0 8px 28px rgba(15,23,42,0.13); transform: translateY(-2px); }
-.kpi-lbl { font-size: 0.67rem; font-weight: 600; color: #94a3b8;
-  text-transform: uppercase; letter-spacing: 0.9px; margin-bottom: 5px; }
-.kpi-val { font-size: 1.45rem; font-weight: 700; color: #0f172a; line-height: 1.1; }
-.kpi-sub { font-size: 0.78rem; color: #64748b; margin-top: 4px; font-weight: 500; }
-.green  { color: #10b981 !important; }
-.red    { color: #ef4444 !important; }
-.amber  { color: #f59e0b !important; }
-.indigo { color: #6366f1 !important; }
+.kpi:hover { transform:translateY(-3px); border-color:rgba(124,108,255,0.45);
+  box-shadow:0 14px 36px rgba(0,0,0,0.45), 0 0 0 1px rgba(124,108,255,0.12); }
+.kpi-lbl { font-size:0.64rem; font-weight:700; color:var(--faint);
+  text-transform:uppercase; letter-spacing:1px; margin-bottom:7px; }
+.kpi-val { font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.5rem; font-weight:600; color:var(--ink); line-height:1.05;
+  font-variant-numeric:tabular-nums; letter-spacing:-0.4px; }
+.kpi-sub { font-size:0.76rem; color:var(--muted); margin-top:5px; font-weight:500;
+  font-variant-numeric:tabular-nums; }
+.green  { color:var(--pos) !important; }
+.red    { color:var(--neg) !important; }
+.amber  { color:var(--warn) !important; }
+.indigo { color:var(--accent) !important; }
 
 /* ── Section headers ── */
 .sec {
-  font-size: 1.05rem; font-weight: 700; color: #1e293b;
-  border-left: 4px solid #6366f1; padding-left: 10px;
-  margin: 1.5rem 0 0.9rem;
+  font-size:0.78rem; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1.6px;
+  display:flex; align-items:center; gap:10px;
+  margin:1.9rem 0 1rem;
 }
+.sec::before { content:""; width:14px; height:2px; border-radius:2px;
+  background:linear-gradient(90deg,#7c6cff,#22d3ee); display:inline-block; }
+.sec::after { content:""; flex:1; height:1px; background:var(--line); }
 
-/* ── Glass panel (AI boxes, news) ── */
+/* ── Glass panel (AI output, etc.) ── */
 .glass {
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.8);
-  border-radius: 14px; padding: 1.4rem 1.6rem;
-  box-shadow: 0 4px 24px rgba(15,23,42,0.08);
-  line-height: 1.75; color: #1e293b;
+  background:linear-gradient(180deg, rgba(22,29,51,0.7), rgba(17,22,42,0.7));
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--line-2); border-radius:16px; padding:1.5rem 1.7rem;
+  line-height:1.78; color:#d4dbec; font-size:0.92rem;
 }
+.glass h2,.glass h3 { color:var(--ink); margin-top:1.1rem; }
+.glass strong { color:#fff; }
 
 /* ── Valuation badge ── */
 .val-badge {
-  border-radius: 12px; padding: 1rem 1.4rem; margin-bottom: 1rem;
-  display: flex; align-items: center; gap: 1rem;
+  border-radius:14px; padding:1rem 1.4rem; margin-bottom:1rem;
+  display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
 }
 
 /* ── News cards ── */
 .news-card {
-  background: white; border-radius: 10px; padding: 0.9rem 1.1rem;
-  margin-bottom: 0.6rem; border-left: 3px solid #6366f1;
-  box-shadow: 0 1px 6px rgba(15,23,42,0.06);
+  background:rgba(22,29,51,0.6); border:1px solid var(--line);
+  border-left:3px solid var(--accent); border-radius:12px;
+  padding:0.95rem 1.15rem; margin-bottom:0.6rem; transition:border-color .15s, background .15s;
 }
-.news-title { font-weight: 600; color: #1e293b; font-size: 0.88rem; }
-.news-meta  { font-size: 0.73rem; color: #94a3b8; margin-top: 3px; }
+.news-card:hover { background:rgba(22,29,51,0.95); border-left-color:#22d3ee; }
+.news-title { font-weight:600; color:var(--ink); font-size:0.9rem; line-height:1.4; }
+.news-title a { color:var(--ink) !important; text-decoration:none; }
+.news-meta  { font-size:0.72rem; color:var(--faint); margin-top:5px; }
 
-/* ── Chip buttons ── */
+/* ── Text input ── */
+[data-testid="stTextInput"] input {
+  background:rgba(17,22,42,0.85) !important; color:var(--ink) !important;
+  border:1px solid var(--line-2) !important; border-radius:14px !important;
+  padding:0.85rem 1.1rem !important; font-size:0.98rem !important;
+}
+[data-testid="stTextInput"] input::placeholder { color:var(--faint) !important; }
+[data-testid="stTextInput"] input:focus {
+  border-color:var(--accent) !important;
+  box-shadow:0 0 0 3px rgba(124,108,255,0.18) !important;
+}
+
+/* ── Buttons ── */
 div[data-testid="stButton"] > button {
-  border-radius: 999px !important;
-  font-size: 0.83rem !important;
-  font-weight: 500 !important;
-  transition: all 0.15s !important;
+  border-radius:12px !important; font-size:0.85rem !important; font-weight:600 !important;
+  background:rgba(124,108,255,0.07) !important; color:#cdd5ec !important;
+  border:1px solid var(--line-2) !important; transition:all .15s !important;
+}
+div[data-testid="stButton"] > button:hover {
+  border-color:rgba(124,108,255,0.5) !important; color:#fff !important;
+  background:rgba(124,108,255,0.16) !important; transform:translateY(-1px) !important;
 }
 div[data-testid="stButton"] > button[kind="primary"] {
-  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
-  border: none !important; color: white !important;
-  box-shadow: 0 4px 14px rgba(99,102,241,0.4) !important;
+  background:linear-gradient(135deg,#7c6cff 0%, #6d5cf0 100%) !important;
+  border:none !important; color:#fff !important;
+  box-shadow:0 8px 24px rgba(124,108,255,0.40) !important;
 }
 div[data-testid="stButton"] > button[kind="primary"]:hover {
-  box-shadow: 0 6px 20px rgba(99,102,241,0.55) !important;
-  transform: translateY(-1px) !important;
+  box-shadow:0 12px 32px rgba(124,108,255,0.6) !important; transform:translateY(-1px) !important;
 }
 
 /* ── Tabs ── */
-.stTabs [data-baseweb="tab-list"] { gap: 4px; background: transparent; }
-.stTabs [data-baseweb="tab"] {
-  border-radius: 8px 8px 0 0; font-weight: 500;
-  font-size: 0.85rem !important;
+.stTabs [data-baseweb="tab-list"] {
+  gap:6px; background:rgba(17,22,42,0.6); border:1px solid var(--line);
+  border-radius:14px; padding:5px;
 }
+.stTabs [data-baseweb="tab"] {
+  border-radius:10px; font-weight:600; font-size:0.85rem !important;
+  color:var(--muted) !important; background:transparent; padding:8px 16px;
+}
+.stTabs [data-baseweb="tab"]:hover { color:var(--ink) !important; }
+.stTabs [aria-selected="true"] {
+  background:linear-gradient(135deg,#7c6cff,#6d5cf0) !important; color:#fff !important;
+  box-shadow:0 6px 18px rgba(124,108,255,0.4);
+}
+.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] { display:none !important; }
+
+/* ── Expander (assumptions) ── */
+[data-testid="stExpander"] {
+  border:1px solid var(--line) !important; border-radius:12px !important;
+  background:rgba(17,22,42,0.5) !important;
+}
+[data-testid="stExpander"] summary { font-weight:600; color:#cdd5ec; }
 
 /* ── Confidence factor list ── */
-.factor { padding: 3px 0; font-size: 0.82rem; color: #374151; }
+.factor { padding:4px 0; font-size:0.83rem; color:#c4cce0; }
 
 /* ── Search suggestions ── */
 .suggestion {
-  background: white; border-radius: 8px; padding: 0.6rem 1rem;
-  border: 1px solid #e2e8f0; cursor: pointer; font-size: 0.85rem;
-  margin-bottom: 4px; color: #1e293b;
-  transition: background 0.15s;
+  background:rgba(22,29,51,0.6); border-radius:12px; padding:0.7rem 1.1rem;
+  border:1px solid var(--line-2); font-size:0.9rem; margin-bottom:5px;
+  color:var(--ink); transition:all .15s;
 }
-.suggestion:hover { background: #f0f4ff; border-color: #6366f1; }
+.suggestion:hover { background:rgba(124,108,255,0.12); border-color:rgba(124,108,255,0.5); }
 
-/* ── Reverse DCF highlight ── */
+/* ── Reverse-DCF highlight ── */
 .rdcf-box {
-  background: linear-gradient(135deg, #ede9fe, #e0e7ff);
-  border: 1px solid #c7d2fe; border-radius: 12px;
-  padding: 1rem 1.3rem; margin-bottom: 1rem;
+  background:linear-gradient(135deg, rgba(124,108,255,0.12), rgba(34,211,238,0.07));
+  border:1px solid rgba(124,108,255,0.30); border-radius:14px;
+  padding:1.1rem 1.4rem; margin-bottom:1rem; color:#d4dbec;
 }
+
+/* ── Dataframe (sensitivity) ── */
+[data-testid="stDataFrame"] { border-radius:12px; overflow:hidden; border:1px solid var(--line); }
 
 /* ── Verdict banner ── */
 .verdict-banner {
-  border-radius: 20px; padding: 2.2rem 2.4rem 2rem;
-  margin-bottom: 1.6rem; color: white;
-  position: relative; overflow: hidden;
+  border-radius:24px; padding:2.3rem 2.5rem 2rem; margin-bottom:1.7rem; color:#fff;
+  position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.10);
 }
 .verdict-banner::before {
-  content: ""; position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 80% 0%, rgba(255,255,255,0.08) 0%, transparent 70%);
-  pointer-events: none;
+  content:""; position:absolute; inset:0;
+  background:radial-gradient(ellipse at 85% -10%, rgba(255,255,255,0.14) 0%, transparent 62%);
+  pointer-events:none;
 }
+.verdict-banner > * { position:relative; z-index:1; }
 .verdict-label {
-  font-size: 0.62rem; font-weight: 700; letter-spacing: 2.5px;
-  text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 5px;
+  font-size:0.62rem; font-weight:700; letter-spacing:2.6px;
+  text-transform:uppercase; color:rgba(255,255,255,0.62); margin-bottom:6px;
 }
 .verdict-word {
-  font-size: 3.2rem; font-weight: 900; letter-spacing: -1.5px; line-height: 1;
-  color: white !important;
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:3.4rem; font-weight:700; letter-spacing:-1.6px; line-height:1;
+  color:#fff !important;
 }
-.verdict-sub {
-  font-size: 1rem; color: rgba(255,255,255,0.75); margin-top: 6px; font-weight: 500;
-}
+.verdict-sub { font-size:1rem; color:rgba(255,255,255,0.82); margin-top:8px; font-weight:500; }
 .verdict-pill {
-  border-radius: 12px; padding: 0.8rem 1.2rem;
-  text-align: center; backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px); min-width: 110px;
+  border-radius:14px; padding:0.85rem 1.2rem; text-align:center;
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); min-width:112px;
 }
-.verdict-pill-lbl {
-  font-size: 0.58rem; font-weight: 700; letter-spacing: 1.5px;
-  text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 3px;
-}
-.verdict-pill-val {
-  font-size: 1.55rem; font-weight: 800; color: white; line-height: 1.1;
-}
-.verdict-pill-sub {
-  font-size: 0.68rem; color: rgba(255,255,255,0.65); margin-top: 2px;
-}
+.verdict-pill-lbl { font-size:0.56rem; font-weight:700; letter-spacing:1.6px;
+  text-transform:uppercase; color:rgba(255,255,255,0.68); margin-bottom:4px; }
+.verdict-pill-val { font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.6rem; font-weight:700; color:#fff; line-height:1.05; font-variant-numeric:tabular-nums; }
+.verdict-pill-sub { font-size:0.66rem; color:rgba(255,255,255,0.7); margin-top:2px; }
 .verdict-stat {
-  background: rgba(0,0,0,0.22); border-radius: 12px;
-  padding: 0.85rem 1rem; min-width: 0;
+  background:rgba(0,0,0,0.26); border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px; padding:0.9rem 1.05rem; min-width:0;
 }
-.verdict-stat-lbl {
-  font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 1.2px; color: rgba(255,255,255,0.5); margin-bottom: 4px;
-}
-.verdict-stat-val {
-  font-size: 1.35rem; font-weight: 800; color: white; line-height: 1.1;
-}
-.verdict-stat-sub {
-  font-size: 0.68rem; color: rgba(255,255,255,0.6); margin-top: 2px;
-}
+.verdict-stat-lbl { font-size:0.56rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:1.3px; color:rgba(255,255,255,0.6); margin-bottom:5px; }
+.verdict-stat-val { font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.4rem; font-weight:700; color:#fff; line-height:1.05; font-variant-numeric:tabular-nums; }
+.verdict-stat-sub { font-size:0.66rem; color:rgba(255,255,255,0.62); margin-top:3px; }
+
+/* ── Company title row ── */
+.co-name { font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.75rem; font-weight:700; color:var(--ink); letter-spacing:-0.5px; }
+.co-tick { color:var(--accent); font-size:1rem; font-weight:600; margin-left:6px; }
+.co-meta { color:var(--muted); margin:2px 0 1rem; font-size:0.88rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -261,24 +383,43 @@ def _kpi(label, value, sub=None, sub_cls=""):
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 def render_sidebar() -> tuple[str | None, dict]:
     with st.sidebar:
-        st.markdown("## 📊 DCF Analyzer")
+        st.markdown(
+            '<div class="brand">'
+            '<div class="brand-mark">◆</div>'
+            '<div><div class="brand-name">Intrinsic</div>'
+            '<div class="brand-tag">Know what it\'s worth</div></div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown("---")
-        st.markdown("### AI ENGINE")
+        st.markdown('<div class="side-h">AI Engine</div>', unsafe_allow_html=True)
 
         ollama_ok = check_ollama_status()
         if ollama_ok:
-            st.success("Ollama running ✓")
             models = get_available_models()
             if models:
-                model = st.selectbox("Model", models)
+                st.markdown(
+                    '<div class="status-chip status-ok"><span class="dot dot-ok"></span>'
+                    f'Ollama connected · {len(models)} model{"s" if len(models)!=1 else ""}</div>',
+                    unsafe_allow_html=True,
+                )
+                model = st.selectbox("Model", models, label_visibility="collapsed")
             else:
-                st.warning("No models.\nRun: `ollama pull llama3.2`")
+                st.markdown(
+                    '<div class="status-chip status-off"><span class="dot dot-off"></span>'
+                    'Connected · no models</div>',
+                    unsafe_allow_html=True,
+                )
+                st.caption("Pull one with:  `ollama pull llama3.2`")
                 model = None
         else:
-            st.error("Ollama not detected.\n\n"
-                     "**Install:** ollama.ai\n"
-                     "**Start:** `ollama serve`\n"
-                     "**Model:** `ollama pull llama3.2`")
+            st.markdown(
+                '<div class="status-chip status-off"><span class="dot dot-off"></span>'
+                'Ollama offline</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption("Install at **ollama.ai**, then run `ollama serve` "
+                       "and `ollama pull llama3.2`. Data & valuation still work without it.")
             model = None
 
         st.markdown("---")
@@ -324,7 +465,7 @@ def render_sidebar() -> tuple[str | None, dict]:
         }
 
         st.markdown("---")
-        st.caption("Data: Yahoo Finance · AI: Ollama")
+        st.caption("Data · Yahoo Finance     AI · Ollama (local)")
         st.caption("⚠️ Educational only — not financial advice.")
 
     return model, assumptions
@@ -335,10 +476,11 @@ def render_landing(model: str | None):
     # Hero
     st.markdown("""
     <div class="hero">
-      <div class="hero-badge">AI · Local · Free · No subscription</div>
-      <h1>Stock DCF Analyzer</h1>
-      <p>Professional intrinsic-value analysis running entirely on your machine.<br>
-         Ask anything — it understands natural language.</p>
+      <div class="hero-badge">◆ &nbsp;100% local · AI-powered · no subscription</div>
+      <h1>Know what it's<br><span class="grad">really worth.</span></h1>
+      <p>Institutional-grade DCF valuation, Monte Carlo, and financial
+         scoring for any public company — running entirely on your machine.
+         Just ask in plain English.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -427,7 +569,7 @@ def _show_search_results():
             st.markdown(
                 f'<div class="suggestion">'
                 f'<strong>{r["name"]}</strong> '
-                f'<span style="color:#6366f1; font-weight:600;">{r["symbol"]}</span> '
+                f'<span style="color:#7c6cff; font-weight:600;">{r["symbol"]}</span> '
                 f'<span style="color:#94a3b8; font-size:0.75rem;">· {r["exchange"]} · {r["type"]}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -632,10 +774,9 @@ def render_overview():
     arrow = "▲" if chg_pct >= 0 else "▼"; clr = "green" if chg_pct >= 0 else "red"
 
     st.markdown(
-        f'<h2 style="margin-bottom:2px;color:#0f172a;font-weight:800;">{name} '
-        f'<span style="color:#6366f1;font-size:1.1rem;font-weight:600;">({ticker})</span></h2>'
-        f'<p style="color:#64748b;margin:0 0 1rem;">'
-        f'{m.get("sector","N/A")} · {m.get("industry","N/A")} · {m.get("country","")}</p>',
+        f'<div class="co-name">{name}<span class="co-tick">{ticker}</span></div>'
+        f'<div class="co-meta">'
+        f'{m.get("sector","N/A")} · {m.get("industry","N/A")} · {m.get("country","")}</div>',
         unsafe_allow_html=True,
     )
 
@@ -676,18 +817,18 @@ def render_overview():
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=hist.index, y=hist["Close"], name="Price",
-            line=dict(color="#6366f1", width=2.5),
+            line=dict(color="#7c6cff", width=2.5),
             hovertemplate="<b>$%{y:.2f}</b><extra></extra>"))
         fig.add_trace(go.Scatter(x=hist.index, y=hist["MA50"], name="50-day MA",
             line=dict(color="#f59e0b", width=1.5, dash="dot")))
         fig.add_trace(go.Scatter(x=hist.index, y=hist["MA200"], name="200-day MA",
-            line=dict(color="#ef4444", width=1.5, dash="dot")))
+            line=dict(color="#fb7185", width=1.5, dash="dot")))
         fig.add_trace(go.Bar(x=hist.index, y=hist["Volume"], name="Volume",
             yaxis="y2", marker_color="rgba(99,102,241,0.12)"))
         fig.update_layout(
             yaxis2=dict(overlaying="y", side="right", showgrid=False,
                         tickformat=".2s", title="Volume"),
-            plot_bgcolor="white", paper_bgcolor="white",
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", y=1.08, x=0),
             margin=dict(l=0, r=0, t=30, b=0), height=310,
             hovermode="x unified",
@@ -733,7 +874,7 @@ def render_dcf_tab(model: str | None):
         mc_extra = ""
         if mc:
             mc_extra = (
-                f'<br><span style="font-size:0.8rem;color:#6366f1;">'
+                f'<br><span style="font-size:0.8rem;color:#7c6cff;">'
                 f'Monte Carlo P10/P50/P90: '
                 f'${mc["p10"]:.2f} / ${mc["p50"]:.2f} / ${mc["p90"]:.2f}'
                 f'</span>'
@@ -765,7 +906,7 @@ def render_dcf_tab(model: str | None):
             x=[str(y) for y in reversed(h_yrs)],
             y=[v/1e9 for v in reversed(h_fcf)],
             name="Historical FCF",
-            marker_color=["#94a3b8" if v < 0 else "#6366f1" for v in reversed(h_fcf)],
+            marker_color=["#94a3b8" if v < 0 else "#7c6cff" for v in reversed(h_fcf)],
         ))
     if p_fcf:
         s1_end = 5
@@ -773,7 +914,7 @@ def render_dcf_tab(model: str | None):
             x=[str(y) for y in p_yrs[:s1_end]],
             y=[v/1e9 for v in p_fcf[:s1_end]],
             name="Stage 1 (High Growth)",
-            marker_color="#10b981", opacity=0.88,
+            marker_color="#34d399", opacity=0.88,
         ))
         fig.add_trace(go.Bar(
             x=[str(y) for y in p_yrs[s1_end:]],
@@ -783,7 +924,7 @@ def render_dcf_tab(model: str | None):
         ))
     fig.update_layout(
         barmode="group", yaxis_title="FCF ($B)",
-        plot_bgcolor="white", paper_bgcolor="white",
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         legend=dict(orientation="h", y=1.08),
         margin=dict(l=0, r=0, t=20, b=0), height=280,
     )
@@ -798,22 +939,23 @@ def render_dcf_tab(model: str | None):
         fig2 = go.Figure()
         fig2.add_trace(go.Histogram(
             x=data, nbinsx=60,
-            marker_color="#6366f1", opacity=0.75, name="Simulations",
+            marker_color="#7c6cff", opacity=0.75, name="Simulations",
         ))
         for pct, lbl, col in [
-            (mc["p10"],"P10","#ef4444"),
+            (mc["p10"],"P10","#fb7185"),
             (mc["p50"],"P50","#f59e0b"),
-            (mc["p90"],"P90","#10b981"),
+            (mc["p90"],"P90","#34d399"),
         ]:
             fig2.add_vline(x=pct, line_dash="dash", line_color=col, line_width=2,
                            annotation_text=f"{lbl} ${pct:.2f}", annotation_position="top")
         if cp:
-            fig2.add_vline(x=cp, line_color="#0f172a", line_width=2.5,
-                           annotation_text=f"Market ${cp:.2f}", annotation_position="top left")
+            fig2.add_vline(x=cp, line_color="#e8edf7", line_width=2.5,
+                           annotation_text=f"Market ${cp:.2f}", annotation_position="top left",
+                           annotation_font_color="#e8edf7")
         fig2.update_layout(
             xaxis_title="Intrinsic Value per Share ($)",
             yaxis_title="Frequency",
-            plot_bgcolor="white", paper_bgcolor="white",
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             showlegend=False,
             margin=dict(l=0, r=0, t=30, b=0), height=270,
         )
@@ -843,12 +985,12 @@ def render_dcf_tab(model: str | None):
         try:
             sens = sensitivity_table(dcf)
             def _hl(val):
-                if val is None or not cp: return "background:#f8fafc"
-                if val > cp * 1.20: return "background:#d1fae5;color:#065f46"
-                if val > cp * 1.05: return "background:#e0f2fe;color:#0c4a6e"
-                if val < cp * 0.80: return "background:#fee2e2;color:#991b1b"
-                if val < cp * 0.95: return "background:#fef9c3;color:#92400e"
-                return "background:#f0fdf4;color:#166534"
+                if val is None or not cp: return "background:rgba(148,163,184,0.06);color:#8a93a8"
+                if val > cp * 1.20: return "background:rgba(52,211,153,0.28);color:#d1fae5"
+                if val > cp * 1.05: return "background:rgba(56,189,248,0.22);color:#e0f2fe"
+                if val < cp * 0.80: return "background:rgba(251,113,133,0.28);color:#fee2e2"
+                if val < cp * 0.95: return "background:rgba(251,191,36,0.22);color:#fef9c3"
+                return "background:rgba(52,211,153,0.12);color:#bbf7d0"
             st.dataframe(
                 sens.style.map(_hl).format("${:.2f}", na_rep="—"),
                 use_container_width=True,
@@ -934,23 +1076,25 @@ def render_hype_tab():
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=score,
-            number={"suffix":" / 100", "font":{"size":26,"color":"#0f172a"}},
+            number={"suffix":" / 100", "font":{"size":28,"color":"#e8edf7",
+                                                "family":"Space Grotesk"}},
             gauge={
-                "axis":{"range":[0,100],"tickwidth":1,"tickcolor":"#94a3b8"},
+                "axis":{"range":[0,100],"tickwidth":1,"tickcolor":"#5a6379",
+                        "tickfont":{"color":"#8a93a8"}},
                 "bar":{"color":color,"thickness":0.32},
-                "bgcolor":"white","borderwidth":0,
+                "bgcolor":"rgba(0,0,0,0)","borderwidth":0,
                 "steps":[
-                    {"range":[0,20],"color":"#f1f5f9"},
-                    {"range":[20,40],"color":"#dbeafe"},
-                    {"range":[40,60],"color":"#fef9c3"},
-                    {"range":[60,80],"color":"#ffedd5"},
-                    {"range":[80,100],"color":"#fee2e2"},
+                    {"range":[0,20],"color":"rgba(56,189,248,0.10)"},
+                    {"range":[20,40],"color":"rgba(52,211,153,0.10)"},
+                    {"range":[40,60],"color":"rgba(251,191,36,0.12)"},
+                    {"range":[60,80],"color":"rgba(249,115,22,0.14)"},
+                    {"range":[80,100],"color":"rgba(251,113,133,0.16)"},
                 ],
                 "threshold":{"line":{"color":color,"width":4},"thickness":0.85,"value":score},
             },
-            title={"text":f"{emoji}  Hype Meter","font":{"size":17}},
+            title={"text":f"{emoji}  Hype Meter","font":{"size":16,"color":"#8a93a8"}},
         ))
-        fig.update_layout(height=290, margin=dict(l=5,r=5,t=40,b=5), paper_bgcolor="white")
+        fig.update_layout(height=290, margin=dict(l=5,r=5,t=40,b=5), paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig, use_container_width=True)
         st.markdown(f'<div style="text-align:center;font-size:1.25rem;font-weight:700;'
                     f'color:{color};">{level}</div>', unsafe_allow_html=True)
@@ -959,11 +1103,13 @@ def render_hype_tab():
         st.markdown('<div class="sec">Score Breakdown</div>', unsafe_allow_html=True)
         for label, comp in hype["components"].items():
             pct = comp["score"] / comp["max"] * 100
-            bc  = "#10b981" if pct>=66 else ("#f59e0b" if pct>=33 else "#ef4444")
+            bc  = "#34d399" if pct>=66 else ("#fbbf24" if pct>=33 else "#fb7185")
             st.markdown(
-                f'**{label}** — <span style="color:#64748b;font-size:0.8rem;">{comp["detail"]}</span><br>'
-                f'<div style="height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden;margin:3px 0 10px;">'
-                f'<div style="width:{pct:.0f}%;height:100%;background:{bc};border-radius:4px;"></div></div>',
+                f'<span style="color:#e8edf7;font-weight:600;font-size:0.88rem;">{label}</span> '
+                f'<span style="color:#8a93a8;font-size:0.78rem;">{comp["detail"]}</span>'
+                f'<div style="height:7px;background:rgba(148,163,184,0.14);border-radius:99px;'
+                f'overflow:hidden;margin:5px 0 12px;">'
+                f'<div style="width:{pct:.0f}%;height:100%;background:{bc};border-radius:99px;"></div></div>',
                 unsafe_allow_html=True,
             )
 
@@ -1001,16 +1147,16 @@ def render_valuation_tab(model: str | None):
 
     # Status badge
     if upside > 15:
-        bc, bt, bb = "#d1fae5","🟢  Potentially Undervalued","#10b981"
+        bc, bt, bb, tc = "rgba(52,211,153,0.12)","🟢  Potentially Undervalued","rgba(52,211,153,0.45)","#6ee7b7"
     elif upside < -15:
-        bc, bt, bb = "#fee2e2","🔴  Potentially Overvalued","#ef4444"
+        bc, bt, bb, tc = "rgba(251,113,133,0.12)","🔴  Potentially Overvalued","rgba(251,113,133,0.45)","#fda4af"
     else:
-        bc, bt, bb = "#fef9c3","🟡  Fairly Valued","#f59e0b"
+        bc, bt, bb, tc = "rgba(251,191,36,0.12)","🟡  Fairly Valued","rgba(251,191,36,0.45)","#fcd34d"
     st.markdown(
-        f'<div class="val-badge" style="background:{bc};border:2px solid {bb};">'
-        f'<span style="font-size:1.1rem;font-weight:700;">{bt}</span>'
-        f'<span style="color:#374151;font-size:0.9rem;">DCF: <strong>${iv:.2f}</strong> '
-        f'vs market: <strong>${cp:.2f}</strong> ({upside:+.1f}%)</span></div>',
+        f'<div class="val-badge" style="background:{bc};border:1px solid {bb};">'
+        f'<span style="font-size:1.1rem;font-weight:700;color:{tc};">{bt}</span>'
+        f'<span style="color:#c4cce0;font-size:0.9rem;">DCF: <strong style="color:#fff">${iv:.2f}</strong> '
+        f'vs market: <strong style="color:#fff">${cp:.2f}</strong> ({upside:+.1f}%)</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -1022,8 +1168,8 @@ def render_valuation_tab(model: str | None):
         if val and float(val) > 0:
             bars.append(lbl); bar_vals.append(float(val)); bar_clrs.append(clr)
 
-    _bar("DCF Intrinsic Value",        iv,                          "#6366f1")
-    _bar("Market Price",               cp,                          "#0f172a")
+    _bar("DCF Intrinsic Value",        iv,                          "#7c6cff")
+    _bar("Market Price",               cp,                          "#cbd5e1")
     if mults.get("pe_value"):
         _bar(f'P/E ({mults["pe_multiple"]}x sector avg)',           mults["pe_value"],        "#f59e0b")
     if mults.get("ev_ebitda_value"):
@@ -1033,7 +1179,7 @@ def render_valuation_tab(model: str | None):
     _bar("52-Wk High",                 m.get("week_52_high"),       "#94a3b8")
     _bar("52-Wk Low",                  m.get("week_52_low"),        "#cbd5e1")
     if m.get("target_price"):
-        _bar("Analyst Target",         m["target_price"],           "#10b981")
+        _bar("Analyst Target",         m["target_price"],           "#34d399")
 
     if bars:
         fig = go.Figure(go.Bar(
@@ -1041,10 +1187,11 @@ def render_valuation_tab(model: str | None):
             marker_color=bar_clrs,
             text=[f"${v:.2f}" for v in bar_vals], textposition="outside",
         ))
-        fig.add_vline(x=cp, line_dash="dash", line_color="#0f172a", line_width=2,
-                      annotation_text="Market", annotation_position="top left")
+        fig.add_vline(x=cp, line_dash="dash", line_color="#e8edf7", line_width=2,
+                      annotation_text="Market", annotation_position="top left",
+                      annotation_font_color="#e8edf7")
         fig.update_layout(
-            plot_bgcolor="white", paper_bgcolor="white",
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             xaxis_title="Price ($)",
             margin=dict(l=0, r=80, t=10, b=0), height=max(240, len(bars)*42),
             showlegend=False,
@@ -1059,21 +1206,23 @@ def render_valuation_tab(model: str | None):
             fig_c = go.Figure(go.Indicator(
                 mode="gauge+number",
                 value=conf["score"],
-                number={"suffix":" / 10","font":{"size":28,"color":conf["color"]}},
+                number={"suffix":" / 10","font":{"size":30,"color":conf["color"],
+                                                  "family":"Space Grotesk"}},
                 gauge={
-                    "axis":{"range":[0,10]},
+                    "axis":{"range":[0,10],"tickcolor":"#5a6379",
+                            "tickfont":{"color":"#8a93a8"}},
                     "bar":{"color":conf["color"],"thickness":0.38},
-                    "bgcolor":"white","borderwidth":0,
+                    "bgcolor":"rgba(0,0,0,0)","borderwidth":0,
                     "steps":[
-                        {"range":[0,4],"color":"#fee2e2"},
-                        {"range":[4,6],"color":"#ffedd5"},
-                        {"range":[6,8],"color":"#fef9c3"},
-                        {"range":[8,10],"color":"#d1fae5"},
+                        {"range":[0,4],"color":"rgba(251,113,133,0.16)"},
+                        {"range":[4,6],"color":"rgba(249,115,22,0.14)"},
+                        {"range":[6,8],"color":"rgba(251,191,36,0.12)"},
+                        {"range":[8,10],"color":"rgba(52,211,153,0.14)"},
                     ],
                 },
                 title={"text":conf["level"],"font":{"size":15,"color":conf["color"]}},
             ))
-            fig_c.update_layout(height=210, margin=dict(l=5,r=5,t=40,b=5), paper_bgcolor="white")
+            fig_c.update_layout(height=210, margin=dict(l=5,r=5,t=40,b=5), paper_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig_c, use_container_width=True)
         with fc_col:
             st.markdown("**Score drivers:**")
@@ -1121,21 +1270,25 @@ def render_scorecard_tab():
     fig_radar = go.Figure()
     fig_radar.add_trace(go.Scatterpolar(
         r=vals_p_closed, theta=cols_p_closed, fill="toself",
-        fillcolor="rgba(99,102,241,0.15)",
-        line=dict(color="#6366f1", width=2.5),
-        marker=dict(size=7, color="#6366f1"),
+        fillcolor="rgba(124,108,255,0.22)",
+        line=dict(color="#7c6cff", width=2.5),
+        marker=dict(size=7, color="#a855f7"),
         name="Score",
         hovertemplate="%{theta}: %{r}/6<extra></extra>",
     ))
     fig_radar.update_layout(
         polar=dict(
             radialaxis=dict(visible=True, range=[0, 6],
-                           tickfont=dict(size=10), tickvals=[2, 4, 6]),
-            angularaxis=dict(tickfont=dict(size=12, color="#1e293b")),
-            bgcolor="rgba(248,250,252,0.8)",
+                           tickfont=dict(size=10, color="#8a93a8"), tickvals=[2, 4, 6],
+                           gridcolor="rgba(148,163,184,0.14)",
+                           linecolor="rgba(148,163,184,0.14)"),
+            angularaxis=dict(tickfont=dict(size=12, color="#e8edf7"),
+                            gridcolor="rgba(148,163,184,0.14)",
+                            linecolor="rgba(148,163,184,0.14)"),
+            bgcolor="rgba(17,22,42,0.5)",
         ),
         showlegend=False,
-        paper_bgcolor="white", plot_bgcolor="white",
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=20, b=20),
         height=340,
     )
@@ -1146,10 +1299,10 @@ def render_scorecard_tab():
         st.markdown(f"""
         <div class="kpi" style="margin-bottom:10px">
           <div class="kpi-lbl">StockRank Score</div>
-          <div class="kpi-val" style="font-size:2.4rem;color:{rank.get('color','#6366f1')}">
+          <div class="kpi-val" style="font-size:2.4rem;color:{rank.get('color','#7c6cff')}">
             {rank.get('rank', 0)}<span style="font-size:1rem;color:#94a3b8">/100</span>
           </div>
-          <div class="kpi-sub" style="color:{rank.get('color','#6366f1')};font-weight:700">
+          <div class="kpi-sub" style="color:{rank.get('color','#7c6cff')};font-weight:700">
             Grade {rank.get('grade','—')}  ·  Value+Growth+Quality
           </div>
         </div>""", unsafe_allow_html=True)
@@ -1157,14 +1310,14 @@ def render_scorecard_tab():
                          ("Quality","quality"),("Momentum","momentum"),("Income","income")]:
             v = pent.get(k, 0)
             pct = v / 6 * 100
-            bar_color = "#10b981" if pct >= 67 else "#f59e0b" if pct >= 34 else "#ef4444"
+            bar_color = "#34d399" if pct >= 67 else "#fbbf24" if pct >= 34 else "#fb7185"
             st.markdown(f"""
-            <div style="margin-bottom:6px">
-              <div style="display:flex;justify-content:space-between;font-size:0.75rem;
-                          color:#64748b;margin-bottom:2px">
-                <span>{label}</span><span style="font-weight:700">{v}/6</span>
+            <div style="margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;font-size:0.76rem;
+                          color:#8a93a8;margin-bottom:3px">
+                <span>{label}</span><span style="font-weight:700;color:#e8edf7">{v}/6</span>
               </div>
-              <div style="height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+              <div style="height:6px;background:rgba(148,163,184,0.14);border-radius:99px;overflow:hidden">
                 <div style="width:{pct:.0f}%;height:100%;background:{bar_color};
                             border-radius:99px"></div>
               </div>
@@ -1178,13 +1331,13 @@ def render_scorecard_tab():
         fig_hist = go.Figure()
         fig_hist.add_trace(go.Bar(
             x=years_r, y=list(reversed(hist_f["revenue"])),
-            name="Revenue", marker_color="#6366f1", opacity=0.85))
+            name="Revenue", marker_color="#7c6cff", opacity=0.85))
         fig_hist.add_trace(go.Bar(
             x=years_r, y=list(reversed(hist_f["gross_profit"])),
             name="Gross Profit", marker_color="#22d3ee", opacity=0.85))
         fig_hist.add_trace(go.Bar(
             x=years_r, y=list(reversed(hist_f["fcf"])),
-            name="Free Cash Flow", marker_color="#10b981", opacity=0.85))
+            name="Free Cash Flow", marker_color="#34d399", opacity=0.85))
         fig_hist.add_trace(go.Bar(
             x=years_r, y=list(reversed(hist_f["net_income"])),
             name="Net Income", marker_color="#f59e0b", opacity=0.85))
@@ -1192,7 +1345,7 @@ def render_scorecard_tab():
             barmode="group",
             xaxis=dict(type="category"),
             yaxis=dict(ticksuffix="B", tickprefix="$"),
-            plot_bgcolor="white", paper_bgcolor="white",
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", y=1.08),
             margin=dict(l=0, r=0, t=30, b=0), height=300,
         )
@@ -1216,17 +1369,17 @@ def render_scorecard_tab():
     with col_pc:
         for (name, passed, detail) in piot.get("checks", []):
             if passed is True:
-                icon, col = "✅", "#10b981"
+                icon, col = "✅", "#34d399"
             elif passed is False:
-                icon, col = "❌", "#ef4444"
+                icon, col = "❌", "#fb7185"
             else:
                 icon, col = "⬜", "#94a3b8"
             st.markdown(
                 f'<div style="display:flex;align-items:flex-start;gap:8px;'
-                f'padding:5px 0;border-bottom:1px solid #f1f5f9;">'
+                f'padding:6px 0;border-bottom:1px solid rgba(148,163,184,0.10);">'
                 f'<span style="flex-shrink:0;font-size:0.9rem">{icon}</span>'
-                f'<div><span style="font-size:0.82rem;font-weight:600;color:#1e293b">{name}</span>'
-                f'<br><span style="font-size:0.72rem;color:#94a3b8">{detail}</span></div>'
+                f'<div><span style="font-size:0.83rem;font-weight:600;color:#e8edf7">{name}</span>'
+                f'<br><span style="font-size:0.73rem;color:#8a93a8">{detail}</span></div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1251,12 +1404,12 @@ def render_scorecard_tab():
         st.markdown("""
         <div class="kpi">
           <div class="kpi-lbl">Safe Zone</div>
-          <div class="kpi-val" style="color:#10b981;font-size:1.1rem">Z &gt; 2.99</div>
+          <div class="kpi-val" style="color:#34d399;font-size:1.1rem">Z &gt; 2.99</div>
           <div class="kpi-sub">Low bankruptcy risk</div>
         </div>
         <div class="kpi" style="margin-top:8px">
           <div class="kpi-lbl">Grey Zone</div>
-          <div class="kpi-val" style="color:#f59e0b;font-size:1.1rem">1.81 – 2.99</div>
+          <div class="kpi-val" style="color:#fbbf24;font-size:1.1rem">1.81 – 2.99</div>
           <div class="kpi-sub">Uncertain territory</div>
         </div>""", unsafe_allow_html=True)
     with col_z3:
@@ -1271,9 +1424,9 @@ def render_scorecard_tab():
             for lbl, v_f in factors:
                 st.markdown(
                     f'<div style="display:flex;justify-content:space-between;'
-                    f'padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:0.78rem">'
-                    f'<span style="color:#64748b">{lbl}</span>'
-                    f'<span style="font-weight:600">{f"{v_f:.3f}" if v_f is not None else "—"}</span>'
+                    f'padding:5px 0;border-bottom:1px solid rgba(148,163,184,0.10);font-size:0.79rem">'
+                    f'<span style="color:#8a93a8">{lbl}</span>'
+                    f'<span style="font-weight:600;color:#e8edf7">{f"{v_f:.3f}" if v_f is not None else "—"}</span>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -1303,8 +1456,8 @@ def render_analysis(model: str | None, assumptions: dict):
     with t5: render_scorecard_tab()
 
     st.markdown(
-        '<hr style="border-color:#e2e8f0;margin-top:2rem;">'
-        '<p style="color:#94a3b8;font-size:0.72rem;text-align:center;">'
+        '<hr style="border:none;border-top:1px solid rgba(148,163,184,0.12);margin-top:2.5rem;">'
+        '<p style="color:#5a6379;font-size:0.72rem;text-align:center;">'
         "⚠️  This tool is for educational purposes only and does not constitute financial advice. "
         "Always consult a qualified professional before making investment decisions. "
         "Financial data sourced from Yahoo Finance.</p>",

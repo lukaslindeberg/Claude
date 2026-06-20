@@ -22,13 +22,42 @@ def check_ollama_status() -> bool:
 
 
 def get_available_models() -> list[str]:
+    """Return installed model names.
+
+    Handles every shape the ``ollama`` client has shipped:
+      • ≤0.3  →  ``{"models": [{"name": "llama3.2:latest", ...}]}``  (dict)
+      • ≥0.4  →  ``ListResponse(models=[Model(model="llama3.2:latest", ...)])``
+                 (pydantic objects — ``.get`` raises, field renamed to ``model``)
+    """
     if not _OLLAMA_AVAILABLE:
         return []
     try:
         resp = _ollama.list()
-        return [m["name"] for m in resp.get("models", []) if m.get("name")]
     except Exception:
         return []
+
+    # Normalise to a plain list of model entries.
+    models_raw = getattr(resp, "models", None)
+    if models_raw is None and isinstance(resp, dict):
+        models_raw = resp.get("models", [])
+    if not models_raw:
+        return []
+
+    names: list[str] = []
+    for m in models_raw:
+        name = None
+        # pydantic Model objects: prefer .model, fall back to .name
+        for attr in ("model", "name"):
+            v = getattr(m, attr, None)
+            if isinstance(v, str) and v:
+                name = v
+                break
+        # legacy dict entries
+        if name is None and isinstance(m, dict):
+            name = m.get("model") or m.get("name")
+        if name:
+            names.append(name)
+    return names
 
 
 # ─── Smart query parsing ──────────────────────────────────────────────────────
