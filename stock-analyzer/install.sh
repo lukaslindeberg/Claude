@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────
-#  Stock DCF Analyzer — Installer (macOS / Linux)
+#  Intrinsic — Know what it's really worth (macOS / Linux installer)
 # ─────────────────────────────────────────────────────────
 set -e
 cd "$(dirname "$0")"
@@ -10,7 +10,8 @@ RED='\033[0;31m'; BLUE='\033[0;34m'; NC='\033[0m'
 
 echo ""
 echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}${BLUE}   📊 Stock DCF Analyzer — Installation${NC}"
+echo -e "${BOLD}${BLUE}   ◆ Intrinsic — Know what it's really worth${NC}"
+echo -e "${BOLD}${BLUE}     Installation${NC}"
 echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 

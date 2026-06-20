@@ -27,7 +27,8 @@ if defined PORT_OVERRIDE set PORT=%PORT_OVERRIDE%
 
 echo.
 echo ================================================
-echo   Stock DCF Analyzer -- Mobile PWA
+echo   Intrinsic -- Mobile PWA
+echo   Know what it's really worth
 echo ================================================
 echo.
 echo   Desktop:   http://localhost:%PORT%

@@ -1,13 +1,14 @@
 @echo off
 :: ─────────────────────────────────────────────────────────
-::  Stock DCF Analyzer — Installer (Windows)
+::  Intrinsic — Know what it's really worth (Windows installer)
 :: ─────────────────────────────────────────────────────────
 cd /d "%~dp0"
-title Stock DCF Analyzer - Installation
+title Intrinsic - Installation
 
 echo.
 echo =====================================================
-echo    Stock DCF Analyzer -- Installation
+echo    Intrinsic -- Know what it's really worth
+echo    Installation
 echo =====================================================
 echo.
 

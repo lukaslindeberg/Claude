@@ -1,5 +1,5 @@
 """
-Stock DCF Analyzer — Modern UI with smart natural-language search.
+Intrinsic — Know what it's really worth. Modern UI with smart natural-language search.
 """
 import streamlit as st
 import pandas as pd

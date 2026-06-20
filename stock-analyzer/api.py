@@ -1,4 +1,4 @@
-"""FastAPI backend for the Stock DCF Analyzer mobile PWA."""
+"""FastAPI backend for the Intrinsic mobile PWA."""
 from __future__ import annotations
 
 import json
@@ -39,7 +39,7 @@ PRESETS = {
     "bull": {"risk_free": 0.035, "market_risk_premium": 0.045, "terminal_growth": 0.035, "growth_adjustment":  0.05},
 }
 
-app = FastAPI(title="Stock DCF Analyzer API", version="1.0.0")
+app = FastAPI(title="Intrinsic API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

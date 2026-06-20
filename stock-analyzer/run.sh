@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────
-#  Stock DCF Analyzer — Launcher (macOS / Linux)
+#  Intrinsic — Know what it's really worth (macOS / Linux)
 # ─────────────────────────────────────────────────────────
 cd "$(dirname "$0")"
 
@@ -10,5 +10,5 @@ if [ ! -d "venv" ]; then
 fi
 
 source venv/bin/activate
-echo "Starting Stock DCF Analyzer — opening in your browser..."
+echo "◆ Starting Intrinsic — opening in your browser..."
 streamlit run app.py --server.headless false
