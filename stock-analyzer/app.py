@@ -17,6 +17,10 @@ from modules.ai_analysis import (
     generate_dcf_narrative, analyze_news_sentiment,
     analyze_valuation_gap, calculate_confidence_score,
 )
+from modules.scores import (
+    piotroski_f_score, altman_z_score,
+    calculate_pentagon, historical_financials, stock_rank,
+)
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -170,6 +174,7 @@ _DEFAULTS = {
     "stock_data": None, "key_metrics": None,
     "dcf_results": None, "hype_data": None,
     "confidence": None,
+    "scores": None,
     "ai_dcf": None, "ai_news": None, "ai_val": None,
     "search_results": [], "last_query": "",
     "pending_query": None,
@@ -380,7 +385,7 @@ def _select_company(ticker: str, name: str):
 
 def _clear_analysis():
     for k in ("stock_data","key_metrics","dcf_results","hype_data","confidence",
-               "ai_dcf","ai_news","ai_val","advanced_done","selected_ticker"):
+               "scores","ai_dcf","ai_news","ai_val","advanced_done","selected_ticker"):
         st.session_state[k] = None
     st.session_state.advanced_done = False
 
@@ -427,6 +432,17 @@ def ensure_data(ticker: str, assumptions: dict):
     st.session_state.dcf_results  = dcf
     st.session_state.hype_data    = calculate_hype_score(sd)
     st.session_state.confidence   = calculate_confidence_score(dcf, st.session_state.key_metrics)
+
+    # Scorecard calculations
+    piot   = piotroski_f_score(sd)
+    altman = altman_z_score(sd)
+    pent   = calculate_pentagon(sd, dcf, st.session_state.key_metrics)
+    hist_f = historical_financials(sd)
+    rank   = stock_rank(pent)
+    st.session_state.scores = {
+        "piotroski": piot, "altman": altman,
+        "pentagon": pent, "history": hist_f, "rank": rank,
+    }
     st.session_state.advanced_done = True
     return True
 
@@ -907,6 +923,186 @@ def render_valuation_tab(model: str | None):
             st.rerun()
 
 
+# ─── Scorecard tab ────────────────────────────────────────────────────────────
+def render_scorecard_tab():
+    sc = st.session_state.scores
+    if not sc:
+        return
+    piot   = sc.get("piotroski", {})
+    altman = sc.get("altman", {})
+    pent   = sc.get("pentagon", {})
+    hist_f = sc.get("history", {})
+    rank   = sc.get("rank", {})
+
+    # ── Pentagon Radar Chart ──────────────────────────────────────────────────
+    st.markdown('<div class="sec">Health Pentagon — 5-Pillar Analysis</div>',
+                unsafe_allow_html=True)
+    cols_p = ["Value", "Growth", "Quality", "Momentum", "Income"]
+    vals_p = [pent.get(k.lower(), 0) for k in cols_p]
+    cols_p_closed = cols_p + [cols_p[0]]
+    vals_p_closed = vals_p + [vals_p[0]]
+
+    fig_radar = go.Figure()
+    fig_radar.add_trace(go.Scatterpolar(
+        r=vals_p_closed, theta=cols_p_closed, fill="toself",
+        fillcolor="rgba(99,102,241,0.15)",
+        line=dict(color="#6366f1", width=2.5),
+        marker=dict(size=7, color="#6366f1"),
+        name="Score",
+        hovertemplate="%{theta}: %{r}/6<extra></extra>",
+    ))
+    fig_radar.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 6],
+                           tickfont=dict(size=10), tickvals=[2, 4, 6]),
+            angularaxis=dict(tickfont=dict(size=12, color="#1e293b")),
+            bgcolor="rgba(248,250,252,0.8)",
+        ),
+        showlegend=False,
+        paper_bgcolor="white", plot_bgcolor="white",
+        margin=dict(l=40, r=40, t=20, b=20),
+        height=340,
+    )
+    col_r, col_b = st.columns([3, 2])
+    with col_r:
+        st.plotly_chart(fig_radar, use_container_width=True)
+    with col_b:
+        st.markdown(f"""
+        <div class="kpi" style="margin-bottom:10px">
+          <div class="kpi-lbl">StockRank Score</div>
+          <div class="kpi-val" style="font-size:2.4rem;color:{rank.get('color','#6366f1')}">
+            {rank.get('rank', 0)}<span style="font-size:1rem;color:#94a3b8">/100</span>
+          </div>
+          <div class="kpi-sub" style="color:{rank.get('color','#6366f1')};font-weight:700">
+            Grade {rank.get('grade','—')}  ·  Value+Growth+Quality
+          </div>
+        </div>""", unsafe_allow_html=True)
+        for label, k in [("Value","value"),("Growth","growth"),
+                         ("Quality","quality"),("Momentum","momentum"),("Income","income")]:
+            v = pent.get(k, 0)
+            pct = v / 6 * 100
+            bar_color = "#10b981" if pct >= 67 else "#f59e0b" if pct >= 34 else "#ef4444"
+            st.markdown(f"""
+            <div style="margin-bottom:6px">
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;
+                          color:#64748b;margin-bottom:2px">
+                <span>{label}</span><span style="font-weight:700">{v}/6</span>
+              </div>
+              <div style="height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+                <div style="width:{pct:.0f}%;height:100%;background:{bar_color};
+                            border-radius:99px"></div>
+              </div>
+            </div>""", unsafe_allow_html=True)
+
+    # ── Historical Financials ─────────────────────────────────────────────────
+    if hist_f.get("years"):
+        st.markdown('<div class="sec">5-Year Financial History</div>',
+                    unsafe_allow_html=True)
+        years_r = list(reversed(hist_f["years"]))
+        fig_hist = go.Figure()
+        fig_hist.add_trace(go.Bar(
+            x=years_r, y=list(reversed(hist_f["revenue"])),
+            name="Revenue", marker_color="#6366f1", opacity=0.85))
+        fig_hist.add_trace(go.Bar(
+            x=years_r, y=list(reversed(hist_f["gross_profit"])),
+            name="Gross Profit", marker_color="#22d3ee", opacity=0.85))
+        fig_hist.add_trace(go.Bar(
+            x=years_r, y=list(reversed(hist_f["fcf"])),
+            name="Free Cash Flow", marker_color="#10b981", opacity=0.85))
+        fig_hist.add_trace(go.Bar(
+            x=years_r, y=list(reversed(hist_f["net_income"])),
+            name="Net Income", marker_color="#f59e0b", opacity=0.85))
+        fig_hist.update_layout(
+            barmode="group",
+            xaxis=dict(type="category"),
+            yaxis=dict(ticksuffix="B", tickprefix="$"),
+            plot_bgcolor="white", paper_bgcolor="white",
+            legend=dict(orientation="h", y=1.08),
+            margin=dict(l=0, r=0, t=30, b=0), height=300,
+        )
+        st.plotly_chart(fig_hist, use_container_width=True)
+
+    # ── Piotroski F-Score ─────────────────────────────────────────────────────
+    st.markdown('<div class="sec">Piotroski F-Score — Financial Quality (0–9)</div>',
+                unsafe_allow_html=True)
+    col_ps, col_pc = st.columns([1, 3])
+    with col_ps:
+        st.markdown(f"""
+        <div class="kpi" style="text-align:center">
+          <div class="kpi-lbl">F-Score</div>
+          <div class="kpi-val" style="font-size:3rem;color:{piot.get('color','#888')}">
+            {piot.get('score','—')}
+          </div>
+          <div class="kpi-sub" style="color:{piot.get('color','#888')};font-weight:700">
+            {piot.get('grade','N/A')}<br>out of 9
+          </div>
+        </div>""", unsafe_allow_html=True)
+    with col_pc:
+        for (name, passed, detail) in piot.get("checks", []):
+            if passed is True:
+                icon, col = "✅", "#10b981"
+            elif passed is False:
+                icon, col = "❌", "#ef4444"
+            else:
+                icon, col = "⬜", "#94a3b8"
+            st.markdown(
+                f'<div style="display:flex;align-items:flex-start;gap:8px;'
+                f'padding:5px 0;border-bottom:1px solid #f1f5f9;">'
+                f'<span style="flex-shrink:0;font-size:0.9rem">{icon}</span>'
+                f'<div><span style="font-size:0.82rem;font-weight:600;color:#1e293b">{name}</span>'
+                f'<br><span style="font-size:0.72rem;color:#94a3b8">{detail}</span></div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # ── Altman Z-Score ────────────────────────────────────────────────────────
+    st.markdown('<div class="sec">Altman Z-Score — Bankruptcy Risk</div>',
+                unsafe_allow_html=True)
+    z = altman.get("score")
+    z_zone  = altman.get("zone",  "Unavailable")
+    z_color = altman.get("color", "#94a3b8")
+    col_z1, col_z2, col_z3 = st.columns(3)
+    with col_z1:
+        st.markdown(f"""
+        <div class="kpi">
+          <div class="kpi-lbl">Z-Score</div>
+          <div class="kpi-val" style="color:{z_color};font-size:2rem">
+            {f"{z:.2f}" if z is not None else "N/A"}
+          </div>
+          <div class="kpi-sub" style="color:{z_color};font-weight:700">{z_zone}</div>
+        </div>""", unsafe_allow_html=True)
+    with col_z2:
+        st.markdown("""
+        <div class="kpi">
+          <div class="kpi-lbl">Safe Zone</div>
+          <div class="kpi-val" style="color:#10b981;font-size:1.1rem">Z &gt; 2.99</div>
+          <div class="kpi-sub">Low bankruptcy risk</div>
+        </div>
+        <div class="kpi" style="margin-top:8px">
+          <div class="kpi-lbl">Grey Zone</div>
+          <div class="kpi-val" style="color:#f59e0b;font-size:1.1rem">1.81 – 2.99</div>
+          <div class="kpi-sub">Uncertain territory</div>
+        </div>""", unsafe_allow_html=True)
+    with col_z3:
+        if z is not None:
+            factors = [
+                ("Working Capital / Assets (X1)", altman.get("x1")),
+                ("Retained Earnings / Assets (X2)", altman.get("x2")),
+                ("EBIT / Assets (X3)",              altman.get("x3")),
+                ("Market Cap / Liabilities (X4)",   altman.get("x4")),
+                ("Revenue / Assets (X5)",            altman.get("x5")),
+            ]
+            for lbl, v_f in factors:
+                st.markdown(
+                    f'<div style="display:flex;justify-content:space-between;'
+                    f'padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:0.78rem">'
+                    f'<span style="color:#64748b">{lbl}</span>'
+                    f'<span style="font-weight:600">{f"{v_f:.3f}" if v_f is not None else "—"}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+
 # ─── Full analysis view ───────────────────────────────────────────────────────
 def render_analysis(model: str | None, assumptions: dict):
     ticker = st.session_state.selected_ticker
@@ -916,16 +1112,18 @@ def render_analysis(model: str | None, assumptions: dict):
     render_topbar(model)
     render_overview()
 
-    t1, t2, t3, t4 = st.tabs([
+    t1, t2, t3, t4, t5 = st.tabs([
         "📐  DCF Analysis",
         "📰  News & Sentiment",
         "🌡️  Hype Meter",
         "⚖️  Valuation vs. Market",
+        "🏆  Scorecard",
     ])
     with t1: render_dcf_tab(model)
     with t2: render_news_tab(model)
     with t3: render_hype_tab()
     with t4: render_valuation_tab(model)
+    with t5: render_scorecard_tab()
 
     st.markdown(
         '<hr style="border-color:#e2e8f0;margin-top:2rem;">'

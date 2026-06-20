@@ -28,6 +28,10 @@ from modules.ai_analysis import (
     analyze_valuation_gap,
     calculate_confidence_score,
 )
+from modules.scores import (
+    piotroski_f_score, altman_z_score,
+    calculate_pentagon, historical_financials, stock_rank,
+)
 
 MOBILE_DIR = Path(__file__).parent / "mobile"
 PRESETS = {
@@ -161,6 +165,13 @@ async def analyse(ticker: str, preset: str = "base"):
     hype = calculate_hype_score(sd)
     conf = calculate_confidence_score(dcf, km)
 
+    # Scorecard
+    piot   = piotroski_f_score(sd)
+    altman = altman_z_score(sd)
+    pent   = calculate_pentagon(sd, dcf, km)
+    hist_f = historical_financials(sd)
+    srank  = stock_rank(pent)
+
     # Sensitivity table → serialisable list of dicts
     try:
         st_df = sensitivity_table(dcf)
@@ -198,6 +209,13 @@ async def analyse(ticker: str, preset: str = "base"):
         "dcf": _sanitise(dcf),
         "hype": _sanitise(hype),
         "confidence": _sanitise(conf),
+        "scores": {
+            "piotroski": _sanitise(piot),
+            "altman":    _sanitise(altman),
+            "pentagon":  _sanitise(pent),
+            "history":   _sanitise(hist_f),
+            "rank":      _sanitise(srank),
+        },
         "sensitivity": st_data,
         "fcf_projection": proj_b,
         "price_chart": price_chart,

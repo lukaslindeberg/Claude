@@ -22,9 +22,11 @@ def search_companies(query: str) -> list:
             results = []
             for q in quotes:
                 if q.get("quoteType") in ("EQUITY", "ETF"):
+                    sym = q.get("symbol", "")
                     results.append(
                         {
-                            "symbol": q.get("symbol", ""),
+                            "symbol": sym,
+                            "ticker": sym,   # alias used by mobile API
                             "name": q.get("longname") or q.get("shortname", ""),
                             "exchange": q.get("exchDisp", ""),
                             "type": q.get("quoteType", ""),
@@ -64,6 +66,11 @@ def get_comprehensive_data(ticker: str) -> dict | None:
             balance_sheet = pd.DataFrame()
 
         try:
+            quarterly_cashflow = stock.quarterly_cashflow
+        except Exception:
+            quarterly_cashflow = pd.DataFrame()
+
+        try:
             news = stock.news[:15]
         except Exception:
             news = []
@@ -74,6 +81,7 @@ def get_comprehensive_data(ticker: str) -> dict | None:
             "history_1y": hist_1y,
             "history_2y": hist_2y,
             "cashflow": cashflow,
+            "quarterly_cashflow": quarterly_cashflow,
             "financials": financials,
             "balance_sheet": balance_sheet,
             "news": news,
@@ -99,6 +107,9 @@ def get_key_metrics(stock_data: dict) -> dict:
     else:
         m["price_change"] = 0
         m["price_change_pct"] = 0
+    # Aliases used by mobile frontend
+    m["price_change_1d"]     = m["price_change"]
+    m["price_change_1d_pct"] = m["price_change_pct"]
 
     # Market
     m["market_cap"] = info.get("marketCap", 0) or 0
@@ -136,27 +147,36 @@ def get_key_metrics(stock_data: dict) -> dict:
 
     # 52-week
     m["week_52_high"] = info.get("fiftyTwoWeekHigh")
-    m["week_52_low"] = info.get("fiftyTwoWeekLow")
+    m["week_52_low"]  = info.get("fiftyTwoWeekLow")
+    m["week52_high"]  = m["week_52_high"]   # mobile alias
+    m["week52_low"]   = m["week_52_low"]    # mobile alias
 
     # Volume
     m["avg_volume"] = info.get("averageVolume", 0) or 0
     m["current_volume"] = info.get("volume") or info.get("regularMarketVolume", 0) or 0
 
     # Company info
-    m["name"] = info.get("longName") or info.get("shortName") or ticker
-    m["ticker"] = ticker
-    m["sector"] = info.get("sector", "N/A")
-    m["industry"] = info.get("industry", "N/A")
-    m["country"] = info.get("country", "N/A")
+    m["name"]        = info.get("longName") or info.get("shortName") or ticker
+    m["ticker"]      = ticker
+    m["sector"]      = info.get("sector", "N/A")
+    m["industry"]    = info.get("industry", "N/A")
+    m["country"]     = info.get("country", "N/A")
+    m["exchange"]    = info.get("fullExchangeName") or info.get("exchange", "")
+    m["currency"]    = info.get("currency", "USD")
     m["description"] = info.get("longBusinessSummary", "")
-    m["website"] = info.get("website", "")
+    m["website"]     = info.get("website", "")
+    m["pb_ratio"]    = info.get("priceToBook")  # alias
+    m["price_to_book"] = m["pb_ratio"]
+    m["current_ratio"] = info.get("currentRatio")
+    m["payout_ratio"]  = info.get("payoutRatio")
 
     # Analyst info
     m["recommendation"] = info.get("recommendationKey", "").replace("_", " ").title()
-    m["analyst_count"] = info.get("numberOfAnalystOpinions", 0)
-    m["target_price"] = info.get("targetMeanPrice")
-    m["target_high"] = info.get("targetHighPrice")
-    m["target_low"] = info.get("targetLowPrice")
+    m["analyst_count"]  = info.get("numberOfAnalystOpinions", 0)
+    m["target_price"]   = info.get("targetMeanPrice")
+    m["target_high"]    = info.get("targetHighPrice")
+    m["target_low"]     = info.get("targetLowPrice")
+    m["analyst_target_price"] = m["target_price"]  # mobile alias
 
     # Short interest
     m["short_ratio"] = info.get("shortRatio")
