@@ -338,6 +338,90 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
   font-size:1.75rem; font-weight:700; color:var(--ink); letter-spacing:-0.5px; }
 .co-tick { color:var(--accent); font-size:1rem; font-weight:600; margin-left:6px; }
 .co-meta { color:var(--muted); margin:2px 0 1rem; font-size:0.88rem; }
+
+/* ── Editorial price hero ── */
+.price-hero { padding:0.8rem 0 0.4rem; }
+.price-hero-eyebrow {
+  font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:1.6px;
+  color:var(--faint); margin-bottom:0.5rem; display:flex; align-items:center; gap:10px;
+}
+.price-hero-eyebrow .tick { color:var(--accent); }
+.price-hero-row { display:flex; align-items:baseline; gap:18px; flex-wrap:wrap; margin-bottom:4px; }
+.price-hero-num {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:4.2rem; font-weight:700; color:var(--ink);
+  letter-spacing:-2.5px; line-height:1; font-variant-numeric:tabular-nums;
+}
+.price-hero-chg {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.45rem; font-weight:600; letter-spacing:-0.4px;
+  align-self:flex-end; padding-bottom:5px;
+}
+.price-hero-sub {
+  font-size:0.8rem; color:var(--muted); font-weight:500;
+  display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;
+}
+
+/* ── Horizontal stat strip ── */
+.stat-strip {
+  display:flex; align-items:center; overflow-x:auto;
+  padding:1rem 0; margin:1.1rem 0 1.6rem;
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  scrollbar-width:none; -ms-overflow-style:none;
+}
+.stat-strip::-webkit-scrollbar { display:none; }
+.stat-item {
+  display:flex; flex-direction:column; padding:0 1.6rem 0 0;
+  min-width:max-content; gap:4px;
+}
+.stat-item:first-child { padding-left:0; }
+.stat-div { width:1px; height:30px; background:var(--line-2); flex-shrink:0; margin-right:1.6rem; }
+.stat-val {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.05rem; font-weight:600; color:var(--ink);
+  white-space:nowrap; font-variant-numeric:tabular-nums;
+}
+.stat-lbl {
+  font-size:0.59rem; font-weight:700; color:var(--faint);
+  text-transform:uppercase; letter-spacing:1.3px; white-space:nowrap;
+}
+
+/* ── Bento grid ── */
+.bento { display:grid; gap:0.9rem; margin-bottom:1.5rem; }
+.bento-4 { grid-template-columns:2.2fr 1fr 1fr 1fr; }
+.bento-3 { grid-template-columns:1.8fr 1fr 1fr; }
+.bento-cell {
+  background:linear-gradient(180deg, rgba(22,29,51,0.88), rgba(17,22,42,0.88));
+  border:1px solid var(--line); border-radius:18px;
+  padding:1.35rem 1.5rem; transition:border-color .18s, box-shadow .18s;
+}
+.bento-cell:hover { border-color:rgba(124,108,255,0.35);
+  box-shadow:0 8px 28px rgba(0,0,0,0.35); }
+.bento-hero {
+  background:linear-gradient(135deg, rgba(124,108,255,0.13), rgba(34,211,238,0.05));
+  border-color:rgba(124,108,255,0.28); border-radius:18px;
+}
+.bento-lbl { font-size:0.61rem; font-weight:700; color:var(--faint);
+  text-transform:uppercase; letter-spacing:1.3px; margin-bottom:8px; }
+.bento-val {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:2.4rem; font-weight:700; color:var(--ink);
+  letter-spacing:-0.8px; line-height:1.08; font-variant-numeric:tabular-nums;
+}
+.bento-val-sm {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.6rem; font-weight:700; color:var(--ink);
+  letter-spacing:-0.4px; line-height:1.08; font-variant-numeric:tabular-nums;
+}
+.bento-sub { font-size:0.74rem; color:var(--muted); margin-top:6px; }
+
+/* ── Inline runway / progress bar ── */
+.spark-bar {
+  height:4px; background:var(--line); border-radius:99px;
+  overflow:hidden; margin-top:10px;
+}
+.spark-fill { height:100%; border-radius:99px;
+  background:linear-gradient(90deg,#7c6cff,#22d3ee); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -353,6 +437,7 @@ _DEFAULTS = {
     "search_results": [], "last_query": "",
     "pending_query": None,
     "advanced_done": False,
+    "_rf": 4.5, "_mrp": 5.5, "_tg": 2.5, "_ga": 0.0,
 }
 for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
@@ -425,38 +510,40 @@ def render_sidebar() -> tuple[str | None, dict]:
         st.markdown("---")
 
         with st.expander("⚙️  DCF Assumptions", expanded=False):
-            # Preset buttons
             st.markdown(
-                '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;'
-                'letter-spacing:1.5px;color:#64748b;margin-bottom:8px;">Scenario Presets</div>',
+                '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
+                'letter-spacing:1.5px;color:#64748b;margin-bottom:10px;">Scenario Presets</div>',
                 unsafe_allow_html=True,
             )
             c1, c2, c3 = st.columns(3)
-            preset = None
             with c1:
-                if st.button("🐻 Bear", use_container_width=True):  preset = "bear"
+                if st.button("🐻 Bear", use_container_width=True):
+                    st.session_state["_rf"]  = 5.0
+                    st.session_state["_mrp"] = 6.5
+                    st.session_state["_tg"]  = 1.5
+                    st.session_state["_ga"]  = -5.0
             with c2:
-                if st.button("📊 Base", use_container_width=True):  preset = "base"
+                if st.button("📊 Base", use_container_width=True):
+                    st.session_state["_rf"]  = 4.5
+                    st.session_state["_mrp"] = 5.5
+                    st.session_state["_tg"]  = 2.5
+                    st.session_state["_ga"]  =  0.0
             with c3:
-                if st.button("🐂 Bull", use_container_width=True):  preset = "bull"
-
-            if preset == "bear":
-                st.session_state["_preset"] = {"rf": 5.0, "mrp": 6.5, "tg": 1.5, "ga": -5.0}
-            elif preset == "base":
-                st.session_state["_preset"] = {"rf": 4.5, "mrp": 5.5, "tg": 2.5, "ga":  0.0}
-            elif preset == "bull":
-                st.session_state["_preset"] = {"rf": 3.5, "mrp": 4.5, "tg": 3.5, "ga":  5.0}
-            p = st.session_state.get("_preset", {})
+                if st.button("🐂 Bull", use_container_width=True):
+                    st.session_state["_rf"]  = 3.5
+                    st.session_state["_mrp"] = 4.5
+                    st.session_state["_tg"]  = 3.5
+                    st.session_state["_ga"]  =  5.0
 
             st.markdown(
-                '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;'
-                'letter-spacing:1.5px;color:#64748b;margin:12px 0 6px;">Parameters</div>',
+                '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
+                'letter-spacing:1.5px;color:#64748b;margin:14px 0 6px;">Parameters</div>',
                 unsafe_allow_html=True,
             )
-            rf  = st.slider("Risk-Free Rate (%)",      1.0, 8.0, p.get("rf",  4.5), 0.1) / 100
-            mrp = st.slider("Market Risk Premium (%)",  3.0, 9.0, p.get("mrp", 5.5), 0.1) / 100
-            tg  = st.slider("Terminal Growth (%)",      0.5, 5.0, p.get("tg",  2.5), 0.1) / 100
-            ga  = st.slider("Growth Adjustment (%)", -15.0,15.0, p.get("ga",  0.0), 0.5) / 100
+            rf  = st.slider("Risk-Free Rate (%)",      1.0, 8.0,  step=0.1, key="_rf")  / 100
+            mrp = st.slider("Market Risk Premium (%)", 3.0, 9.0,  step=0.1, key="_mrp") / 100
+            tg  = st.slider("Terminal Growth (%)",     0.5, 5.0,  step=0.1, key="_tg")  / 100
+            ga  = st.slider("Growth Adjustment (%)", -15.0, 15.0, step=0.5, key="_ga")  / 100
 
         assumptions = {
             "risk_free_rate": rf, "market_risk_premium": mrp,
@@ -766,71 +853,140 @@ def ensure_data(ticker: str, assumptions: dict):
 
 
 # ─── Overview ─────────────────────────────────────────────────────────────────
+def _stat(lbl: str, val: str, color: str = "") -> str:
+    """Build a single stat-strip cell."""
+    style = f'style="color:{color};"' if color else ""
+    return (
+        f'<div class="stat-item">'
+        f'<div class="stat-val" {style}>{val}</div>'
+        f'<div class="stat-lbl">{lbl}</div>'
+        f'</div>'
+    )
+
+def _sdiv() -> str:
+    return '<div class="stat-div"></div>'
+
+
 def render_overview():
     m    = st.session_state.key_metrics
     sd   = st.session_state.stock_data
-    name = m.get("name",""); ticker = m.get("ticker","")
+    name = m.get("name", ""); ticker = m.get("ticker", "")
     cp   = m.get("current_price", 0); chg_pct = m.get("price_change_pct", 0)
-    arrow = "▲" if chg_pct >= 0 else "▼"; clr = "green" if chg_pct >= 0 else "red"
+    chg_arrow = "▲" if chg_pct >= 0 else "▼"
+    chg_clr   = "var(--pos)" if chg_pct >= 0 else "var(--neg)"
+
+    sector  = m.get("sector", ""); country = m.get("country", "")
+    cap_str = fmt(m.get("market_cap"), "$") if m.get("market_cap") else ""
+    rev_str = fmt(m.get("revenue"), "$") if m.get("revenue") else ""
+
+    # ── Editorial price hero ─────────────────────────────────────────────────
+    sub_parts = []
+    if cap_str: sub_parts.append(f"Market cap {cap_str}")
+    if rev_str:
+        rev_g = m.get("revenue_growth")
+        rev_tag = f" ({_pct(rev_g*100, sign=True)} YoY)" if rev_g else ""
+        sub_parts.append(f"Revenue {rev_str}{rev_tag}")
+    if m.get("exchange"): sub_parts.append(m["exchange"])
 
     st.markdown(
-        f'<div class="co-name">{name}<span class="co-tick">{ticker}</span></div>'
-        f'<div class="co-meta">'
-        f'{m.get("sector","N/A")} · {m.get("industry","N/A")} · {m.get("country","")}</div>',
+        f'<div class="price-hero">'
+        f'<div class="price-hero-eyebrow">'
+        f'<span class="tick">{ticker}</span>'
+        f'{" · " + name if name else ""}'
+        f'{" · " + sector if sector else ""}'
+        f'{" · " + country if country else ""}'
+        f'</div>'
+        f'<div class="price-hero-row">'
+        f'<div class="price-hero-num">${cp:,.2f}</div>'
+        f'<div class="price-hero-chg" style="color:{chg_clr};">'
+        f'{chg_arrow} {abs(chg_pct):.2f}%</div>'
+        f'</div>'
+        f'<div class="price-hero-sub">'
+        + "  ·  ".join(sub_parts) +
+        f'</div>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
-    # Row 1 — price & scale
-    c = st.columns(6)
-    with c[0]: _kpi("Current Price",   f"${cp:.2f}",
-                    f'{arrow} {abs(chg_pct):.2f}% today', clr)
-    with c[1]: _kpi("Market Cap",      fmt(m.get("market_cap"),"$"))
-    with c[2]: _kpi("Revenue (TTM)",   fmt(m.get("revenue"),"$"),
-                    _pct((m.get("revenue_growth") or 0)*100, sign=True)+" YoY"
-                    if m.get("revenue_growth") else None)
-    with c[3]: _kpi("P/E (trail/fwd)",
-                    f'{m["pe_ratio"]:.1f}x' if m.get("pe_ratio") else "N/A",
-                    f'Fwd {m["forward_pe"]:.1f}x' if m.get("forward_pe") else None)
-    with c[4]: _kpi("52-Wk Range",
-                    f'${m.get("week_52_low",0):.0f} – ${m.get("week_52_high",0):.0f}')
-    with c[5]: _kpi("Beta",            f'{m.get("beta",1):.2f}', "vs S&P 500")
+    # ── Horizontal stat strip ────────────────────────────────────────────────
+    def _sv(v, fmt_fn=None, fallback="—"):
+        if v is None: return fallback
+        return fmt_fn(v) if fmt_fn else v
 
-    # Row 2 — profitability & capital
-    c = st.columns(6)
-    with c[0]: _kpi("Op. Margin",      _pct((m.get("operating_margin") or 0)*100, sign=False))
-    with c[1]: _kpi("EV / EBITDA",     f'{m["ev_ebitda"]:.1f}x' if m.get("ev_ebitda") else "N/A")
-    with c[2]: _kpi("ROE",             _pct((m.get("roe") or 0)*100, sign=False))
-    with c[3]: _kpi("Net Cash / Debt",
-                    fmt((m.get("total_cash") or 0) - (m.get("total_debt") or 0),"$"))
-    with c[4]: _kpi("Dividend Yield",
-                    _pct((m.get("dividend_yield") or 0)*100, sign=False)
-                    if m.get("dividend_yield") else "—")
-    with c[5]: _kpi("1-Year Return",
-                    _pct(m.get("ytd_return"), sign=True) if m.get("ytd_return") is not None else "N/A",
-                    sub_cls=_cc(m.get("ytd_return")))
+    ytd = m.get("ytd_return")
+    ytd_clr = "var(--pos)" if (ytd or 0) > 0 else "var(--neg)"
+    net_cash = (m.get("total_cash") or 0) - (m.get("total_debt") or 0)
 
-    # Price chart
+    items = []
+    items.append(_stat("P/E Trailing",
+                       f'{m["pe_ratio"]:.1f}x' if m.get("pe_ratio") else "—"))
+    items.append(_sdiv())
+    items.append(_stat("P/E Forward",
+                       f'{m["forward_pe"]:.1f}x' if m.get("forward_pe") else "—"))
+    items.append(_sdiv())
+    items.append(_stat("EV / EBITDA",
+                       f'{m["ev_ebitda"]:.1f}x' if m.get("ev_ebitda") else "—"))
+    items.append(_sdiv())
+    items.append(_stat("Op. Margin",
+                       _pct((m.get("operating_margin") or 0)*100, sign=False)))
+    items.append(_sdiv())
+    items.append(_stat("ROE",
+                       _pct((m.get("roe") or 0)*100, sign=False)))
+    items.append(_sdiv())
+    items.append(_stat("Beta", f'{m.get("beta", 1):.2f}'))
+    items.append(_sdiv())
+    items.append(_stat("52-Wk Range",
+                       f'${m.get("week_52_low",0):.0f}–${m.get("week_52_high",0):.0f}'))
+    items.append(_sdiv())
+    items.append(_stat("Net Cash / Debt", fmt(net_cash, "$")))
+    items.append(_sdiv())
+    if m.get("dividend_yield"):
+        items.append(_stat("Dividend",
+                           _pct(m["dividend_yield"]*100, sign=False)))
+        items.append(_sdiv())
+    items.append(_stat("1-Yr Return",
+                       _pct(ytd, sign=True) if ytd is not None else "—",
+                       ytd_clr if ytd is not None else ""))
+    if m.get("recommendation"):
+        items.append(_sdiv())
+        items.append(_stat("Analyst Consensus",
+                           (m.get("recommendation") or "—").title()))
+
+    st.markdown(
+        f'<div class="stat-strip">{"".join(items)}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Price chart ──────────────────────────────────────────────────────────
     hist = sd.get("history_1y", pd.DataFrame())
     if not hist.empty:
         hist["MA50"]  = hist["Close"].rolling(50).mean()
         hist["MA200"] = hist["Close"].rolling(200).mean()
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=hist.index, y=hist["Close"], name="Price",
+        fig.add_trace(go.Scatter(
+            x=hist.index, y=hist["Close"], name="Price",
             line=dict(color="#7c6cff", width=2.5),
-            hovertemplate="<b>$%{y:.2f}</b><extra></extra>"))
-        fig.add_trace(go.Scatter(x=hist.index, y=hist["MA50"], name="50-day MA",
-            line=dict(color="#f59e0b", width=1.5, dash="dot")))
-        fig.add_trace(go.Scatter(x=hist.index, y=hist["MA200"], name="200-day MA",
-            line=dict(color="#fb7185", width=1.5, dash="dot")))
-        fig.add_trace(go.Bar(x=hist.index, y=hist["Volume"], name="Volume",
-            yaxis="y2", marker_color="rgba(99,102,241,0.12)"))
+            hovertemplate="<b>$%{y:.2f}</b><extra></extra>",
+        ))
+        fig.add_trace(go.Scatter(
+            x=hist.index, y=hist["MA50"], name="50-day MA",
+            line=dict(color="#f59e0b", width=1.5, dash="dot"),
+        ))
+        fig.add_trace(go.Scatter(
+            x=hist.index, y=hist["MA200"], name="200-day MA",
+            line=dict(color="#fb7185", width=1.5, dash="dot"),
+        ))
+        fig.add_trace(go.Bar(
+            x=hist.index, y=hist["Volume"], name="Volume",
+            yaxis="y2", marker_color="rgba(124,108,255,0.10)",
+        ))
         fig.update_layout(
             yaxis2=dict(overlaying="y", side="right", showgrid=False,
                         tickformat=".2s", title="Volume"),
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", y=1.08, x=0),
-            margin=dict(l=0, r=0, t=30, b=0), height=310,
+            margin=dict(l=0, r=0, t=30, b=0), height=300,
             hovermode="x unified",
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -851,14 +1007,52 @@ def render_dcf_tab(model: str | None):
     upside = dcf.get("upside_pct", 0)
     wacc   = dcf.get("wacc_data", {}).get("wacc", 0)
 
-    # ── Top KPIs ────────────────────────────────────────────────────────────
-    c = st.columns(5)
-    with c[0]: _kpi("DCF Intrinsic Value", _price(iv) if iv else "N/A")
-    with c[1]: _kpi("Upside / Downside",   _pct(upside, sign=True),
-                     sub_cls=_cc(upside))
-    with c[2]: _kpi("WACC",               _pct(wacc*100, sign=False))
-    with c[3]: _kpi("Enterprise Value",   fmt(dcf.get("enterprise_value"),"$"))
-    with c[4]: _kpi("Terminal Value %",   f'{dcf.get("pv_terminal_pct",0):.0f}% of EV')
+    # ── Bento top numbers ────────────────────────────────────────────────────
+    up_clr  = "#34d399" if upside > 0 else "#fb7185"
+    tv_pct  = dcf.get("pv_terminal_pct", 0)
+    ev_str  = fmt(dcf.get("enterprise_value"), "$") if dcf.get("enterprise_value") else "N/A"
+
+    # Upside runway bar (capped ±60%)
+    bar_pct = min(max((upside + 60) / 120 * 100, 0), 100)
+    bar_clr = "#34d399" if upside > 0 else "#fb7185"
+
+    st.markdown(
+        f'<div class="bento bento-4">'
+
+        # Hero cell — intrinsic value
+        f'<div class="bento-cell bento-hero">'
+        f'<div class="bento-lbl">DCF Intrinsic Value</div>'
+        f'<div class="bento-val">{_price(iv) if iv else "N/A"}</div>'
+        f'<div class="bento-sub">per share · discounted cash flow</div>'
+        f'<div class="spark-bar"><div class="spark-fill" style="width:100%"></div></div>'
+        f'</div>'
+
+        # Upside cell
+        f'<div class="bento-cell">'
+        f'<div class="bento-lbl">Upside / Downside</div>'
+        f'<div class="bento-val-sm" style="color:{up_clr};">{_pct(upside, sign=True)}</div>'
+        f'<div class="bento-sub">vs ${cp:.2f} market price</div>'
+        f'<div class="spark-bar"><div class="spark-fill" style="width:{bar_pct:.0f}%;'
+        f'background:{bar_clr};"></div></div>'
+        f'</div>'
+
+        # WACC cell
+        f'<div class="bento-cell">'
+        f'<div class="bento-lbl">WACC</div>'
+        f'<div class="bento-val-sm">{_pct(wacc*100, sign=False)}</div>'
+        f'<div class="bento-sub">discount rate applied</div>'
+        f'</div>'
+
+        # Terminal value cell
+        f'<div class="bento-cell">'
+        f'<div class="bento-lbl">Terminal Value</div>'
+        f'<div class="bento-val-sm">{tv_pct:.0f}% of EV</div>'
+        f'<div class="bento-sub">{ev_str} enterprise value</div>'
+        f'</div>'
+
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     for w in dcf.get("warnings", []):
         st.warning(f"⚠️  {w}")
@@ -960,23 +1154,43 @@ def render_dcf_tab(model: str | None):
             margin=dict(l=0, r=0, t=30, b=0), height=270,
         )
         st.plotly_chart(fig2, use_container_width=True)
-        mc_cols = st.columns(5)
-        for col, (lbl, val) in zip(mc_cols, [
-            ("P10 (Bear)", mc["p10"]),  ("P25", mc["p25"]),
-            ("P50 (Base)", mc["p50"]),  ("P75", mc["p75"]),
-            ("P90 (Bull)", mc["p90"]),
-        ]):
-            with col: _kpi(lbl, _price(val))
+        mc_pairs = [
+            ("P10 · Bear", mc["p10"], "var(--neg)"),
+            ("P25",        mc["p25"], ""),
+            ("P50 · Base", mc["p50"], "var(--accent)"),
+            ("P75",        mc["p75"], ""),
+            ("P90 · Bull", mc["p90"], "var(--pos)"),
+        ]
+        mc_cells = []
+        for i, (l, v, clr) in enumerate(mc_pairs):
+            if i: mc_cells.append(_sdiv())
+            mc_cells.append(_stat(l, _price(v), clr))
+        st.markdown(
+            '<div class="stat-strip" style="border-top:none;padding-top:0;margin-top:-0.2rem;">'
+            + "".join(mc_cells) + "</div>",
+            unsafe_allow_html=True,
+        )
 
     # ── WACC breakdown ───────────────────────────────────────────────────────
     wd = dcf.get("wacc_data", {})
     st.markdown('<div class="sec">WACC Breakdown</div>', unsafe_allow_html=True)
-    wc = st.columns(5)
-    with wc[0]: _kpi("Beta",                   f'{wd.get("beta",1):.2f}')
-    with wc[1]: _kpi("Cost of Equity",         _pct(wd.get("cost_of_equity",0)*100, sign=False))
-    with wc[2]: _kpi("Cost of Debt (post-tax)",_pct(wd.get("after_tax_cost_of_debt",0)*100, sign=False))
-    with wc[3]: _kpi("Effective Tax Rate",     _pct(wd.get("tax_rate",0.21)*100, sign=False))
-    with wc[4]: _kpi("Debt / Total Capital",   _pct(wd.get("debt_weight",0)*100, sign=False))
+
+    wacc_items = [
+        ("Beta",                    f'{wd.get("beta",1):.2f}'),
+        ("Cost of Equity",          _pct(wd.get("cost_of_equity",0)*100, sign=False)),
+        ("After-Tax Cost of Debt",  _pct(wd.get("after_tax_cost_of_debt",0)*100, sign=False)),
+        ("Effective Tax Rate",      _pct(wd.get("tax_rate",0.21)*100, sign=False)),
+        ("Debt / Total Capital",    _pct(wd.get("debt_weight",0)*100, sign=False)),
+    ]
+    wacc_cells = []
+    for i, (l, v) in enumerate(wacc_items):
+        if i: wacc_cells.append(_sdiv())
+        wacc_cells.append(_stat(l, v))
+    st.markdown(
+        f'<div class="stat-strip" style="border:none;padding:0.6rem 0;margin:0 0 1rem;">'
+        + "".join(wacc_cells) + "</div>",
+        unsafe_allow_html=True,
+    )
 
     # ── Sensitivity table ────────────────────────────────────────────────────
     st.markdown('<div class="sec">Sensitivity — Intrinsic Value per Share vs. WACC & Terminal Growth</div>',
@@ -1115,22 +1329,43 @@ def render_hype_tab():
 
     # Market data
     st.markdown('<div class="sec">Market Sentiment Data</div>', unsafe_allow_html=True)
-    sc = st.columns(4)
-    with sc[0]: _kpi("Avg Daily Volume", fmt(m.get("avg_volume")))
-    with sc[1]: _kpi("Short Ratio", f'{m["short_ratio"]:.1f} days' if m.get("short_ratio") else "N/A")
-    with sc[2]: _kpi("Short % Float", _pct(m["short_percent"]*100,sign=False) if m.get("short_percent") else "N/A")
-    with sc[3]: _kpi("Analyst Consensus", m.get("recommendation","N/A") or "N/A",
-                     f'{m.get("analyst_count",0)} analysts')
+    sent_cells = []
+    sent_cells.append(_stat("Avg Daily Volume",
+                            fmt(m.get("avg_volume")) if m.get("avg_volume") else "—"))
+    sent_cells.append(_sdiv())
+    sent_cells.append(_stat("Short Ratio",
+                            f'{m["short_ratio"]:.1f} days' if m.get("short_ratio") else "—"))
+    sent_cells.append(_sdiv())
+    sent_cells.append(_stat("Short % Float",
+                            _pct(m["short_percent"]*100, sign=False)
+                            if m.get("short_percent") else "—"))
+    sent_cells.append(_sdiv())
+    sent_cells.append(_stat("Analyst Consensus",
+                            (m.get("recommendation") or "—").title()))
+    sent_cells.append(_sdiv())
+    sent_cells.append(_stat("Analysts Covering",
+                            str(m.get("analyst_count", "—"))))
 
     tgt_price = m.get("target_price")
     hype_cp   = m.get("current_price")
     if tgt_price and hype_cp:
         tgt_u = (tgt_price - hype_cp) / hype_cp * 100
-        tc = st.columns(3)
-        with tc[0]: _kpi("Analyst Target (Mean)", _price(tgt_price),
-                         _pct(tgt_u, sign=True), _cc(tgt_u))
-        with tc[1]: _kpi("Analyst Target (High)", _price(m.get("target_high")))
-        with tc[2]: _kpi("Analyst Target (Low)",  _price(m.get("target_low")))
+        tgt_clr = "var(--pos)" if tgt_u > 0 else "var(--neg)"
+        sent_cells.append(_sdiv())
+        sent_cells.append(_stat("Analyst Target (Mean)",
+                                f'{_price(tgt_price)} ({_pct(tgt_u, sign=True)})',
+                                tgt_clr))
+        if m.get("target_high"):
+            sent_cells.append(_sdiv())
+            sent_cells.append(_stat("Target High", _price(m["target_high"])))
+        if m.get("target_low"):
+            sent_cells.append(_sdiv())
+            sent_cells.append(_stat("Target Low", _price(m["target_low"])))
+
+    st.markdown(
+        '<div class="stat-strip">' + "".join(sent_cells) + "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 # ─── Valuation tab ────────────────────────────────────────────────────────────
