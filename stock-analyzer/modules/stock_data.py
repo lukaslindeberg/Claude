@@ -75,6 +75,24 @@ def get_comprehensive_data(ticker: str) -> dict | None:
         except Exception:
             news = []
 
+        # Analyst recommendations (upgrade/downgrade history)
+        try:
+            recommendations = stock.recommendations
+        except Exception:
+            recommendations = None
+
+        # Institutional holders
+        try:
+            institutional_holders = stock.institutional_holders
+        except Exception:
+            institutional_holders = None
+
+        # Major holders (insider / institution %)
+        try:
+            major_holders = stock.major_holders
+        except Exception:
+            major_holders = None
+
         return {
             "ticker": ticker,
             "info": info,
@@ -85,6 +103,9 @@ def get_comprehensive_data(ticker: str) -> dict | None:
             "financials": financials,
             "balance_sheet": balance_sheet,
             "news": news,
+            "recommendations": recommendations,
+            "institutional_holders": institutional_holders,
+            "major_holders": major_holders,
         }
     except Exception:
         return None
@@ -187,5 +208,79 @@ def get_key_metrics(stock_data: dict) -> dict:
         m["ytd_return"] = ((hist["Close"].iloc[-1] - hist["Close"].iloc[0]) / hist["Close"].iloc[0]) * 100
     else:
         m["ytd_return"] = None
+
+    # ── New professional metrics ───────────────────────────────────────────────
+
+    # Ownership signals
+    m["insider_pct"]     = info.get("heldPercentInsiders")
+    m["institution_pct"] = info.get("heldPercentInstitutions")
+
+    # EBITDA / EBIT
+    m["ebitda"] = info.get("ebitda")
+
+    # Extract EBIT and interest expense from financials for interest coverage + ROIC
+    fin_df = stock_data.get("financials", pd.DataFrame())
+    _ebit = None
+    _int_exp = None
+    if fin_df is not None and not fin_df.empty:
+        for key in ("EBIT", "Operating Income", "OperatingIncome"):
+            if key in fin_df.index:
+                s = fin_df.loc[key].dropna()
+                if len(s):
+                    try:
+                        _ebit = float(s.iloc[0])
+                    except Exception:
+                        pass
+                    break
+        for key in ("Interest Expense", "Net Non Operating Interest Income Expense",
+                    "Interest Expense Non Operating", "Net Interest Income"):
+            if key in fin_df.index:
+                s = fin_df.loc[key].dropna()
+                if len(s):
+                    try:
+                        _int_exp = float(s.iloc[0])
+                    except Exception:
+                        pass
+                    break
+
+    m["ebit"] = _ebit
+    m["interest_expense"] = _int_exp
+
+    # Interest coverage = EBIT / |Interest Expense|
+    if _ebit is not None and _int_exp is not None and _int_exp != 0:
+        m["interest_coverage"] = _ebit / abs(_int_exp)
+    else:
+        m["interest_coverage"] = None
+
+    # Net Debt / EBITDA
+    _net_debt = (info.get("totalDebt", 0) or 0) - (info.get("totalCash", 0) or 0)
+    m["net_debt"] = _net_debt
+    _ebitda = info.get("ebitda")
+    if _ebitda and _ebitda != 0:
+        m["net_debt_ebitda"] = _net_debt / _ebitda
+    else:
+        m["net_debt_ebitda"] = None
+
+    # Total equity from balance sheet (for ROIC)
+    bs_df = stock_data.get("balance_sheet", pd.DataFrame())
+    _equity = None
+    if bs_df is not None and not bs_df.empty:
+        for key in ("Stockholders Equity", "Total Stockholders Equity",
+                    "Common Stock Equity", "Total Equity Gross Minority Interest"):
+            if key in bs_df.index:
+                s = bs_df.loc[key].dropna()
+                if len(s):
+                    try:
+                        _equity = float(s.iloc[0])
+                    except Exception:
+                        pass
+                    break
+    m["total_equity"] = _equity
+
+    # Book value per share
+    if _equity and m["shares_outstanding"]:
+        m["book_value_per_share"] = _equity / m["shares_outstanding"]
+    else:
+        m["book_value_per_share"] = None
 
     return m

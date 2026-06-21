@@ -20,6 +20,7 @@ from modules.ai_analysis import (
 from modules.scores import (
     piotroski_f_score, altman_z_score,
     calculate_pentagon, historical_financials, stock_rank,
+    financial_health_score,
 )
 
 # ─── Page config ──────────────────────────────────────────────────────────────
@@ -422,6 +423,66 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
 }
 .spark-fill { height:100%; border-radius:99px;
   background:linear-gradient(90deg,#7c6cff,#22d3ee); }
+
+/* ── Risk / health badges ── */
+.badge-row { display:flex; gap:0.65rem; flex-wrap:wrap; margin-bottom:0.9rem; align-items:center; }
+.risk-badge {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:5px 13px; border-radius:99px;
+  font-size:0.72rem; font-weight:700; letter-spacing:0.5px;
+}
+.health-badge {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:5px 13px; border-radius:99px;
+  font-size:0.72rem; font-weight:700; letter-spacing:0.5px;
+  background:rgba(17,22,42,0.7); border:1px solid var(--line-2);
+  color:var(--muted);
+}
+
+/* ── Financial Health tab ── */
+.health-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.9rem; margin-bottom:1.5rem; }
+.health-cell {
+  background:linear-gradient(180deg, rgba(22,29,51,0.88), rgba(17,22,42,0.88));
+  border:1px solid var(--line); border-radius:16px;
+  padding:1.2rem 1.3rem;
+}
+.health-lbl { font-size:0.6rem; font-weight:700; color:var(--faint);
+  text-transform:uppercase; letter-spacing:1.3px; margin-bottom:7px; }
+.health-val { font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.55rem; font-weight:700; line-height:1.1; font-variant-numeric:tabular-nums; }
+.health-sub { font-size:0.73rem; color:var(--muted); margin-top:5px; }
+
+/* ── Check list ── */
+.check-item {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:9px 0; border-bottom:1px solid rgba(148,163,184,0.09);
+  font-size:0.83rem;
+}
+.check-item:last-child { border-bottom:none; }
+.check-icon { flex-shrink:0; margin-top:1px; font-size:0.88rem; }
+.check-lbl { font-weight:600; color:var(--ink); }
+.check-detail { color:var(--muted); margin-top:2px; font-size:0.76rem; line-height:1.5; }
+
+/* ── Analyst table ── */
+.analyst-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:8px 0; border-bottom:1px solid rgba(148,163,184,0.08);
+  font-size:0.82rem;
+}
+.analyst-row:last-child { border-bottom:none; }
+.grade-pill {
+  padding:2px 10px; border-radius:99px;
+  font-size:0.68rem; font-weight:700; letter-spacing:0.5px;
+}
+
+/* ── Tooltip ── */
+.tip {
+  display:inline-block; width:15px; height:15px; border-radius:99px;
+  background:rgba(124,108,255,0.18); color:var(--accent);
+  font-size:0.65rem; font-weight:700; text-align:center; line-height:15px;
+  cursor:help; border:1px solid rgba(124,108,255,0.30);
+  vertical-align:middle; margin-left:4px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -844,9 +905,11 @@ def ensure_data(ticker: str, assumptions: dict):
     pent   = calculate_pentagon(sd, dcf, st.session_state.key_metrics)
     hist_f = historical_financials(sd)
     rank   = stock_rank(pent)
+    health = financial_health_score(sd, dcf, st.session_state.key_metrics)
     st.session_state.scores = {
         "piotroski": piot, "altman": altman,
-        "pentagon": pent, "history": hist_f, "rank": rank,
+        "pentagon": pent,  "history": hist_f,
+        "rank": rank,      "health": health,
     }
     st.session_state.advanced_done = True
     return True
@@ -867,6 +930,37 @@ def _sdiv() -> str:
     return '<div class="stat-div"></div>'
 
 
+def _risk_badge_html() -> str:
+    """Return inline HTML for risk level + health grade badges."""
+    sc = st.session_state.scores or {}
+    h  = sc.get("health", {})
+    if not h:
+        return ""
+
+    rl   = h.get("risk_level", "")
+    rc   = h.get("risk_color", "#94a3b8")
+    grade = h.get("grade", "—")
+    gc   = h.get("color", "#94a3b8")
+    hs   = h.get("score", 0)
+
+    # Risk badge background
+    rgb = {"Low Risk": "52,211,153", "Medium Risk": "251,191,36",
+           "High Risk": "251,113,133"}.get(rl, "148,163,184")
+
+    return (
+        f'<div class="badge-row">'
+        f'<div class="risk-badge" style="background:rgba({rgb},0.12);'
+        f'border:1px solid rgba({rgb},0.40);color:{rc};">'
+        f'<span>●</span><span>{rl}</span>'
+        f'</div>'
+        f'<div class="health-badge" style="color:{gc};">'
+        f'Health Grade <strong style="color:{gc};">{grade}</strong>'
+        f' · {hs}/10'
+        f'</div>'
+        f'</div>'
+    )
+
+
 def render_overview():
     m    = st.session_state.key_metrics
     sd   = st.session_state.stock_data
@@ -878,6 +972,9 @@ def render_overview():
     sector  = m.get("sector", ""); country = m.get("country", "")
     cap_str = fmt(m.get("market_cap"), "$") if m.get("market_cap") else ""
     rev_str = fmt(m.get("revenue"), "$") if m.get("revenue") else ""
+
+    # ── Risk / health badges ─────────────────────────────────────────────────
+    st.markdown(_risk_badge_html(), unsafe_allow_html=True)
 
     # ── Editorial price hero ─────────────────────────────────────────────────
     sub_parts = []
@@ -1466,6 +1563,40 @@ def render_valuation_tab(model: str | None):
                 st.markdown(f'<div class="factor">{icons.get(kind,"•")} {text}</div>',
                             unsafe_allow_html=True)
 
+    # ── Book value + ROIC cross-check ───────────────────────────────────────
+    sc  = st.session_state.scores or {}
+    hlth = sc.get("health", {})
+    roic = hlth.get("roic"); fy = hlth.get("fcf_yield")
+    bvps = m.get("book_value_per_share"); pb = m.get("pb_ratio")
+
+    if roic is not None or fy is not None or bvps is not None:
+        st.markdown('<div class="sec">Capital Efficiency Signals</div>',
+                    unsafe_allow_html=True)
+        eff_cells = []
+        if roic is not None:
+            wacc_val = dcf.get("wacc_data", {}).get("wacc", 0)
+            spread   = (roic - wacc_val) * 100
+            eff_cells.append(_stat("ROIC", f"{roic*100:.1f}%",
+                                   "#34d399" if roic > 0.08 else "#fb7185"))
+            eff_cells.append(_sdiv())
+            eff_cells.append(_stat("ROIC–WACC Spread",
+                                   f"{spread:+.1f}pts",
+                                   "#34d399" if spread > 0 else "#fb7185"))
+            eff_cells.append(_sdiv())
+        if fy is not None:
+            eff_cells.append(_stat("FCF Yield", f"{fy*100:.1f}%",
+                                   "#34d399" if fy > 0.04 else "#fbbf24" if fy > 0 else "#fb7185"))
+            eff_cells.append(_sdiv())
+        if bvps is not None:
+            eff_cells.append(_stat("Book Value / Share", _price(bvps)))
+            if pb:
+                eff_cells.append(_sdiv())
+                eff_cells.append(_stat("Price / Book", f"{pb:.2f}×"))
+        st.markdown(
+            '<div class="stat-strip">' + "".join(eff_cells) + '</div>',
+            unsafe_allow_html=True,
+        )
+
     # AI gap analysis
     st.markdown('<div class="sec">AI: Why Does the Valuation Gap Exist?</div>',
                 unsafe_allow_html=True)
@@ -1667,6 +1798,281 @@ def render_scorecard_tab():
                 )
 
 
+# ─── Financial Health tab ────────────────────────────────────────────────────
+def render_health_tab():
+    sc = st.session_state.scores or {}
+    h  = sc.get("health", {})
+    m  = st.session_state.key_metrics or {}
+    dcf = st.session_state.dcf_results or {}
+    sd  = st.session_state.stock_data or {}
+
+    if not h:
+        st.info("Run analysis first to see financial health data.")
+        return
+
+    # ── Header grade card ────────────────────────────────────────────────────
+    grade = h.get("grade", "—"); gc = h.get("color", "#94a3b8")
+    hs    = h.get("score", 0)
+    rl    = h.get("risk_level", ""); rc = h.get("risk_color", "#94a3b8")
+    roic  = h.get("roic"); fy = h.get("fcf_yield")
+    ic    = h.get("interest_coverage"); nde = h.get("net_debt_ebitda")
+    cr    = h.get("current_ratio"); qr = h.get("quick_ratio")
+
+    st.markdown(
+        f'<div style="background:linear-gradient(135deg,rgba(22,29,51,0.9),'
+        f'rgba(17,22,42,0.9));border:1px solid var(--line);border-radius:20px;'
+        f'padding:1.6rem 2rem;margin-bottom:1.5rem;display:flex;'
+        f'align-items:center;gap:2rem;flex-wrap:wrap;">'
+
+        # Grade circle
+        f'<div style="text-align:center;min-width:100px;">'
+        f'<div style="font-size:4rem;font-weight:800;color:{gc};'
+        f'font-family:Space Grotesk,sans-serif;line-height:1;">{grade}</div>'
+        f'<div style="font-size:0.62rem;font-weight:700;color:var(--faint);'
+        f'text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;">Health Grade</div>'
+        f'<div style="font-size:0.8rem;color:{gc};font-weight:600;margin-top:2px;">'
+        f'{hs}/10</div>'
+        f'</div>'
+
+        # Risk level
+        f'<div style="flex:1;min-width:220px;">'
+        f'<div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:1.5px;color:var(--faint);margin-bottom:8px;">Risk Profile</div>'
+        f'<div style="font-size:1.6rem;font-weight:700;color:{rc};'
+        f'font-family:Space Grotesk,sans-serif;">{rl}</div>'
+        f'<div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">'
+        f'Based on beta, leverage, interest coverage & Altman Z-Score</div>'
+        f'</div>'
+
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Key metrics grid ─────────────────────────────────────────────────────
+    st.markdown('<div class="sec">Key Health Metrics</div>', unsafe_allow_html=True)
+
+    def _hcell(lbl: str, val: str, sub: str, color: str = "var(--ink)",
+               tip: str = "") -> str:
+        tip_html = f'<span class="tip" title="{tip}">?</span>' if tip else ""
+        return (
+            f'<div class="health-cell">'
+            f'<div class="health-lbl">{lbl}{tip_html}</div>'
+            f'<div class="health-val" style="color:{color};">{val}</div>'
+            f'<div class="health-sub">{sub}</div>'
+            f'</div>'
+        )
+
+    def _fmt_x(v, suffix="×"):
+        if v is None: return "—"
+        return f"{v:.2f}{suffix}"
+
+    roic_color = "#34d399" if roic and roic > 0.08 else "#fbbf24" if roic and roic > 0 else "#fb7185"
+    fy_color   = "#34d399" if fy   and fy   > 0.04 else "#fbbf24" if fy   and fy  > 0 else "#fb7185"
+    ic_color   = "#34d399" if ic   and ic   > 5    else "#fbbf24" if ic   and ic  > 2 else "#fb7185"
+    nde_color  = "#34d399" if nde  is not None and nde  < 2    else "#fbbf24" if nde  is not None and nde < 4 else "#fb7185"
+
+    wacc_val = dcf.get("wacc_data", {}).get("wacc", 0)
+
+    st.markdown(
+        f'<div class="health-grid">'
+        + _hcell("ROIC",
+                 f"{roic*100:.1f}%" if roic is not None else "—",
+                 f"WACC {wacc_val*100:.1f}% · spread {(roic-wacc_val)*100:.1f}pts"
+                 if (roic and wacc_val) else "Return on Invested Capital",
+                 roic_color,
+                 "Return on Invested Capital: NOPAT / (Equity + Debt – Cash). Exceeding WACC means economic value creation.")
+        + _hcell("FCF Yield",
+                 f"{fy*100:.1f}%" if fy is not None else "—",
+                 "Free cash flow / market cap",
+                 fy_color,
+                 "How much free cash flow the business generates per dollar of market cap. >4% is attractive for value investors.")
+        + _hcell("Interest Coverage",
+                 _fmt_x(ic),
+                 "EBIT / interest expense",
+                 ic_color,
+                 "How many times EBIT can cover interest payments. >5× is healthy; <2× is risky.")
+        + _hcell("Net Debt / EBITDA",
+                 _fmt_x(nde),
+                 "Negative = net cash position",
+                 nde_color,
+                 "Years of earnings needed to repay net debt. <2× is low leverage; >4× is high leverage.")
+        + _hcell("Current Ratio",
+                 _fmt_x(cr),
+                 "Current assets / current liabilities",
+                 "#34d399" if cr and cr > 1.5 else "#fbbf24" if cr and cr > 1 else "#fb7185",
+                 "Short-term liquidity: >1.5× is healthy, <1× may signal cash flow pressure.")
+        + _hcell("Quick Ratio",
+                 _fmt_x(qr),
+                 "Liquid assets / current liabilities",
+                 "#34d399" if qr and qr > 1 else "#fbbf24" if qr and qr > 0.8 else "#fb7185",
+                 "Like current ratio but excludes inventory. Shows ability to meet obligations without selling stock.")
+        + f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Detailed checks ──────────────────────────────────────────────────────
+    checks = h.get("checks", [])
+    if checks:
+        st.markdown('<div class="sec">Detailed Assessment</div>', unsafe_allow_html=True)
+        icons = {"positive": "✅", "neutral": "⚪", "negative": "❌"}
+        items_html = ""
+        for (kind, lbl, detail) in checks:
+            items_html += (
+                f'<div class="check-item">'
+                f'<div class="check-icon">{icons.get(kind,"•")}</div>'
+                f'<div><div class="check-lbl">{lbl}</div>'
+                f'<div class="check-detail">{detail}</div></div>'
+                f'</div>'
+            )
+        st.markdown(
+            f'<div style="background:linear-gradient(180deg,rgba(22,29,51,0.7),'
+            f'rgba(17,22,42,0.7));border:1px solid var(--line);border-radius:16px;'
+            f'padding:1.1rem 1.4rem;">{items_html}</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Ownership structure ──────────────────────────────────────────────────
+    insider_pct  = m.get("insider_pct")
+    inst_pct     = m.get("institution_pct")
+
+    if insider_pct is not None or inst_pct is not None:
+        st.markdown('<div class="sec">Ownership Structure</div>', unsafe_allow_html=True)
+        own_cells = []
+        if inst_pct is not None:
+            own_cells.append(_stat("Institutional Ownership",
+                                   f"{inst_pct*100:.1f}%",
+                                   "#22d3ee"))
+            own_cells.append(_sdiv())
+        if insider_pct is not None:
+            own_cells.append(_stat("Insider Ownership",
+                                   f"{insider_pct*100:.1f}%",
+                                   "#a855f7"))
+            own_cells.append(_sdiv())
+        if inst_pct and insider_pct:
+            float_est = max(0, 1 - insider_pct - inst_pct)
+            own_cells.append(_stat("Public Float (est.)", f"{float_est*100:.1f}%"))
+
+        st.markdown(
+            '<div class="stat-strip">' + "".join(own_cells) + '</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Ownership bar visualisation
+        if insider_pct is not None and inst_pct is not None:
+            float_pct = max(0, 1 - insider_pct - inst_pct)
+            st.markdown(
+                f'<div style="height:12px;border-radius:99px;overflow:hidden;'
+                f'display:flex;margin-bottom:0.5rem;">'
+                f'<div style="width:{inst_pct*100:.1f}%;background:#22d3ee;opacity:0.8;"'
+                f' title="Institutional"></div>'
+                f'<div style="width:{insider_pct*100:.1f}%;background:#a855f7;opacity:0.8;"'
+                f' title="Insider"></div>'
+                f'<div style="flex:1;background:rgba(148,163,184,0.18);"'
+                f' title="Public Float"></div>'
+                f'</div>'
+                f'<div style="display:flex;gap:1.2rem;font-size:0.7rem;color:var(--faint);">'
+                f'<span><span style="color:#22d3ee;">■</span> Institutional</span>'
+                f'<span><span style="color:#a855f7;">■</span> Insider</span>'
+                f'<span><span style="color:rgba(148,163,184,0.5);">■</span> Public Float</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        if insider_pct and insider_pct > 0.10:
+            st.caption(f"ℹ️  {insider_pct*100:.0f}% insider ownership — management has strong skin in the game.")
+        elif insider_pct and insider_pct < 0.01:
+            st.caption("⚠️  Very low insider ownership — management incentives may not align with shareholders.")
+
+    # ── Top institutional holders ────────────────────────────────────────────
+    inst_df = sd.get("institutional_holders")
+    if inst_df is not None and not inst_df.empty:
+        st.markdown('<div class="sec">Top Institutional Holders</div>', unsafe_allow_html=True)
+        try:
+            cols_wanted = ["Holder", "Shares", "% Out", "Value"]
+            available   = [c for c in cols_wanted if c in inst_df.columns]
+            if available:
+                show_df = inst_df[available].head(8).copy()
+                if "% Out" in show_df.columns:
+                    show_df["% Out"] = show_df["% Out"].apply(
+                        lambda x: f"{float(x)*100:.2f}%" if x else "—"
+                    )
+                if "Value" in show_df.columns:
+                    show_df["Value"] = show_df["Value"].apply(
+                        lambda x: fmt(float(x), "$") if x else "—"
+                    )
+                st.dataframe(show_df, use_container_width=True, hide_index=True)
+        except Exception:
+            pass
+
+    # ── Analyst recommendation history ───────────────────────────────────────
+    rec_df = sd.get("recommendations")
+    if rec_df is not None and not rec_df.empty:
+        st.markdown('<div class="sec">Recent Analyst Activity</div>', unsafe_allow_html=True)
+        try:
+            # Newer yfinance returns columns: Firm, To Grade, From Grade, Action
+            # Older: period-index with buy/hold/sell counts
+            if "Firm" in rec_df.columns or "firm" in rec_df.columns:
+                r = rec_df.copy()
+                r.columns = [c.lower().replace(" ", "_") for c in r.columns]
+                # Sort by date descending if index is DatetimeIndex
+                if hasattr(r.index, "year"):
+                    r = r.sort_index(ascending=False)
+                r = r.head(12)
+                items_html = ""
+                for idx, row in r.iterrows():
+                    firm  = row.get("firm", "—")
+                    to_g  = row.get("to_grade", row.get("tograde", "—")) or "—"
+                    frm_g = row.get("from_grade", row.get("fromgrade", "")) or ""
+                    action = row.get("action", "") or ""
+                    date_str = idx.strftime("%b %d, %Y") if hasattr(idx, "strftime") else str(idx)[:10]
+                    grade_color = (
+                        "#34d399" if any(w in to_g.lower() for w in ("buy","outperform","overweight","positive"))
+                        else "#fb7185" if any(w in to_g.lower() for w in ("sell","underperform","underweight","negative"))
+                        else "#fbbf24"
+                    )
+                    from_html = (
+                        f'<span style="color:var(--faint);font-size:0.73rem;">'
+                        f'from {frm_g}</span> ' if frm_g else ""
+                    )
+                    items_html += (
+                        f'<div class="analyst-row">'
+                        f'<div>'
+                        f'<div style="font-weight:600;color:var(--ink);">{firm}</div>'
+                        f'<div style="font-size:0.73rem;color:var(--faint);">{date_str}</div>'
+                        f'</div>'
+                        f'<div style="text-align:right;">'
+                        f'{from_html}'
+                        f'<span class="grade-pill" style="background:rgba(255,255,255,0.06);'
+                        f'border:1px solid rgba(255,255,255,0.12);color:{grade_color};">'
+                        f'{to_g}</span>'
+                        f'</div>'
+                        f'</div>'
+                    )
+                st.markdown(
+                    f'<div style="background:linear-gradient(180deg,rgba(22,29,51,0.7),'
+                    f'rgba(17,22,42,0.7));border:1px solid var(--line);border-radius:16px;'
+                    f'padding:0.4rem 1.2rem;">{items_html}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                # Period-count format — show as summary
+                recent = rec_df.tail(4)
+                st.dataframe(recent, use_container_width=True)
+        except Exception:
+            st.caption("Analyst recommendation data not available in standard format for this ticker.")
+
+    st.markdown(
+        '<div style="margin-top:2rem;padding:1rem 1.2rem;border-radius:12px;'
+        'background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.22);'
+        'font-size:0.77rem;color:#c4ac5a;">'
+        '⚠️ Financial health metrics are computed from Yahoo Finance data and may differ from '
+        'official filings. ROIC uses a simplified invested-capital definition. '
+        'Non-US companies may have incomplete data for some metrics.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
 # ─── Full analysis view ───────────────────────────────────────────────────────
 def render_analysis(model: str | None, assumptions: dict):
     ticker = st.session_state.selected_ticker
@@ -1677,18 +2083,20 @@ def render_analysis(model: str | None, assumptions: dict):
     render_verdict_banner()
     render_overview()
 
-    t1, t2, t3, t4, t5 = st.tabs([
+    t1, t2, t3, t4, t5, t6 = st.tabs([
         "📐  DCF Analysis",
         "📰  News & Sentiment",
         "🌡️  Hype Meter",
         "⚖️  Valuation vs. Market",
         "🏆  Scorecard",
+        "🩺  Financial Health",
     ])
     with t1: render_dcf_tab(model)
     with t2: render_news_tab(model)
     with t3: render_hype_tab()
     with t4: render_valuation_tab(model)
     with t5: render_scorecard_tab()
+    with t6: render_health_tab()
 
     st.markdown(
         '<hr style="border:none;border-top:1px solid rgba(148,163,184,0.12);margin-top:2.5rem;">'

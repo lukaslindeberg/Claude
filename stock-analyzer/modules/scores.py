@@ -395,6 +395,229 @@ def historical_financials(stock_data: dict) -> dict:
     return out
 
 
+# ─── Financial Health Score ───────────────────────────────────────────────────
+
+def financial_health_score(stock_data: dict, dcf: dict, key_metrics: dict) -> dict:
+    """
+    Comprehensive financial health for both new and professional investors.
+    Covers: Solvency, Liquidity, Capital Efficiency, Risk Profile.
+    Returns grade (A–D), risk level (Low/Medium/High), and detailed checks.
+    """
+    info  = stock_data.get("info", {})
+    bs    = stock_data.get("balance_sheet", pd.DataFrame())
+
+    checks: list[tuple[str, str, str]] = []  # (icon, label, detail)
+    raw_score = 0.0
+
+    # ── Solvency: Interest Coverage ───────────────────────────────────────────
+    ic = key_metrics.get("interest_coverage")
+    if ic is not None:
+        if ic > 10:
+            raw_score += 2.0
+            checks.append(("positive", "Strong interest coverage",
+                            f"{ic:.1f}x — earnings comfortably cover interest payments"))
+        elif ic > 5:
+            raw_score += 1.5
+            checks.append(("positive", "Healthy interest coverage",
+                            f"{ic:.1f}x — debt servicing is manageable"))
+        elif ic > 2:
+            raw_score += 0.5
+            checks.append(("neutral", "Adequate interest coverage",
+                            f"{ic:.1f}x — watch if earnings decline"))
+        else:
+            checks.append(("negative", "Low interest coverage",
+                            f"{ic:.1f}x — high debt-servicing risk"))
+    else:
+        total_debt = key_metrics.get("total_debt", 0) or 0
+        if total_debt < 1e8:
+            raw_score += 1.0
+            checks.append(("positive", "Minimal long-term debt",
+                            "Interest coverage not calculable but debt level is low"))
+        else:
+            checks.append(("neutral", "Interest coverage unavailable",
+                            "Insufficient interest-expense data; assess debt manually"))
+
+    # ── Solvency: Net Debt / EBITDA ──────────────────────────────────────────
+    nd_ebitda = key_metrics.get("net_debt_ebitda")
+    if nd_ebitda is not None:
+        if nd_ebitda < 0:
+            raw_score += 2.0
+            checks.append(("positive", "Net cash position",
+                            f"Cash exceeds total debt — fortress balance sheet"))
+        elif nd_ebitda < 1.5:
+            raw_score += 2.0
+            checks.append(("positive", "Low financial leverage",
+                            f"{nd_ebitda:.1f}× Net Debt/EBITDA — debt paid off in under 1.5 years of earnings"))
+        elif nd_ebitda < 3.0:
+            raw_score += 1.0
+            checks.append(("neutral", "Moderate leverage",
+                            f"{nd_ebitda:.1f}× Net Debt/EBITDA — acceptable for stable earnings"))
+        else:
+            checks.append(("negative", "High leverage",
+                            f"{nd_ebitda:.1f}× Net Debt/EBITDA — refinancing risk if earnings fall"))
+    else:
+        total_cash = key_metrics.get("total_cash", 0) or 0
+        total_debt = key_metrics.get("total_debt", 0) or 0
+        if total_cash > total_debt:
+            raw_score += 1.5
+            checks.append(("positive", "Net cash position",
+                            f"Cash ${total_cash/1e9:.1f}B > Debt ${total_debt/1e9:.1f}B"))
+
+    # ── Liquidity: Current Ratio ──────────────────────────────────────────────
+    cr = key_metrics.get("current_ratio")
+    if cr is not None:
+        if cr > 2:
+            raw_score += 1.5
+            checks.append(("positive", "Strong liquidity",
+                            f"Current ratio {cr:.2f}× — ample short-term assets to cover liabilities"))
+        elif cr > 1.5:
+            raw_score += 1.0
+            checks.append(("positive", "Healthy liquidity",
+                            f"Current ratio {cr:.2f}×"))
+        elif cr > 1:
+            raw_score += 0.5
+            checks.append(("neutral", "Adequate liquidity",
+                            f"Current ratio {cr:.2f}× — acceptable but monitor working capital"))
+        else:
+            checks.append(("negative", "Tight liquidity",
+                            f"Current ratio {cr:.2f}× — current liabilities exceed current assets"))
+
+    # ── Liquidity: Quick Ratio (computed from balance sheet) ─────────────────
+    ca_s  = _row(bs, ["Current Assets",      "TotalCurrentAssets"])
+    cl_s  = _row(bs, ["Current Liabilities", "TotalCurrentLiabilities"])
+    inv_s = _row(bs, ["Inventory", "Inventories"])
+    ca_v  = _v(ca_s, 0);  cl_v = _v(cl_s, 0);  inv_v = _v(inv_s, 0) or 0.0
+    quick_ratio = None
+    if ca_v and cl_v and cl_v > 0:
+        quick_ratio = (ca_v - inv_v) / cl_v
+        if quick_ratio > 1:
+            raw_score += 1.0
+            checks.append(("positive", "Good quick ratio",
+                            f"{quick_ratio:.2f}× — liquid assets cover short-term obligations without inventory"))
+        elif quick_ratio > 0.8:
+            checks.append(("neutral", "Borderline quick ratio",
+                            f"{quick_ratio:.2f}× — okay for inventory-light businesses"))
+        else:
+            checks.append(("negative", "Weak quick ratio",
+                            f"{quick_ratio:.2f}× — may struggle to meet immediate obligations"))
+
+    # ── Capital Efficiency: ROIC ──────────────────────────────────────────────
+    ebit        = key_metrics.get("ebit")
+    total_debt  = key_metrics.get("total_debt", 0) or 0
+    total_cash  = key_metrics.get("total_cash", 0) or 0
+    total_equity = key_metrics.get("total_equity")
+    roic = None
+
+    if ebit and total_equity:
+        # Use a sensible effective tax rate: try from income statement, fallback 21%
+        ni_s  = _row(stock_data.get("financials", pd.DataFrame()),
+                     ["Net Income", "NetIncome", "Net Income Common Stockholders"])
+        tax_s = _row(stock_data.get("financials", pd.DataFrame()),
+                     ["Income Tax Expense", "Tax Provision"])
+        ni_v  = _v(ni_s, 0)
+        tax_v = _v(tax_s, 0)
+        pre_s = _row(stock_data.get("financials", pd.DataFrame()),
+                     ["Pretax Income", "Income Before Tax"])
+        pre_v = _v(pre_s, 0)
+        if pre_v and pre_v != 0 and tax_v:
+            eff_tax = max(0.0, min(0.40, tax_v / abs(pre_v)))
+        else:
+            eff_tax = 0.21
+
+        nopat = ebit * (1.0 - eff_tax)
+        invested_capital = (total_equity or 0) + total_debt - total_cash
+        if invested_capital > 1e6:
+            roic = nopat / invested_capital
+            wacc = dcf.get("wacc_data", {}).get("wacc", 0.08) or 0.08
+            spread = roic - wacc
+            if spread > 0.08:
+                raw_score += 2.0
+                checks.append(("positive", "Exceptional ROIC vs WACC",
+                                f"ROIC {roic*100:.1f}% vs WACC {wacc*100:.1f}% — high economic value creation"))
+            elif spread > 0.03:
+                raw_score += 1.5
+                checks.append(("positive", "ROIC exceeds WACC",
+                                f"ROIC {roic*100:.1f}% vs WACC {wacc*100:.1f}% — creating shareholder value"))
+            elif spread > 0:
+                raw_score += 0.5
+                checks.append(("neutral", "ROIC slightly above WACC",
+                                f"ROIC {roic*100:.1f}% vs WACC {wacc*100:.1f}% — marginal value creation"))
+            else:
+                checks.append(("negative", "ROIC below WACC",
+                                f"ROIC {roic*100:.1f}% vs WACC {wacc*100:.1f}% — destroying economic value"))
+
+    # ── Capital Efficiency: FCF Yield ─────────────────────────────────────────
+    fcf = dcf.get("current_fcf", 0) or 0
+    mc  = info.get("marketCap", 0) or 0
+    fcf_yield = (fcf / mc) if (mc > 0) else None
+
+    if fcf_yield is not None:
+        if fcf_yield > 0.07:
+            raw_score += 1.5
+            checks.append(("positive", "High FCF yield",
+                            f"{fcf_yield*100:.1f}% — excellent cash generation relative to price"))
+        elif fcf_yield > 0.04:
+            raw_score += 1.0
+            checks.append(("positive", "Solid FCF yield",
+                            f"{fcf_yield*100:.1f}%"))
+        elif fcf_yield > 0.01:
+            raw_score += 0.5
+            checks.append(("neutral", "Modest FCF yield",
+                            f"{fcf_yield*100:.1f}%"))
+        elif fcf_yield <= 0:
+            checks.append(("negative", "Negative FCF yield",
+                            f"Company is burning cash — model reliability limited for DCF"))
+
+    # ── Risk Badge (Low / Medium / High) ──────────────────────────────────────
+    risk_pts = 0
+    beta = key_metrics.get("beta", 1.0) or 1.0
+    if beta > 2.0:    risk_pts += 3
+    elif beta > 1.5:  risk_pts += 2
+    elif beta > 1.2:  risk_pts += 1
+
+    if nd_ebitda is not None:
+        if nd_ebitda > 4:   risk_pts += 3
+        elif nd_ebitda > 2: risk_pts += 1
+
+    if ic is not None:
+        if ic < 2:  risk_pts += 3
+        elif ic < 5: risk_pts += 1
+
+    # Check Altman Z for distress signal (reuse existing function)
+    z_res = altman_z_score(stock_data)
+    z_val = z_res.get("score")
+    if z_val is not None:
+        if z_val < 1.81:  risk_pts += 3
+        elif z_val < 2.99: risk_pts += 1
+
+    if   risk_pts >= 5: risk_level, risk_color = "High Risk",   "#fb7185"
+    elif risk_pts >= 2: risk_level, risk_color = "Medium Risk", "#fbbf24"
+    else:               risk_level, risk_color = "Low Risk",    "#34d399"
+
+    # Final health score (0–10 scale)
+    health_score = min(10, round(raw_score))
+    if   health_score >= 8: grade, color = "A", "#34d399"
+    elif health_score >= 6: grade, color = "B", "#22d3ee"
+    elif health_score >= 4: grade, color = "C", "#fbbf24"
+    else:                   grade, color = "D", "#fb7185"
+
+    return {
+        "score":        health_score,
+        "grade":        grade,
+        "color":        color,
+        "risk_level":   risk_level,
+        "risk_color":   risk_color,
+        "risk_pts":     risk_pts,
+        "roic":         roic,
+        "fcf_yield":    fcf_yield,
+        "interest_coverage": ic,
+        "net_debt_ebitda":   nd_ebitda,
+        "current_ratio":     cr,
+        "quick_ratio":       quick_ratio,
+        "checks":       checks,
+    }
+
+
 # ─── StockRank (composite badge) ─────────────────────────────────────────────
 
 def stock_rank(pentagon: dict) -> dict:
