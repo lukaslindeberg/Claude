@@ -1,3 +1,4 @@
+import streamlit as st
 import yfinance as yf
 import requests
 import pandas as pd
@@ -5,6 +6,7 @@ import numpy as np
 from datetime import datetime
 
 
+@st.cache_data(ttl=300, show_spinner=False)
 def search_companies(query: str) -> list:
     """Search Yahoo Finance for companies matching query."""
     try:
