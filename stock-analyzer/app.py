@@ -211,52 +211,94 @@ def render_sidebar() -> tuple[str | None, dict]:
 
 
 # ─── Landing page ─────────────────────────────────────────────────────────────
+_HERO_HTML = """
+<div class="lp">
+<div class="lp-aurora"></div>
+<div class="lp-hero">
+<div class="lp-hero-left">
+<div class="lp-eyebrow"><span class="lp-livedot"></span>Equity Valuation Engine</div>
+<h1 class="lp-title"><span class="lp-pay">Price is what you <s>pay.</s></span><span class="lp-worth">Worth is what<br>we <span class="grad">reveal.</span></span></h1>
+<p class="lp-sub">Institutional-grade DCF, a financial-health grade and a market-sentiment score — for any public company, from a single search.</p>
+</div>
+<div class="lp-hero-right">
+<div class="reveal">
+<svg class="reveal-chart" viewBox="0 0 340 88" preserveAspectRatio="none">
+<defs>
+<linearGradient id="rg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient>
+<linearGradient id="ra" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(124,108,255,0.30)"/><stop offset="1" stop-color="rgba(124,108,255,0)"/></linearGradient>
+</defs>
+<path class="reveal-area" d="M0,66 L36,60 L70,64 L104,46 L142,52 L178,34 L214,40 L252,22 L292,26 L332,10 L332,88 L0,88 Z"/>
+<path class="reveal-path" d="M0,66 L36,60 L70,64 L104,46 L142,52 L178,34 L214,40 L252,22 L292,26 L332,10"/>
+<circle class="reveal-end" cx="332" cy="10" r="4"/>
+</svg>
+<div class="reveal-row">
+<div class="reveal-blk"><div class="reveal-lbl">Market price</div><div class="reveal-num reveal-price">$173</div></div>
+<div class="reveal-arrow">&#8594;</div>
+<div class="reveal-blk" style="text-align:right;"><div class="reveal-lbl">Intrinsic value</div><div class="reveal-num reveal-value grad">$215</div></div>
+</div>
+<div class="reveal-bar"><div class="reveal-bar-fill"></div><div class="reveal-bar-shimmer"></div></div>
+<div class="reveal-foot"><span class="reveal-up">&#9650; 24% upside</span><span class="reveal-illus">Illustrative</span></div>
+</div>
+</div>
+</div>
+</div>
+"""
+
+_TAPE_HTML = """
+<div class="tape">
+<span class="tape-lbl">Try</span>
+<a class="tk" href="?q=Apple" target="_self" title="Apple Inc"><b>AAPL</b></a>
+<a class="tk" href="?q=Tesla" target="_self" title="Tesla"><b>TSLA</b></a>
+<a class="tk" href="?q=Nvidia" target="_self" title="Nvidia"><b>NVDA</b></a>
+<a class="tk" href="?q=Microsoft" target="_self" title="Microsoft"><b>MSFT</b></a>
+<a class="tk" href="?q=Amazon" target="_self" title="Amazon"><b>AMZN</b></a>
+<a class="tk" href="?q=Meta%20Platforms" target="_self" title="Meta Platforms"><b>META</b></a>
+<a class="tk" href="?q=Alphabet" target="_self" title="Alphabet (Google)"><b>GOOGL</b></a>
+</div>
+"""
+
+_CAP_HTML = """
+<div class="cap-rail">
+<div class="cap"><div class="cap-ic v">&#9670;</div><div class="cap-tx"><div class="cap-t">Intrinsic Value</div><div class="cap-d">3-stage DCF &amp; 1,000-run Monte Carlo</div></div></div>
+<div class="cap-div"></div>
+<div class="cap"><div class="cap-ic g">&#10010;</div><div class="cap-tx"><div class="cap-t">Financial Health</div><div class="cap-d">A&ndash;D grade &middot; Piotroski &middot; Altman&nbsp;Z &middot; ROIC</div></div></div>
+<div class="cap-div"></div>
+<div class="cap"><div class="cap-ic a">&#8767;</div><div class="cap-tx"><div class="cap-t">Market Sentiment</div><div class="cap-d">Analyst consensus, short interest &amp; momentum</div></div></div>
+</div>
+"""
+
+
 def render_landing(model: str | None):
-    # Hero
-    st.markdown("""
-    <div class="hero">
-      <div class="hero-badge">◆ &nbsp;DCF · Monte Carlo · AI Scoring</div>
-      <h1>Know what it's<br><span class="grad">really worth.</span></h1>
-      <p>Institutional-grade valuation for any public company.
-         Intrinsic value, financial health grade, and sentiment
-         score — all from a single search.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Ticker-tape pills navigate via ?q=… — pick that up and route into search
+    q_param = st.query_params.get("q")
+    if q_param:
+        st.session_state.pending_query = q_param
+        try:
+            del st.query_params["q"]
+        except Exception:
+            st.query_params.clear()
 
-    # Quick-access chips — wrapped for CSS targeting
-    chips = [
-        ("Apple",     "Apple Inc"),
-        ("Tesla",     "Tesla"),
-        ("Nvidia",    "Nvidia"),
-        ("Microsoft", "Microsoft"),
-        ("Amazon",    "Amazon"),
-        ("Meta",      "Meta Platforms"),
-    ]
-    st.markdown('<div class="chip-row-wrap">', unsafe_allow_html=True)
-    chip_cols = st.columns(len(chips))
-    for i, (label, q) in enumerate(chips):
-        with chip_cols[i]:
-            if st.button(label, use_container_width=True, key=f"chip_{i}"):
-                st.session_state.pending_query = q
-                st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Asymmetric editorial hero + live reveal panel
+    st.markdown(_HERO_HTML, unsafe_allow_html=True)
 
-    st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
-
-    # Search form — input full width, CTA centred via CSS
+    # Command-bar search: one bar, input + inline Analyse
     with st.form("search_form", clear_on_submit=False):
-        query = st.text_input(
-            "search",
-            placeholder='Search by name, ticker, or ask — e.g. "Is Apple undervalued?" or "NVDA"',
-            label_visibility="collapsed",
-        )
-        _, col_cta, _ = st.columns([2, 1.4, 2])
-        with col_cta:
+        c_in, c_go = st.columns([6, 1.5])
+        with c_in:
+            query = st.text_input(
+                "search",
+                placeholder='Search a company, ticker, or ask  ·  "Is Apple undervalued?"',
+                label_visibility="collapsed",
+            )
+        with c_go:
             submitted = st.form_submit_button(
-                "🔍  Analyse", type="primary", use_container_width=True
+                "Analyse  →", type="primary", use_container_width=True
             )
 
-    # Handle pending (chip) query
+    # Clickable ticker-tape suggestions
+    st.markdown(_TAPE_HTML, unsafe_allow_html=True)
+
+    # Resolve a pending query (from a ticker pill)
     if st.session_state.pending_query:
         query = st.session_state.pending_query
         st.session_state.pending_query = None
@@ -270,51 +312,9 @@ def render_landing(model: str | None):
         _show_search_results()
         return
 
-    # Proof cards — only when no results pending
+    # De-boxed capability rail
     if not st.session_state.search_results:
-        st.markdown("""
-<div class="proof-grid">
-  <div class="proof-card">
-    <div class="proof-icon proof-icon-dcf">📐</div>
-    <div class="proof-title">3-Stage DCF + Monte Carlo</div>
-    <div class="proof-body">
-      Analyst-grade discounted cash flow model with high/base/low growth phases,
-      WACC from first principles, and 1,000-run Monte Carlo simulation.
-    </div>
-    <div class="proof-pill-row">
-      <span class="proof-pill proof-pill-v">Intrinsic Value</span>
-      <span class="proof-pill proof-pill-v">Upside %</span>
-      <span class="proof-pill proof-pill-v">Sensitivity Table</span>
-    </div>
-  </div>
-  <div class="proof-card">
-    <div class="proof-icon proof-icon-health">🩺</div>
-    <div class="proof-title">Financial Health Score</div>
-    <div class="proof-body">
-      Composite grade (A–D) spanning solvency, profitability, and capital efficiency —
-      Piotroski F-Score, Altman Z, ROIC, interest coverage, and more.
-    </div>
-    <div class="proof-pill-row">
-      <span class="proof-pill proof-pill-g">Grade A–D</span>
-      <span class="proof-pill proof-pill-g">Risk Level</span>
-      <span class="proof-pill proof-pill-g">Ownership</span>
-    </div>
-  </div>
-  <div class="proof-card">
-    <div class="proof-icon proof-icon-hype">📡</div>
-    <div class="proof-title">Market Sentiment & Hype</div>
-    <div class="proof-body">
-      Quantified momentum score from analyst consensus, short interest,
-      insider moves, and 52-week price performance.
-    </div>
-    <div class="proof-pill-row">
-      <span class="proof-pill proof-pill-a">Hype Score</span>
-      <span class="proof-pill proof-pill-a">Analyst Feed</span>
-      <span class="proof-pill proof-pill-a">Short Interest</span>
-    </div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
+        st.markdown(_CAP_HTML, unsafe_allow_html=True)
 
 
 def _run_search(query: str, model: str | None):
