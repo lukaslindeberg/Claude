@@ -599,6 +599,82 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
 .cap-d { font-size:0.76rem; color:var(--muted); line-height:1.5; }
 @media (max-width:760px){ .cap-div{ display:none; } .cap-rail{ gap:1.2rem; } .cap{ padding:0 0.8rem; } }
 
+/* ════════════════════════════════════════════════════════════════
+   VERDICT BANNER — layout classes (responsive-ready)
+   ════════════════════════════════════════════════════════════════ */
+.verdict-top {
+  display:flex; justify-content:space-between; align-items:flex-start;
+  margin-bottom:1.6rem; gap:1.5rem;
+}
+.verdict-pills { display:flex; gap:0.75rem; flex-shrink:0; }
+.verdict-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:0.85rem; }
+
+/* ════════════════════════════════════════════════════════════════
+   WATCHLIST — landing cards
+   ════════════════════════════════════════════════════════════════ */
+.wl-tk {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.15rem; font-weight:700; color:var(--ink);
+  letter-spacing:0.4px; line-height:1.1;
+}
+.wl-name {
+  font-size:0.74rem; color:var(--muted); margin:2px 0 0.7rem;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RESPONSIVE / MOBILE  —  collapse the desktop grids gracefully
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width:900px) {
+  .block-container { padding-left:1rem !important; padding-right:1rem !important;
+    padding-top:1.4rem !important; }
+
+  /* Hero headline scales down */
+  .lp-worth { font-size:3rem; letter-spacing:-1.6px; }
+  .lp-sub   { font-size:0.98rem; max-width:none; }
+
+  /* Verdict banner stacks */
+  .verdict-banner { padding:1.6rem 1.4rem 1.4rem; border-radius:18px; }
+  .verdict-top { flex-direction:column; gap:1.1rem; }
+  .verdict-pills { width:100%; }
+  .verdict-pill { flex:1; min-width:0; }
+  .verdict-word { font-size:2.5rem; letter-spacing:-1px; }
+  .verdict-sub  { font-size:0.9rem; }
+  .verdict-stats { grid-template-columns:repeat(2,1fr); }
+
+  /* Price hero */
+  .price-hero-num { font-size:3rem; letter-spacing:-1.5px; }
+  .price-hero-chg { font-size:1.15rem; }
+
+  /* Bento & health grids stack */
+  .bento-4, .bento-3 { grid-template-columns:1fr 1fr; }
+  .bento-hero { grid-column:1 / -1; }
+  .health-grid { grid-template-columns:repeat(2,1fr); }
+
+  /* Tabs: let the row scroll horizontally instead of cramming */
+  .stTabs [data-baseweb="tab-list"] { overflow-x:auto; flex-wrap:nowrap;
+    scrollbar-width:none; }
+  .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar { display:none; }
+  .stTabs [data-baseweb="tab"] { white-space:nowrap; padding:8px 12px; }
+}
+
+@media (max-width:600px) {
+  .lp-worth { font-size:2.4rem; }
+  .reveal { padding:1.2rem 1.2rem 1.1rem; }
+  .reveal-value { font-size:1.8rem; }
+  .reveal-price { font-size:1.25rem; }
+
+  .verdict-word  { font-size:2.1rem; }
+  .verdict-stats { grid-template-columns:1fr; }
+  .verdict-pills { flex-direction:column; }
+
+  .price-hero-num { font-size:2.4rem; }
+
+  /* One column for everything dense */
+  .bento-4, .bento-3 { grid-template-columns:1fr; }
+  .health-grid { grid-template-columns:1fr; }
+}
+
 /* ── Respect reduced-motion ── */
 @media (prefers-reduced-motion: reduce) {
   .lp-aurora, .lp-eyebrow, .lp-pay, .lp-worth, .lp-sub, .lp-livedot,

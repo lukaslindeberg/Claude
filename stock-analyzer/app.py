@@ -23,6 +23,9 @@ from modules.scores import (
     calculate_pentagon, historical_financials, stock_rank,
     financial_health_score,
 )
+from modules.watchlist import (
+    load_watchlist, is_watched, add_to_watchlist, remove_from_watchlist,
+)
 
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -83,6 +86,10 @@ _DEFAULTS = {
 for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
+
+# Watchlist is loaded from disk once per session, then kept in sync on edits
+if "watchlist" not in st.session_state:
+    st.session_state.watchlist = load_watchlist()
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -312,9 +319,53 @@ def render_landing(model: str | None):
         _show_search_results()
         return
 
+    # Personal watchlist — a reason to come back
+    if not st.session_state.search_results:
+        render_watchlist_section()
+
     # De-boxed capability rail
     if not st.session_state.search_results:
         st.markdown(_CAP_HTML, unsafe_allow_html=True)
+
+
+def render_watchlist_section():
+    wl = st.session_state.get("watchlist", [])
+    if not wl:
+        return
+
+    st.markdown(
+        '<div class="sec" style="max-width:920px;margin-left:auto;margin-right:auto;">'
+        'Your Watchlist</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Centre the rail and lay out up to 3 cards per row
+    _, mid, _ = st.columns([1, 12, 1])
+    with mid:
+        for row_start in range(0, len(wl), 3):
+            chunk = wl[row_start:row_start + 3]
+            cols = st.columns(3)
+            for col, item in zip(cols, chunk):
+                with col:
+                    tk = item.get("ticker", "")
+                    nm = item.get("name", tk)
+                    with st.container(border=True):
+                        st.markdown(
+                            f'<div class="wl-tk">{tk}</div>'
+                            f'<div class="wl-name">{nm}</div>',
+                            unsafe_allow_html=True,
+                        )
+                        b_go, b_rm = st.columns([3, 1])
+                        with b_go:
+                            if st.button("Analyse", key=f"wl_go_{tk}",
+                                         use_container_width=True):
+                                _select_company(tk, nm)
+                        with b_rm:
+                            if st.button("✕", key=f"wl_rm_{tk}",
+                                         use_container_width=True):
+                                remove_from_watchlist(tk)
+                                st.session_state.watchlist = load_watchlist()
+                                st.rerun()
 
 
 def _run_search(query: str, model: str | None):
@@ -388,15 +439,27 @@ def _clear_analysis():
 
 # ─── Top navigation bar for active analysis ───────────────────────────────────
 def render_topbar():
-    bc, rc = st.columns([6, 2])
+    bc, wc, rc = st.columns([5, 2.4, 2])
     with bc:
         if st.button("← New Search", key="back"):
             _clear_analysis()
             st.session_state.last_query = ""
             st.session_state.search_results = []
             st.rerun()
+    with wc:
+        tk = st.session_state.selected_ticker
+        if is_watched(tk):
+            if st.button("★  Watching", key="watch_toggle", use_container_width=True):
+                remove_from_watchlist(tk)
+                st.session_state.watchlist = load_watchlist()
+                st.rerun()
+        else:
+            if st.button("☆  Add to Watchlist", key="watch_toggle", use_container_width=True):
+                add_to_watchlist(tk, st.session_state.selected_name)
+                st.session_state.watchlist = load_watchlist()
+                st.rerun()
     with rc:
-        if st.button("↺  Re-analyse", key="reanalyse"):
+        if st.button("↺  Re-analyse", key="reanalyse", use_container_width=True):
             for k in ("stock_data","key_metrics","dcf_results","hype_data","confidence",
                       "ai_dcf","ai_news","ai_val","advanced_done"):
                 st.session_state[k] = None
@@ -455,8 +518,7 @@ def render_verdict_banner():
         f'box-shadow:0 24px 64px {shadow};">'
 
         # ── Top row: verdict + confidence pill ──
-        f'<div style="display:flex;justify-content:space-between;'
-        f'align-items:flex-start;margin-bottom:1.6rem;gap:1.5rem;">'
+        f'<div class="verdict-top">'
 
         f'<div>'
         f'<div class="verdict-label">DCF Valuation Verdict</div>'
@@ -464,7 +526,7 @@ def render_verdict_banner():
         f'<div class="verdict-sub">{verdict_sub}</div>'
         f'</div>'
 
-        f'<div style="display:flex;gap:0.75rem;flex-shrink:0;">'
+        f'<div class="verdict-pills">'
         # Confidence pill
         f'<div class="verdict-pill" style="background:{pill_bg};border:1px solid {pill_bd};">'
         f'<div class="verdict-pill-lbl">Confidence</div>'
@@ -486,7 +548,7 @@ def render_verdict_banner():
         f'</div>'  # end top row
 
         # ── Bottom row: 4 stat boxes ──
-        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.85rem;">'
+        f'<div class="verdict-stats">'
 
         f'<div class="verdict-stat">'
         f'<div class="verdict-stat-lbl">Intrinsic Value</div>'
