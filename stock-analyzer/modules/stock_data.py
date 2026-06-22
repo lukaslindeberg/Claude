@@ -40,6 +40,62 @@ def search_companies(query: str) -> list:
     return []
 
 
+def _normalize_news(raw_news: list) -> list:
+    """Flatten Yahoo/yfinance news into a stable shape.
+
+    yfinance changed schemas: older builds return flat dicts
+    (``title``/``publisher``/``link``/``providerPublishTime``); newer builds
+    nest everything under ``content`` with ``provider.displayName``,
+    ``canonicalUrl.url`` and an ISO ``pubDate``. Handle both so the UI never
+    renders blank cards.
+    """
+    out = []
+    for item in raw_news or []:
+        if not isinstance(item, dict):
+            continue
+        c = item.get("content") if isinstance(item.get("content"), dict) else item
+
+        title = c.get("title") or item.get("title")
+        if not title:
+            continue
+
+        # Publisher
+        pub = ""
+        prov = c.get("provider")
+        if isinstance(prov, dict):
+            pub = prov.get("displayName") or prov.get("name") or ""
+        pub = pub or c.get("publisher") or item.get("publisher") or ""
+
+        # Link
+        link = ""
+        for key in ("canonicalUrl", "clickThroughUrl"):
+            u = c.get(key)
+            if isinstance(u, dict) and u.get("url"):
+                link = u["url"]
+                break
+        link = link or c.get("link") or item.get("link") or "#"
+
+        # Timestamp — unix int, or parsed from ISO pubDate/displayTime
+        ts = item.get("providerPublishTime") or c.get("providerPublishTime")
+        if ts is None:
+            iso = c.get("pubDate") or c.get("displayTime")
+            if iso:
+                try:
+                    ts = int(datetime.fromisoformat(
+                        str(iso).replace("Z", "+00:00")).timestamp())
+                except Exception:
+                    ts = None
+
+        out.append({
+            "title": title,
+            "publisher": pub,
+            "link": link,
+            "providerPublishTime": ts,
+            "summary": (c.get("summary") or c.get("description") or "").strip(),
+        })
+    return out
+
+
 def get_comprehensive_data(ticker: str) -> dict | None:
     """Fetch all data needed for analysis from Yahoo Finance."""
     try:
@@ -73,7 +129,7 @@ def get_comprehensive_data(ticker: str) -> dict | None:
             quarterly_cashflow = pd.DataFrame()
 
         try:
-            news = stock.news[:15]
+            news = _normalize_news(stock.news)[:15]
         except Exception:
             news = []
 

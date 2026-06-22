@@ -134,6 +134,51 @@ def _stream(model: str, system: str, user: str):
         yield f"\n\n⚠️  Ollama error: {e}"
 
 
+# ─── Ask the Analyst (conversational finance tutor) ───────────────────────────
+
+def ask_analyst(question: str, model: str, context: str = "",
+                history: list | None = None):
+    """Stream an answer from an AI that acts as a finance professional + educator.
+
+    ``context`` is an optional plain-text brief about the company currently on
+    screen so answers can be grounded in its real numbers. ``history`` is a list
+    of ``(role, content)`` tuples for multi-turn memory.
+    """
+    system = (
+        "You are a friendly, expert financial analyst and educator. Your job is "
+        "to explain investing concepts, financial terms, ratios and KPIs (P/E, "
+        "WACC, DCF, ROIC, free cash flow, Piotroski F-Score, Altman Z, beta, "
+        "margins, etc.) in clear, plain English a beginner can follow — while "
+        "staying precise enough for professionals. Define jargon the first time "
+        "you use it, use short paragraphs and concrete examples, and add rough "
+        "rules of thumb for what counts as 'good' or 'bad'. When given data about "
+        "a specific company, ground your answer in those actual numbers. Keep "
+        "answers focused and reasonably concise. You educate so the user can "
+        "decide for themselves — never give direct buy or sell recommendations, "
+        "and remind them this is for learning, not financial advice, when relevant."
+    )
+
+    msgs = [{"role": "system", "content": system}]
+    if context:
+        msgs.append({
+            "role": "system",
+            "content": "Data about the company the user is currently viewing "
+                       "(use it when relevant):\n" + context,
+        })
+    for role, content in (history or [])[-8:]:
+        if role in ("user", "assistant") and content:
+            msgs.append({"role": role, "content": content})
+    msgs.append({"role": "user", "content": question})
+
+    try:
+        for chunk in _ollama.chat(model=model, messages=msgs, stream=True):
+            c = chunk.get("message", {}).get("content", "")
+            if c:
+                yield c
+    except Exception as e:
+        yield f"\n\n⚠️  Ollama error: {e}"
+
+
 # ─── DCF Narrative ────────────────────────────────────────────────────────────
 
 def generate_dcf_narrative(key_metrics: dict, dcf: dict, model: str):

@@ -157,7 +157,9 @@ a { color:var(--accent); }
 .news-card:hover { background:rgba(22,29,51,0.95); border-left-color:#22d3ee; }
 .news-title { font-weight:600; color:var(--ink); font-size:0.9rem; line-height:1.4; }
 .news-title a { color:var(--ink) !important; text-decoration:none; }
-.news-meta  { font-size:0.72rem; color:var(--faint); margin-top:5px; }
+.news-title a:hover { color:var(--accent) !important; }
+.news-summary { font-size:0.8rem; color:var(--muted); margin-top:6px; line-height:1.55; }
+.news-meta  { font-size:0.72rem; color:var(--faint); margin-top:7px; }
 
 /* ── Text input ── */
 [data-testid="stTextInput"] input {

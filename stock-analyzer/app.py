@@ -17,6 +17,7 @@ from modules.ai_analysis import (
     extract_company_from_query,
     generate_dcf_narrative, analyze_news_sentiment,
     analyze_valuation_gap, calculate_confidence_score,
+    ask_analyst,
 )
 from modules.scores import (
     piotroski_f_score, altman_z_score,
@@ -80,6 +81,7 @@ _DEFAULTS = {
     "ai_dcf": None, "ai_news": None, "ai_val": None,
     "search_results": [], "last_query": "",
     "pending_query": None,
+    "chat_history": [], "pending_question": None,
     "advanced_done": False,
     "_rf": 4.5, "_mrp": 5.5, "_tg": 2.5, "_ga": 0.0,
 }
@@ -427,6 +429,7 @@ def _select_company(ticker: str, name: str):
     st.session_state.selected_ticker = ticker
     st.session_state.selected_name   = name
     st.session_state.search_results  = []
+    st.session_state.chat_history    = []   # fresh conversation per company
     st.rerun()
 
 
@@ -435,6 +438,7 @@ def _clear_analysis():
                "scores","ai_dcf","ai_news","ai_val","selected_ticker"):
         st.session_state[k] = None
     st.session_state.advanced_done = False
+    st.session_state.chat_history = []
 
 
 # ─── Top navigation bar for active analysis ───────────────────────────────────
@@ -1053,16 +1057,21 @@ def render_news_tab(model: str | None):
     st.markdown(f'<div class="sec">Recent News ({len(news)} articles)</div>',
                 unsafe_allow_html=True)
     for item in news:
-        title = item.get("title","No title")
-        pub   = item.get("publisher","")
-        link  = item.get("link","#")
+        title = item.get("title", "No title")
+        pub   = item.get("publisher", "")
+        link  = item.get("link", "#")
         ts    = item.get("providerPublishTime")
         date  = datetime.fromtimestamp(ts).strftime("%b %d, %Y") if ts else ""
+        summary = (item.get("summary") or "").strip()
+        if len(summary) > 240:
+            summary = summary[:240].rstrip() + "…"
+        summary_html = f'<div class="news-summary">{summary}</div>' if summary else ""
+        meta = "  ·  ".join([p for p in (pub, date) if p])
         st.markdown(
             f'<div class="news-card">'
-            f'<div class="news-title"><a href="{link}" target="_blank" '
-            f'style="color:#1e293b;text-decoration:none;">{title}</a></div>'
-            f'<div class="news-meta">{pub}  ·  {date}</div>'
+            f'<div class="news-title"><a href="{link}" target="_blank">{title}</a></div>'
+            f'{summary_html}'
+            f'<div class="news-meta">{meta}</div>'
             f'</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="sec">AI News Sentiment Analysis</div>', unsafe_allow_html=True)
@@ -1780,6 +1789,116 @@ def render_health_tab():
     )
 
 
+# ─── Ask the Analyst (AI finance tutor) ───────────────────────────────────────
+def _build_ai_context() -> str:
+    """Concise plain-text brief of the current company for grounding answers."""
+    m   = st.session_state.key_metrics or {}
+    dcf = st.session_state.dcf_results or {}
+    sc  = st.session_state.scores or {}
+    if not m:
+        return ""
+    h = sc.get("health", {})
+    p = []
+    p.append(f"{m.get('name','?')} ({m.get('ticker','?')}), sector: {m.get('sector','N/A')}.")
+    if m.get("current_price"):
+        p.append(f"Market price ${m['current_price']:.2f}.")
+    if dcf.get("intrinsic_value"):
+        p.append(f"DCF intrinsic value ${dcf['intrinsic_value']:.2f} "
+                 f"({dcf.get('upside_pct',0):+.1f}% vs market).")
+    if dcf.get("wacc_data", {}).get("wacc"):
+        p.append(f"WACC {dcf['wacc_data']['wacc']*100:.1f}%.")
+    if m.get("pe_ratio"):       p.append(f"Trailing P/E {m['pe_ratio']:.1f}.")
+    if m.get("forward_pe"):     p.append(f"Forward P/E {m['forward_pe']:.1f}.")
+    if m.get("ev_ebitda"):      p.append(f"EV/EBITDA {m['ev_ebitda']:.1f}.")
+    if m.get("ps_ratio"):       p.append(f"P/S {m['ps_ratio']:.1f}.")
+    if m.get("roe") is not None:            p.append(f"ROE {m['roe']*100:.1f}%.")
+    if h.get("roic") is not None:           p.append(f"ROIC {h['roic']*100:.1f}%.")
+    if m.get("operating_margin") is not None: p.append(f"Operating margin {m['operating_margin']*100:.1f}%.")
+    if m.get("profit_margin") is not None:  p.append(f"Net margin {m['profit_margin']*100:.1f}%.")
+    if m.get("revenue_growth") is not None: p.append(f"Revenue growth {m['revenue_growth']*100:.1f}% YoY.")
+    if m.get("debt_to_equity") is not None: p.append(f"Debt/Equity {m['debt_to_equity']:.0f}.")
+    if m.get("beta"):           p.append(f"Beta {m['beta']:.2f}.")
+    if m.get("dividend_yield"): p.append(f"Dividend yield {m['dividend_yield']*100:.2f}%.")
+    if h.get("grade"):
+        p.append(f"Financial-health grade {h['grade']} ({h.get('risk_level','')}).")
+    return " ".join(p)
+
+
+def render_ai_chat_tab(model: str | None):
+    m    = st.session_state.key_metrics or {}
+    name = m.get("name", "this company")
+
+    st.markdown('<div class="sec">Ask the Analyst</div>', unsafe_allow_html=True)
+
+    if model is None:
+        st.info(
+            "🤖  **AI analyst is offline.** Install [Ollama](https://ollama.ai), run "
+            "`ollama serve` and pull a model (e.g. `ollama pull llama3.2`), then pick "
+            "it in the sidebar. You'll be able to ask anything — *“What is WACC?”*, "
+            "*“Is this P/E expensive?”*, *“Explain ROIC for this stock”* — and get a "
+            "plain-English answer grounded in this company's numbers."
+        )
+        return
+
+    st.caption(
+        f"Your personal finance tutor. Ask about any term, ratio or KPI — answers are "
+        f"grounded in {name}'s actual data. Educational only, not financial advice."
+    )
+
+    # Quick-start prompts (adapt to available data)
+    chips = ["Explain this company's valuation in plain English"]
+    if m.get("pe_ratio"):
+        chips.append(f"Is a P/E of {m['pe_ratio']:.1f} good or bad?")
+    else:
+        chips.append("What does the P/E ratio tell me?")
+    chips.append("What is WACC and why does it matter here?")
+    chips.append("What does the DCF intrinsic value mean?")
+
+    cc = st.columns(len(chips))
+    for i, (col, chip) in enumerate(zip(cc, chips)):
+        with col:
+            if st.button(chip, key=f"chip_{i}", use_container_width=True):
+                st.session_state.pending_question = chip
+                st.rerun()
+
+    # Conversation so far
+    for role, content in st.session_state.chat_history:
+        with st.chat_message(role, avatar="🧑" if role == "user" else "📊"):
+            st.markdown(content)
+
+    # Free-text input (plain widgets — keeps the landing's form CSS scoped)
+    q = st.text_input(
+        "ask", key="chat_input",
+        placeholder="Ask anything…  e.g. “What is ROIC and is this company's strong?”",
+        label_visibility="collapsed",
+    )
+    send = st.button("Ask  →", key="chat_send", type="primary")
+
+    question = None
+    if send and q.strip():
+        question = q.strip()
+    elif st.session_state.get("pending_question"):
+        question = st.session_state.pending_question
+        st.session_state.pending_question = None
+
+    if question:
+        with st.chat_message("user", avatar="🧑"):
+            st.markdown(question)
+        with st.chat_message("assistant", avatar="📊"):
+            answer = st.write_stream(
+                ask_analyst(question, model, _build_ai_context(),
+                            st.session_state.chat_history)
+            )
+        st.session_state.chat_history.append(("user", question))
+        st.session_state.chat_history.append(("assistant", answer))
+        st.rerun()
+
+    if st.session_state.chat_history:
+        if st.button("🗑  Clear conversation", key="clear_chat"):
+            st.session_state.chat_history = []
+            st.rerun()
+
+
 # ─── Full analysis view ───────────────────────────────────────────────────────
 def render_analysis(model: str | None, assumptions: dict):
     ticker = st.session_state.selected_ticker
@@ -1790,13 +1909,14 @@ def render_analysis(model: str | None, assumptions: dict):
     render_verdict_banner()
     render_overview()
 
-    t1, t2, t3, t4, t5, t6 = st.tabs([
+    t1, t2, t3, t4, t5, t6, t7 = st.tabs([
         "📐  DCF Analysis",
         "📰  News & Sentiment",
         "🌡️  Hype Meter",
         "⚖️  Valuation vs. Market",
         "🏆  Scorecard",
         "🩺  Financial Health",
+        "💬  Ask the Analyst",
     ])
     with t1: render_dcf_tab(model)
     with t2: render_news_tab(model)
@@ -1804,6 +1924,7 @@ def render_analysis(model: str | None, assumptions: dict):
     with t4: render_valuation_tab(model)
     with t5: render_scorecard_tab()
     with t6: render_health_tab()
+    with t7: render_ai_chat_tab(model)
 
     st.markdown(
         '<hr style="border:none;border-top:1px solid rgba(148,163,184,0.12);margin-top:2.5rem;">'
