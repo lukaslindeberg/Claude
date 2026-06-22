@@ -135,11 +135,13 @@ a { color:var(--accent); }
   display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:600;
   padding:9px 12px; border-radius:10px; margin-bottom:2px;
 }
-.status-ok  { background:rgba(52,211,153,0.10); border:1px solid rgba(52,211,153,0.28); color:#6ee7b7 !important; }
-.status-off { background:rgba(251,113,133,0.09); border:1px solid rgba(251,113,133,0.26); color:#fda4af !important; }
+.status-ok   { background:rgba(52,211,153,0.10); border:1px solid rgba(52,211,153,0.28); color:#6ee7b7 !important; }
+.status-off  { background:rgba(251,113,133,0.09); border:1px solid rgba(251,113,133,0.26); color:#fda4af !important; }
+.status-idle { background:rgba(100,116,139,0.10); border:1px solid rgba(100,116,139,0.22); color:#94a3b8 !important; }
 .dot { width:7px; height:7px; border-radius:99px; flex-shrink:0; }
-.dot-ok  { background:#34d399; box-shadow:0 0 8px #34d399; }
-.dot-off { background:#fb7185; box-shadow:0 0 8px #fb7185; }
+.dot-ok   { background:#34d399; box-shadow:0 0 8px #34d399; }
+.dot-off  { background:#fb7185; box-shadow:0 0 8px #fb7185; }
+.dot-idle { background:#64748b; }
 
 /* ── Hero (landing) ── */
 .hero { text-align:center; padding:2.4rem 1rem 1.4rem; margin-bottom:0.5rem; }
@@ -483,6 +485,50 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
   cursor:help; border:1px solid rgba(124,108,255,0.30);
   vertical-align:middle; margin-left:4px;
 }
+
+/* ── Landing proof cards ── */
+.proof-grid {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:1rem;
+  margin:2.4rem 0 0.5rem;
+}
+.proof-card {
+  background:linear-gradient(160deg, rgba(22,29,51,0.85), rgba(17,22,42,0.85));
+  border:1px solid var(--line); border-radius:20px;
+  padding:1.6rem 1.5rem 1.4rem;
+  transition:border-color .2s, box-shadow .2s, transform .2s;
+  cursor:default;
+}
+.proof-card:hover {
+  border-color:rgba(124,108,255,0.40); transform:translateY(-4px);
+  box-shadow:0 16px 40px rgba(0,0,0,0.40), 0 0 0 1px rgba(124,108,255,0.10);
+}
+.proof-icon {
+  width:44px; height:44px; border-radius:14px; display:flex;
+  align-items:center; justify-content:center; font-size:1.3rem;
+  margin-bottom:1.1rem;
+}
+.proof-icon-dcf    { background:linear-gradient(135deg,rgba(124,108,255,0.22),rgba(168,85,247,0.18)); }
+.proof-icon-health { background:linear-gradient(135deg,rgba(52,211,153,0.18),rgba(34,211,238,0.14)); }
+.proof-icon-hype   { background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(251,113,133,0.14)); }
+.proof-title {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.0rem; font-weight:700; color:var(--ink);
+  margin-bottom:0.45rem; letter-spacing:-0.2px;
+}
+.proof-body {
+  font-size:0.8rem; color:var(--muted); line-height:1.6;
+}
+.proof-pill-row {
+  display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:1rem;
+}
+.proof-pill {
+  font-size:0.62rem; font-weight:700; letter-spacing:0.6px;
+  padding:3px 9px; border-radius:99px;
+  border:1px solid; white-space:nowrap;
+}
+.proof-pill-v { color:#b9b1ff; border-color:rgba(124,108,255,0.30); background:rgba(124,108,255,0.08); }
+.proof-pill-g { color:#6ee7b7; border-color:rgba(52,211,153,0.30);  background:rgba(52,211,153,0.08); }
+.proof-pill-a { color:#fde68a; border-color:rgba(251,191,36,0.30);  background:rgba(251,191,36,0.08); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -560,51 +606,58 @@ def render_sidebar() -> tuple[str | None, dict]:
                 model = None
         else:
             st.markdown(
-                '<div class="status-chip status-off"><span class="dot dot-off"></span>'
-                'Ollama offline</div>',
+                '<div class="status-chip status-idle"><span class="dot dot-idle"></span>'
+                'AI · not connected</div>',
                 unsafe_allow_html=True,
             )
-            st.caption("Install at **ollama.ai**, then run `ollama serve` "
-                       "and `ollama pull llama3.2`. Data & valuation still work without it.")
+            st.caption("All data & valuation works without AI. "
+                       "Install **ollama.ai** and run `ollama serve` to enable insights.")
             model = None
 
-        st.markdown("---")
+        has_ticker = bool(st.session_state.get("selected_ticker"))
 
-        with st.expander("⚙️  DCF Assumptions", expanded=False):
-            st.markdown(
-                '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
-                'letter-spacing:1.5px;color:#64748b;margin-bottom:10px;">Scenario Presets</div>',
-                unsafe_allow_html=True,
-            )
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                if st.button("🐻 Bear", use_container_width=True):
-                    st.session_state["_rf"]  = 5.0
-                    st.session_state["_mrp"] = 6.5
-                    st.session_state["_tg"]  = 1.5
-                    st.session_state["_ga"]  = -5.0
-            with c2:
-                if st.button("📊 Base", use_container_width=True):
-                    st.session_state["_rf"]  = 4.5
-                    st.session_state["_mrp"] = 5.5
-                    st.session_state["_tg"]  = 2.5
-                    st.session_state["_ga"]  =  0.0
-            with c3:
-                if st.button("🐂 Bull", use_container_width=True):
-                    st.session_state["_rf"]  = 3.5
-                    st.session_state["_mrp"] = 4.5
-                    st.session_state["_tg"]  = 3.5
-                    st.session_state["_ga"]  =  5.0
+        if has_ticker:
+            st.markdown("---")
+            with st.expander("⚙️  DCF Assumptions", expanded=False):
+                st.markdown(
+                    '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
+                    'letter-spacing:1.5px;color:#64748b;margin-bottom:10px;">Scenario Presets</div>',
+                    unsafe_allow_html=True,
+                )
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    if st.button("🐻 Bear", use_container_width=True):
+                        st.session_state["_rf"]  = 5.0
+                        st.session_state["_mrp"] = 6.5
+                        st.session_state["_tg"]  = 1.5
+                        st.session_state["_ga"]  = -5.0
+                with c2:
+                    if st.button("📊 Base", use_container_width=True):
+                        st.session_state["_rf"]  = 4.5
+                        st.session_state["_mrp"] = 5.5
+                        st.session_state["_tg"]  = 2.5
+                        st.session_state["_ga"]  =  0.0
+                with c3:
+                    if st.button("🐂 Bull", use_container_width=True):
+                        st.session_state["_rf"]  = 3.5
+                        st.session_state["_mrp"] = 4.5
+                        st.session_state["_tg"]  = 3.5
+                        st.session_state["_ga"]  =  5.0
 
-            st.markdown(
-                '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
-                'letter-spacing:1.5px;color:#64748b;margin:14px 0 6px;">Parameters</div>',
-                unsafe_allow_html=True,
-            )
-            rf  = st.slider("Risk-Free Rate (%)",      1.0, 8.0,  step=0.1, key="_rf")  / 100
-            mrp = st.slider("Market Risk Premium (%)", 3.0, 9.0,  step=0.1, key="_mrp") / 100
-            tg  = st.slider("Terminal Growth (%)",     0.5, 5.0,  step=0.1, key="_tg")  / 100
-            ga  = st.slider("Growth Adjustment (%)", -15.0, 15.0, step=0.5, key="_ga")  / 100
+                st.markdown(
+                    '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
+                    'letter-spacing:1.5px;color:#64748b;margin:14px 0 6px;">Parameters</div>',
+                    unsafe_allow_html=True,
+                )
+                rf  = st.slider("Risk-Free Rate (%)",      1.0, 8.0,  step=0.1, key="_rf")  / 100
+                mrp = st.slider("Market Risk Premium (%)", 3.0, 9.0,  step=0.1, key="_mrp") / 100
+                tg  = st.slider("Terminal Growth (%)",     0.5, 5.0,  step=0.1, key="_tg")  / 100
+                ga  = st.slider("Growth Adjustment (%)", -15.0, 15.0, step=0.5, key="_ga")  / 100
+        else:
+            rf  = st.session_state.get("_rf",  4.5) / 100
+            mrp = st.session_state.get("_mrp", 5.5) / 100
+            tg  = st.session_state.get("_tg",  2.5) / 100
+            ga  = st.session_state.get("_ga",  0.0) / 100
 
         assumptions = {
             "risk_free_rate": rf, "market_risk_premium": mrp,
@@ -673,6 +726,53 @@ def render_landing(model: str | None):
     # Show search results if cached
     if st.session_state.search_results and not st.session_state.selected_ticker:
         _show_search_results()
+        return
+
+    # Proof cards — only when no results pending
+    if not st.session_state.search_results:
+        st.markdown("""
+<div class="proof-grid">
+  <div class="proof-card">
+    <div class="proof-icon proof-icon-dcf">📐</div>
+    <div class="proof-title">3-Stage DCF + Monte Carlo</div>
+    <div class="proof-body">
+      Analyst-grade discounted cash flow model with high/base/low growth phases,
+      WACC from first principles, and 1,000-run Monte Carlo simulation.
+    </div>
+    <div class="proof-pill-row">
+      <span class="proof-pill proof-pill-v">Intrinsic Value</span>
+      <span class="proof-pill proof-pill-v">Upside %</span>
+      <span class="proof-pill proof-pill-v">Sensitivity Table</span>
+    </div>
+  </div>
+  <div class="proof-card">
+    <div class="proof-icon proof-icon-health">🩺</div>
+    <div class="proof-title">Financial Health Score</div>
+    <div class="proof-body">
+      Composite grade (A–D) spanning solvency, profitability, and capital efficiency —
+      Piotroski F-Score, Altman Z, ROIC, interest coverage, and more.
+    </div>
+    <div class="proof-pill-row">
+      <span class="proof-pill proof-pill-g">Grade A–D</span>
+      <span class="proof-pill proof-pill-g">Risk Level</span>
+      <span class="proof-pill proof-pill-g">Ownership</span>
+    </div>
+  </div>
+  <div class="proof-card">
+    <div class="proof-icon proof-icon-hype">📡</div>
+    <div class="proof-title">Market Sentiment & Hype</div>
+    <div class="proof-body">
+      Quantified momentum score from analyst consensus, short interest,
+      insider moves, and 52-week price performance.
+    </div>
+    <div class="proof-pill-row">
+      <span class="proof-pill proof-pill-a">Hype Score</span>
+      <span class="proof-pill proof-pill-a">Analyst Feed</span>
+      <span class="proof-pill proof-pill-a">Short Interest</span>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
 
 def _run_search(query: str, model: str | None):
