@@ -602,6 +602,66 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
 @media (max-width:760px){ .cap-div{ display:none; } .cap-rail{ gap:1.2rem; } .cap{ padding:0 0.8rem; } }
 
 /* ════════════════════════════════════════════════════════════════
+   PLAIN-ENGLISH SIGNAL CARDS (Overview / simple mode)
+   ════════════════════════════════════════════════════════════════ */
+.sig-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:0.9rem;
+  margin:1.4rem 0 1.8rem;
+}
+.sig-card {
+  background:linear-gradient(160deg, rgba(22,29,51,0.70), rgba(17,22,42,0.70));
+  border:1px solid var(--line);
+  border-left:3px solid var(--line-2);
+  border-radius:18px; padding:1.25rem 1.35rem 1.05rem;
+  transition:border-color .18s, box-shadow .18s;
+}
+.sig-card:hover { box-shadow:0 8px 28px rgba(0,0,0,0.32); }
+.sig-pos { border-left-color:var(--pos) !important; }
+.sig-neg { border-left-color:var(--neg) !important; }
+.sig-neu { border-left-color:var(--accent) !important; }
+.sig-pos .sig-icon { color:var(--pos); }
+.sig-neg .sig-icon { color:var(--neg); }
+.sig-neu .sig-icon { color:var(--accent); }
+.sig-icon { font-size:1.1rem; margin-bottom:0.55rem; line-height:1; }
+.sig-head {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:0.96rem; font-weight:700; color:var(--ink);
+  margin-bottom:0.5rem; line-height:1.25;
+}
+.sig-body {
+  font-size:0.83rem; color:var(--muted); line-height:1.62;
+  margin-bottom:0.85rem;
+}
+.sig-raw {
+  font-size:0.68rem; color:var(--faint); letter-spacing:0.2px;
+  border-top:1px solid var(--line); padding-top:0.6rem;
+  font-variant-numeric:tabular-nums; line-height:1.5;
+}
+
+/* ── "Go deeper" CTA ── */
+.deeper-cta {
+  margin:2.4rem 0 1.4rem; padding:1.8rem 2rem 1.5rem;
+  border-radius:20px; text-align:center;
+  border:1px solid var(--line);
+  background:linear-gradient(160deg, rgba(22,29,51,0.45), rgba(12,16,30,0.45));
+}
+.deeper-title {
+  font-family:'Space Grotesk',sans-serif !important;
+  font-size:1.15rem; font-weight:700; color:var(--ink); margin-bottom:0.6rem;
+}
+.deeper-sub {
+  font-size:0.83rem; color:var(--muted); line-height:1.6;
+  max-width:620px; margin:0 auto 1.1rem;
+}
+.deeper-chips { display:flex; flex-wrap:wrap; gap:0.45rem; justify-content:center; }
+.deeper-chip {
+  font-size:0.7rem; font-weight:600; letter-spacing:0.3px;
+  padding:4px 13px; border-radius:99px;
+  border:1px solid var(--line-2); color:var(--muted);
+  background:rgba(17,22,42,0.5);
+}
+
+/* ════════════════════════════════════════════════════════════════
    VERDICT BANNER — layout classes (responsive-ready)
    ════════════════════════════════════════════════════════════════ */
 .verdict-top {
@@ -661,6 +721,8 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
 }
 
 @media (max-width:600px) {
+  .sig-grid { grid-template-columns:1fr; }
+  .deeper-cta { padding:1.3rem 1.2rem; }
   .lp-worth { font-size:2.4rem; }
   .reveal { padding:1.2rem 1.2rem 1.1rem; }
   .reveal-value { font-size:1.8rem; }

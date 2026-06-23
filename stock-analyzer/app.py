@@ -83,6 +83,7 @@ _DEFAULTS = {
     "pending_query": None,
     "chat_history": [], "pending_question": None,
     "advanced_done": False,
+    "view_mode": "simple",
     "_rf": 4.5, "_mrp": 5.5, "_tg": 2.5, "_ga": 0.0,
 }
 for _k, _v in _DEFAULTS.items():
@@ -443,31 +444,55 @@ def _clear_analysis():
 
 # ─── Top navigation bar for active analysis ───────────────────────────────────
 def render_topbar():
-    bc, wc, rc = st.columns([5, 2.4, 2])
-    with bc:
+    is_simple = st.session_state.get("view_mode", "simple") == "simple"
+    tk = st.session_state.selected_ticker
+
+    col_back, col_mode, col_right = st.columns([2.3, 4.6, 3.1])
+
+    with col_back:
         if st.button("← New Search", key="back"):
             _clear_analysis()
             st.session_state.last_query = ""
             st.session_state.search_results = []
             st.rerun()
-    with wc:
-        tk = st.session_state.selected_ticker
-        if is_watched(tk):
-            if st.button("★  Watching", key="watch_toggle", use_container_width=True):
-                remove_from_watchlist(tk)
-                st.session_state.watchlist = load_watchlist()
+
+    with col_mode:
+        m1, m2 = st.columns(2)
+        with m1:
+            if st.button("Overview", key="mode_simple",
+                         type="primary" if is_simple else "secondary",
+                         use_container_width=True):
+                if not is_simple:
+                    st.session_state.view_mode = "simple"
+                    st.rerun()
+        with m2:
+            if st.button("Full Analysis", key="mode_expert",
+                         type="secondary" if is_simple else "primary",
+                         use_container_width=True):
+                if is_simple:
+                    st.session_state.view_mode = "expert"
+                    st.rerun()
+
+    with col_right:
+        r1, r2 = st.columns([3.5, 1])
+        with r1:
+            if is_watched(tk):
+                if st.button("★  Watching", key="watch_toggle", use_container_width=True):
+                    remove_from_watchlist(tk)
+                    st.session_state.watchlist = load_watchlist()
+                    st.rerun()
+            else:
+                if st.button("☆  Save", key="watch_toggle", use_container_width=True):
+                    add_to_watchlist(tk, st.session_state.selected_name)
+                    st.session_state.watchlist = load_watchlist()
+                    st.rerun()
+        with r2:
+            if st.button("↺", key="reanalyse", use_container_width=True,
+                         help="Re-run analysis with fresh data"):
+                for k in ("stock_data","key_metrics","dcf_results","hype_data","confidence",
+                          "ai_dcf","ai_news","ai_val","advanced_done"):
+                    st.session_state[k] = None
                 st.rerun()
-        else:
-            if st.button("☆  Add to Watchlist", key="watch_toggle", use_container_width=True):
-                add_to_watchlist(tk, st.session_state.selected_name)
-                st.session_state.watchlist = load_watchlist()
-                st.rerun()
-    with rc:
-        if st.button("↺  Re-analyse", key="reanalyse", use_container_width=True):
-            for k in ("stock_data","key_metrics","dcf_results","hype_data","confidence",
-                      "ai_dcf","ai_news","ai_val","advanced_done"):
-                st.session_state[k] = None
-            st.rerun()
 
 
 # ─── Verdict banner (verdict-first design) ────────────────────────────────────
@@ -1789,6 +1814,250 @@ def render_health_tab():
     )
 
 
+# ─── Simple / Overview view ───────────────────────────────────────────────────
+def _build_signals(m: dict, dcf: dict, sc: dict, h: dict) -> list[dict]:
+    """Translate raw metrics into plain-English signal dicts for new investors."""
+    out = []
+
+    # 1. Valuation
+    iv     = dcf.get("intrinsic_value")
+    cp_dcf = dcf.get("current_price") or m.get("current_price")
+    upside = dcf.get("upside_pct")
+    if iv and cp_dcf and upside is not None:
+        if upside > 15:
+            out.append(dict(tone="pos", icon="▲",
+                headline="Priced below our estimated value",
+                body=(f"Our model estimates the stock is worth around ${iv:.2f}. "
+                      f"At the current ${cp_dcf:.2f}, there appears to be room to grow — "
+                      f"though models are never perfect."),
+                raw=f"DCF fair value  ${iv:.2f}  ·  {upside:+.1f}% potential upside"))
+        elif upside < -15:
+            out.append(dict(tone="neg", icon="▼",
+                headline="Priced above our estimated value",
+                body=(f"The current price of ${cp_dcf:.2f} looks high compared to our model's "
+                      f"estimate of ${iv:.2f}. The market may be expecting strong future growth."),
+                raw=f"DCF fair value  ${iv:.2f}  ·  {upside:+.1f}% vs market price"))
+        else:
+            out.append(dict(tone="neu", icon="◆",
+                headline="Fairly priced by our model",
+                body=(f"At ${cp_dcf:.2f}, the stock is broadly in line with our estimated value "
+                      f"of ${iv:.2f}. Not a clear bargain, but not obviously overpriced either."),
+                raw=f"DCF fair value  ${iv:.2f}  ·  {upside:+.1f}%"))
+
+    # 2. Business health
+    grade = h.get("grade", "")
+    rl    = h.get("risk_level", "")
+    if grade:
+        grade_map = {
+            "A": ("pos", "♥", "The business looks financially strong",
+                  "Low debt, healthy cash generation and solid returns. "
+                  "Think of it like a company with a clean, well-managed balance sheet."),
+            "B": ("pos", "♥", "The business is in decent financial shape",
+                  "Finances look broadly healthy — no major red flags, though some areas "
+                  "could be stronger."),
+            "C": ("neu", "♥", "The business has some financial strain",
+                  "A few concerns show up — perhaps higher debt or weaker cash flow than ideal. "
+                  "Worth keeping an eye on."),
+            "D": ("neg", "♥", "The business is under financial pressure",
+                  "Elevated debt, weak cash flow, or other risk signals. Tread carefully and "
+                  "understand why before investing."),
+        }
+        tone, icon, headline, body = grade_map.get(grade[0], ("neu", "♥", "Health data available", ""))
+        out.append(dict(tone=tone, icon=icon, headline=headline, body=body,
+                        raw=f"Health grade  {grade}  ·  {rl}"))
+
+    # 3. What analysts think
+    rec    = (m.get("recommendation") or "").strip().lower()
+    tgt    = m.get("target_price")
+    cp_m   = m.get("current_price") or 0
+    n_anal = m.get("analyst_count") or 0
+    if rec:
+        rec_map = {
+            "strong buy": ("pos", "▲",
+                "Professional analysts strongly favour this stock",
+                f"{n_anal} Wall Street analysts cover this company and collectively lean strongly "
+                f"toward buying. That's a notable level of professional conviction."),
+            "buy": ("pos", "▲",
+                "Most analysts recommend buying",
+                f"Of {n_anal} analysts covering this stock, the majority lean toward buying. "
+                f"That said, analysts aren't always right — treat it as one data point."),
+            "hold": ("neu", "◆",
+                "Analysts are on the fence",
+                f"{n_anal} analysts say hold — they see limited upside at the current price "
+                f"but aren't alarmed either."),
+            "underperform": ("neg", "▼",
+                "Analysts are cautious on this stock",
+                f"The consensus from {n_anal} analysts leans cautiously negative. They see "
+                f"limited upside or potential downside from here."),
+            "sell": ("neg", "▼",
+                "Analysts lean toward selling",
+                f"Of {n_anal} analysts, the majority view the stock as overpriced at current levels."),
+        }
+        tone, icon, headline, body = rec_map.get(
+            rec, ("neu", "◆", f"Analyst consensus: {rec.title()}", ""))
+        raw = f"Consensus: {rec.title()}"
+        if tgt and cp_m:
+            tgt_u = (tgt - cp_m) / cp_m * 100
+            raw += f"  ·  Avg target  ${tgt:.2f}  ({tgt_u:+.1f}%)"
+        out.append(dict(tone=tone, icon=icon, headline=headline, body=body, raw=raw))
+
+    # 4. Momentum / past performance
+    ytd = m.get("ytd_return")
+    wh  = m.get("week_52_high")
+    wl  = m.get("week_52_low")
+    if ytd is not None:
+        if ytd > 20:
+            tone, icon = "pos", "▲"
+            headline   = "Strong performer over the past year"
+            body       = (f"Up {ytd:.1f}% in the last 12 months — well ahead of a typical market "
+                          f"return. Momentum is clearly behind this stock.")
+        elif ytd > 5:
+            tone, icon = "pos", "◆"
+            headline   = "Solid performance over the past year"
+            body       = f"The stock has climbed {ytd:.1f}% over the past 12 months, a healthy return."
+        elif ytd > -10:
+            tone, icon = "neu", "◆"
+            headline   = "Relatively flat over the past year"
+            body       = (f"A {ytd:+.1f}% move over 12 months — roughly sideways. Might signal "
+                          f"stability, or a lack of catalysts. Context matters here.")
+        else:
+            tone, icon = "neg", "▼"
+            headline   = "Significant decline over the past year"
+            body       = (f"Down {abs(ytd):.1f}% over 12 months. Worth understanding what drove "
+                          f"the fall before drawing conclusions.")
+        raw = f"1-year return  {ytd:+.1f}%"
+        if wh and wl and cp_m:
+            raw += f"  ·  52-wk range  ${wl:.0f} – ${wh:.0f}"
+            pct_from_high = (cp_m - wh) / wh * 100
+            if pct_from_high < -25:
+                raw += f"  ·  {abs(pct_from_high):.0f}% below 52-wk high"
+        out.append(dict(tone=tone, icon=icon, headline=headline, body=body, raw=raw))
+
+    return out
+
+
+def render_simple_view(model: str | None):
+    """Plain-English overview designed for first-time investors."""
+    m   = st.session_state.key_metrics or {}
+    dcf = st.session_state.dcf_results or {}
+    sc  = st.session_state.scores or {}
+    sd  = st.session_state.stock_data or {}
+    h   = sc.get("health", {})
+
+    # ── Price hero ────────────────────────────────────────────────────────────
+    name    = m.get("name", "")
+    ticker  = m.get("ticker", "")
+    cp      = m.get("current_price", 0)
+    chg_pct = m.get("price_change_pct", 0)
+    chg_arrow = "▲" if chg_pct >= 0 else "▼"
+    chg_clr   = "var(--pos)" if chg_pct >= 0 else "var(--neg)"
+    cap_str   = fmt(m.get("market_cap"), "$") if m.get("market_cap") else ""
+    sector    = m.get("sector", "")
+    sub_parts = [s for s in [cap_str and f"Market cap {cap_str}", sector] if s]
+
+    st.markdown(
+        f'<div class="price-hero">'
+        f'<div class="price-hero-eyebrow">'
+        f'<span class="tick">{ticker}</span>'
+        f'{" · " + name if name else ""}'
+        + (f' · {" · ".join(sub_parts)}' if sub_parts else "") +
+        f'</div>'
+        f'<div class="price-hero-row">'
+        f'<div class="price-hero-num">${cp:,.2f}</div>'
+        f'<div class="price-hero-chg" style="color:{chg_clr};">'
+        f'{chg_arrow} {abs(chg_pct):.2f}%</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Plain-English signal cards ────────────────────────────────────────────
+    signals = _build_signals(m, dcf, sc, h)
+    if signals:
+        cards_html = "".join(
+            f'<div class="sig-card sig-{s["tone"]}">'
+            f'<div class="sig-icon">{s["icon"]}</div>'
+            f'<div class="sig-head">{s["headline"]}</div>'
+            f'<div class="sig-body">{s["body"]}</div>'
+            f'<div class="sig-raw">{s["raw"]}</div>'
+            f'</div>'
+            for s in signals
+        )
+        st.markdown(f'<div class="sig-grid">{cards_html}</div>', unsafe_allow_html=True)
+
+    # ── Minimal area price chart ──────────────────────────────────────────────
+    hist = sd.get("history_1y", pd.DataFrame())
+    if not hist.empty:
+        pos_trend = hist["Close"].iloc[-1] >= hist["Close"].iloc[0]
+        line_clr  = "#34d399" if pos_trend else "#fb7185"
+        fill_clr  = "rgba(52,211,153,0.07)" if pos_trend else "rgba(251,113,133,0.07)"
+        fig = go.Figure(go.Scatter(
+            x=hist.index, y=hist["Close"],
+            fill="tozeroy", fillcolor=fill_clr,
+            line=dict(color=line_clr, width=2),
+            hovertemplate="$%{y:.2f}<extra></extra>",
+        ))
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=8, b=0), height=160,
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=False,
+                       tickfont=dict(size=9, color="#5a6379")),
+            yaxis=dict(showgrid=False, tickprefix="$",
+                       tickfont=dict(size=9, color="#5a6379")),
+            showlegend=False, hovermode="x unified",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ── Company description ───────────────────────────────────────────────────
+    if m.get("description"):
+        with st.expander("What does this company do?"):
+            st.markdown(m["description"])
+
+    # ── Top 3 news ────────────────────────────────────────────────────────────
+    news = [n for n in (sd.get("news") or []) if n.get("title")][:3]
+    if news:
+        st.markdown('<div class="sec">Recent News</div>', unsafe_allow_html=True)
+        for item in news:
+            ts   = item.get("providerPublishTime")
+            date = datetime.fromtimestamp(ts).strftime("%b %d") if ts else ""
+            meta = "  ·  ".join([p for p in (item.get("publisher", ""), date) if p])
+            st.markdown(
+                f'<div class="news-card">'
+                f'<div class="news-title">'
+                f'<a href="{item.get("link","#")}" target="_blank">{item["title"]}</a>'
+                f'</div>'
+                f'<div class="news-meta">{meta}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # ── "Go deeper" CTA ───────────────────────────────────────────────────────
+    st.markdown(
+        '<div class="deeper-cta">'
+        '<div class="deeper-title">Ready to go deeper?</div>'
+        '<div class="deeper-sub">The full analysis includes the complete DCF model, Monte Carlo '
+        'simulation, Piotroski F-Score, Altman Z-Score, analyst upgrade history, institutional '
+        'ownership breakdown — and an AI analyst you can ask anything.</div>'
+        '<div class="deeper-chips">'
+        '<span class="deeper-chip">DCF Model</span>'
+        '<span class="deeper-chip">Monte Carlo</span>'
+        '<span class="deeper-chip">Piotroski F-Score</span>'
+        '<span class="deeper-chip">Altman Z</span>'
+        '<span class="deeper-chip">ROIC · WACC</span>'
+        '<span class="deeper-chip">Analyst History</span>'
+        '<span class="deeper-chip">💬 Ask the Analyst</span>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    _, c_cta, _ = st.columns([2, 3, 2])
+    with c_cta:
+        if st.button("Explore Full Analysis →", key="go_expert", type="primary",
+                     use_container_width=True):
+            st.session_state.view_mode = "expert"
+            st.rerun()
+
+
 # ─── Ask the Analyst (AI finance tutor) ───────────────────────────────────────
 def _build_ai_context() -> str:
     """Concise plain-text brief of the current company for grounding answers."""
@@ -1906,25 +2175,28 @@ def render_analysis(model: str | None, assumptions: dict):
         return
 
     render_topbar()
-    render_verdict_banner()
-    render_overview()
 
-    t1, t2, t3, t4, t5, t6, t7 = st.tabs([
-        "📐  DCF Analysis",
-        "📰  News & Sentiment",
-        "🌡️  Hype Meter",
-        "⚖️  Valuation vs. Market",
-        "🏆  Scorecard",
-        "🩺  Financial Health",
-        "💬  Ask the Analyst",
-    ])
-    with t1: render_dcf_tab(model)
-    with t2: render_news_tab(model)
-    with t3: render_hype_tab()
-    with t4: render_valuation_tab(model)
-    with t5: render_scorecard_tab()
-    with t6: render_health_tab()
-    with t7: render_ai_chat_tab(model)
+    if st.session_state.get("view_mode", "simple") == "simple":
+        render_simple_view(model)
+    else:
+        render_verdict_banner()
+        render_overview()
+        t1, t2, t3, t4, t5, t6, t7 = st.tabs([
+            "📐  DCF Analysis",
+            "📰  News & Sentiment",
+            "🌡️  Hype Meter",
+            "⚖️  Valuation vs. Market",
+            "🏆  Scorecard",
+            "🩺  Financial Health",
+            "💬  Ask the Analyst",
+        ])
+        with t1: render_dcf_tab(model)
+        with t2: render_news_tab(model)
+        with t3: render_hype_tab()
+        with t4: render_valuation_tab(model)
+        with t5: render_scorecard_tab()
+        with t6: render_health_tab()
+        with t7: render_ai_chat_tab(model)
 
     st.markdown(
         '<hr style="border:none;border-top:1px solid rgba(148,163,184,0.12);margin-top:2.5rem;">'
