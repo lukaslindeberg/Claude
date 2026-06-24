@@ -22,6 +22,18 @@
   box-sizing:border-box;
 }
 
+/* Keep Streamlit's Material Symbols icons (expander chevrons, alert icons, etc.)
+   on their icon font — otherwise the forced Inter font above stops the ligature
+   from forming and the raw keyword ("keyboard_arrow_down") leaks out as text. */
+[data-testid="stIconMaterial"],
+[data-testid="stExpanderToggleIcon"],
+.material-symbols-rounded,
+.material-symbols-outlined,
+.material-icons,
+span[class*="material-symbols"] {
+  font-family:'Material Symbols Rounded','Material Symbols Outlined','Material Icons' !important;
+}
+
 /* ── App canvas with cinematic glow ── */
 [data-testid="stAppViewContainer"] {
   background:
