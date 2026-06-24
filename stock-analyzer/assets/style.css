@@ -42,8 +42,31 @@ span[class*="material-symbols"] {
     #0a0e1a !important;
 }
 [data-testid="stHeader"] { display:none !important; }
-.block-container { padding-top:2.2rem !important; max-width:1240px; }
+.block-container { padding-top:1.6rem !important; max-width:1240px; }
 footer, #MainMenu { visibility:hidden !important; }
+
+/* Sidebar removed — every control now lives in the top-right gear popover */
+[data-testid="stSidebar"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] { display:none !important; }
+
+/* Minimal landing header (replaces the old sidebar brand) */
+.brand-top { padding:0 !important; }
+.brand-top .brand-name { font-size:1.12rem; }
+
+/* Gear settings popover — quiet square icon button, top-right */
+[data-testid="stPopover"] button {
+  border-radius:12px !important;
+  border:1px solid var(--line) !important;
+  background:rgba(22,29,51,0.55) !important;
+  color:#c4cce0 !important;
+  font-size:1.15rem !important;
+  line-height:1 !important;
+}
+[data-testid="stPopover"] button:hover {
+  border-color:rgba(124,108,255,0.55) !important;
+  background:rgba(124,108,255,0.12) !important;
+}
 
 ::-webkit-scrollbar { width:10px; height:10px; }
 ::-webkit-scrollbar-track { background:transparent; }
@@ -79,22 +102,10 @@ a { color:var(--accent); }
   font-family:'Space Grotesk',sans-serif !important;
   font-size:1.22rem; font-weight:700; color:#fff !important; letter-spacing:-0.3px;
 }
-.brand-tag { font-size:0.62rem; color:var(--faint) !important; letter-spacing:1.6px;
-  text-transform:uppercase; margin-top:-2px; }
-[data-testid="stSidebar"] hr { border-color:var(--line) !important; margin:0.9rem 0 !important; }
 .side-h { font-size:0.62rem !important; font-weight:700; color:var(--faint) !important;
   text-transform:uppercase; letter-spacing:2px; margin:0.2rem 0 0.4rem; }
 
-/* ── Sidebar footer ── */
-.sidebar-footer {
-  margin-top:1.8rem; padding-top:0.9rem;
-  border-top:1px solid var(--line);
-  font-size:0.72rem; color:var(--faint) !important;
-  line-height:1.65;
-}
-.sidebar-footer span { display:block; }
-
-/* ── Status chips in sidebar ── */
+/* ── Status chips (AI engine, in the gear popover) ── */
 .status-chip {
   display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:600;
   padding:9px 12px; border-radius:10px; margin-bottom:2px;
@@ -594,25 +605,6 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
   background:rgba(124,108,255,0.12); box-shadow:0 8px 20px rgba(0,0,0,0.3); }
 .tk:hover b { color:#fff !important; }
 
-/* ── De-boxed capability rail ── */
-.cap-rail {
-  position:relative; z-index:1; display:flex; align-items:flex-start; justify-content:center;
-  flex-wrap:wrap; margin:2.7rem auto 0.4rem; padding-top:1.7rem;
-  border-top:1px solid var(--line); max-width:920px;
-  animation: rise .8s .4s cubic-bezier(.2,.7,.3,1) backwards;
-}
-.cap { display:flex; gap:12px; align-items:flex-start; padding:0 1.7rem; max-width:285px; }
-.cap-div { width:1px; align-self:stretch;
-  background:linear-gradient(180deg, transparent, var(--line-2), transparent); }
-.cap-ic { font-size:1.1rem; line-height:1.25; flex-shrink:0; }
-.cap-ic.v { color:var(--accent); }
-.cap-ic.g { color:var(--pos); }
-.cap-ic.a { color:var(--warn); }
-.cap-t { font-family:'Space Grotesk',sans-serif !important; font-weight:700; font-size:0.92rem;
-  color:var(--ink); margin-bottom:3px; letter-spacing:-0.1px; }
-.cap-d { font-size:0.76rem; color:var(--muted); line-height:1.5; }
-@media (max-width:760px){ .cap-div{ display:none; } .cap-rail{ gap:1.2rem; } .cap{ padding:0 0.8rem; } }
-
 /* ════════════════════════════════════════════════════════════════
    PLAIN-ENGLISH SIGNAL CARDS (Overview / simple mode)
    ════════════════════════════════════════════════════════════════ */
@@ -648,29 +640,6 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
   font-size:0.68rem; color:var(--faint); letter-spacing:0.2px;
   border-top:1px solid var(--line); padding-top:0.6rem;
   font-variant-numeric:tabular-nums; line-height:1.5;
-}
-
-/* ── "Go deeper" CTA ── */
-.deeper-cta {
-  margin:2.4rem 0 1.4rem; padding:1.8rem 2rem 1.5rem;
-  border-radius:20px; text-align:center;
-  border:1px solid var(--line);
-  background:linear-gradient(160deg, rgba(22,29,51,0.45), rgba(12,16,30,0.45));
-}
-.deeper-title {
-  font-family:'Space Grotesk',sans-serif !important;
-  font-size:1.15rem; font-weight:700; color:var(--ink); margin-bottom:0.6rem;
-}
-.deeper-sub {
-  font-size:0.83rem; color:var(--muted); line-height:1.6;
-  max-width:620px; margin:0 auto 1.1rem;
-}
-.deeper-chips { display:flex; flex-wrap:wrap; gap:0.45rem; justify-content:center; }
-.deeper-chip {
-  font-size:0.7rem; font-weight:600; letter-spacing:0.3px;
-  padding:4px 13px; border-radius:99px;
-  border:1px solid var(--line-2); color:var(--muted);
-  background:rgba(17,22,42,0.5);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -734,7 +703,6 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
 
 @media (max-width:600px) {
   .sig-grid { grid-template-columns:1fr; }
-  .deeper-cta { padding:1.3rem 1.2rem; }
   .lp-worth { font-size:2.4rem; }
   .reveal { padding:1.2rem 1.2rem 1.1rem; }
   .reveal-value { font-size:1.8rem; }
@@ -755,7 +723,7 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
 @media (prefers-reduced-motion: reduce) {
   .lp-aurora, .lp-eyebrow, .lp-pay, .lp-worth, .lp-sub, .lp-livedot,
   .reveal, .reveal-path, .reveal-area, .reveal-end,
-  .reveal-bar-fill, .reveal-bar-shimmer, .tape, .cap-rail {
+  .reveal-bar-fill, .reveal-bar-shimmer, .tape {
     animation:none !important;
   }
   .reveal-path { stroke-dashoffset:0 !important; }

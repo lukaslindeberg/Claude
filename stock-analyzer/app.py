@@ -33,7 +33,7 @@ st.set_page_config(
     page_title="Intrinsic — Know what it's really worth",
     page_icon="◆",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─── Plotly dark theme ────────────────────────────────────────────────────────
@@ -117,107 +117,89 @@ def _kpi(label, value, sub=None, sub_cls=""):
 
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
-def render_sidebar() -> tuple[str | None, dict]:
-    with st.sidebar:
-        st.markdown(
-            '<div class="brand">'
-            '<div class="brand-mark">◆</div>'
-            '<div><div class="brand-name">Intrinsic</div>'
-            '<div class="brand-tag">Know what it\'s worth</div></div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown("---")
-        st.markdown('<div class="side-h">AI Engine</div>', unsafe_allow_html=True)
+def _current_assumptions() -> dict:
+    """Build the DCF assumptions dict from session state (set by the popover)."""
+    return {
+        "risk_free_rate":      st.session_state.get("_rf",  4.5) / 100,
+        "market_risk_premium": st.session_state.get("_mrp", 5.5) / 100,
+        "terminal_growth":     st.session_state.get("_tg",  2.5) / 100,
+        "growth_adjustment":   st.session_state.get("_ga",  0.0) / 100,
+        "projection_years":    5,
+    }
 
-        ollama_ok = check_ollama_status()
-        if ollama_ok:
-            models = get_available_models()
-            if models:
-                st.markdown(
-                    '<div class="status-chip status-ok"><span class="dot dot-ok"></span>'
-                    f'Ollama connected · {len(models)} model{"s" if len(models)!=1 else ""}</div>',
-                    unsafe_allow_html=True,
-                )
-                model = st.selectbox("Model", models, label_visibility="collapsed")
-            else:
-                st.markdown(
-                    '<div class="status-chip status-off"><span class="dot dot-off"></span>'
-                    'Connected · no models</div>',
-                    unsafe_allow_html=True,
-                )
-                st.caption("Pull one with:  `ollama pull llama3.2`")
-                model = None
-        else:
+
+def _render_ai_engine() -> str | None:
+    """Render the AI-engine status + model picker. Returns the chosen model."""
+    st.markdown('<div class="side-h">AI Engine</div>', unsafe_allow_html=True)
+    if check_ollama_status():
+        models = get_available_models()
+        if models:
             st.markdown(
-                '<div class="status-chip status-idle"><span class="dot dot-idle"></span>'
-                'AI · not connected</div>',
+                '<div class="status-chip status-ok"><span class="dot dot-ok"></span>'
+                f'Connected · {len(models)} model{"s" if len(models)!=1 else ""}</div>',
                 unsafe_allow_html=True,
             )
-            st.caption("All data & valuation works without AI. "
-                       "Install **ollama.ai** and run `ollama serve` to enable insights.")
-            model = None
-
-        has_ticker = bool(st.session_state.get("selected_ticker"))
-
-        if has_ticker:
-            st.markdown("---")
-            with st.expander("⚙️  DCF Assumptions", expanded=False):
-                st.markdown(
-                    '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
-                    'letter-spacing:1.5px;color:#64748b;margin-bottom:10px;">Scenario Presets</div>',
-                    unsafe_allow_html=True,
-                )
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    if st.button("🐻 Bear", use_container_width=True):
-                        st.session_state["_rf"]  = 5.0
-                        st.session_state["_mrp"] = 6.5
-                        st.session_state["_tg"]  = 1.5
-                        st.session_state["_ga"]  = -5.0
-                with c2:
-                    if st.button("📊 Base", use_container_width=True):
-                        st.session_state["_rf"]  = 4.5
-                        st.session_state["_mrp"] = 5.5
-                        st.session_state["_tg"]  = 2.5
-                        st.session_state["_ga"]  =  0.0
-                with c3:
-                    if st.button("🐂 Bull", use_container_width=True):
-                        st.session_state["_rf"]  = 3.5
-                        st.session_state["_mrp"] = 4.5
-                        st.session_state["_tg"]  = 3.5
-                        st.session_state["_ga"]  =  5.0
-
-                st.markdown(
-                    '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
-                    'letter-spacing:1.5px;color:#64748b;margin:14px 0 6px;">Parameters</div>',
-                    unsafe_allow_html=True,
-                )
-                rf  = st.slider("Risk-Free Rate (%)",      1.0, 8.0,  step=0.1, key="_rf")  / 100
-                mrp = st.slider("Market Risk Premium (%)", 3.0, 9.0,  step=0.1, key="_mrp") / 100
-                tg  = st.slider("Terminal Growth (%)",     0.5, 5.0,  step=0.1, key="_tg")  / 100
-                ga  = st.slider("Growth Adjustment (%)", -15.0, 15.0, step=0.5, key="_ga")  / 100
-        else:
-            rf  = st.session_state.get("_rf",  4.5) / 100
-            mrp = st.session_state.get("_mrp", 5.5) / 100
-            tg  = st.session_state.get("_tg",  2.5) / 100
-            ga  = st.session_state.get("_ga",  0.0) / 100
-
-        assumptions = {
-            "risk_free_rate": rf, "market_risk_premium": mrp,
-            "terminal_growth": tg, "growth_adjustment": ga,
-            "projection_years": 5,
-        }
-
+            return st.selectbox("Model", models, key="ai_model",
+                                label_visibility="collapsed")
         st.markdown(
-            '<div class="sidebar-footer">'
-            '<span>Data · Yahoo Finance · AI · Ollama (local)</span>'
-            '<span>Educational only — not financial advice.</span>'
-            '</div>',
-            unsafe_allow_html=True,
+            '<div class="status-chip status-off"><span class="dot dot-off"></span>'
+            'Connected · no models</div>', unsafe_allow_html=True,
         )
+        st.caption("Pull one with:  `ollama pull llama3.2`")
+        return None
+    st.markdown(
+        '<div class="status-chip status-idle"><span class="dot dot-idle"></span>'
+        'AI · not connected</div>', unsafe_allow_html=True,
+    )
+    st.caption("Everything works without AI. Install **ollama.ai** and run "
+               "`ollama serve` to enable insights.")
+    return None
 
-    return model, assumptions
+
+def _render_assumptions_controls() -> None:
+    """DCF scenario presets + parameter sliders (lives inside the gear popover)."""
+    st.markdown(
+        '<div style="font-size:0.63rem;font-weight:700;text-transform:uppercase;'
+        'letter-spacing:1.5px;color:#64748b;margin-bottom:8px;">DCF Scenario</div>',
+        unsafe_allow_html=True,
+    )
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        if st.button("🐻 Bear", use_container_width=True):
+            st.session_state.update(_rf=5.0, _mrp=6.5, _tg=1.5, _ga=-5.0)
+    with c2:
+        if st.button("📊 Base", use_container_width=True):
+            st.session_state.update(_rf=4.5, _mrp=5.5, _tg=2.5, _ga=0.0)
+    with c3:
+        if st.button("🐂 Bull", use_container_width=True):
+            st.session_state.update(_rf=3.5, _mrp=4.5, _tg=3.5, _ga=5.0)
+
+    st.slider("Risk-Free Rate (%)",      1.0, 8.0,  step=0.1, key="_rf")
+    st.slider("Market Risk Premium (%)", 3.0, 9.0,  step=0.1, key="_mrp")
+    st.slider("Terminal Growth (%)",     0.5, 5.0,  step=0.1, key="_tg")
+    st.slider("Growth Adjustment (%)", -15.0, 15.0, step=0.5, key="_ga")
+    st.caption("Changes apply on the next refresh.")
+
+
+def render_settings_menu(show_assumptions: bool) -> str | None:
+    """Top-right gear popover holding everything the sidebar used to.
+
+    Returns the active model so callers can drive AI features.
+    """
+    with st.popover("⚙", use_container_width=True):
+        model = _render_ai_engine()
+        if show_assumptions:
+            st.markdown("---")
+            _render_assumptions_controls()
+            st.markdown("---")
+            if st.button("↺  Refresh with fresh data", key="reanalyse",
+                         use_container_width=True):
+                for k in ("stock_data", "key_metrics", "dcf_results", "hype_data",
+                          "confidence", "scores", "ai_dcf", "ai_news", "ai_val",
+                          "advanced_done"):
+                    st.session_state[k] = None
+                st.rerun()
+    return model
 
 
 # ─── Landing page ─────────────────────────────────────────────────────────────
@@ -267,18 +249,20 @@ _TAPE_HTML = """
 </div>
 """
 
-_CAP_HTML = """
-<div class="cap-rail">
-<div class="cap"><div class="cap-ic v">&#9670;</div><div class="cap-tx"><div class="cap-t">Intrinsic Value</div><div class="cap-d">3-stage DCF &amp; 1,000-run Monte Carlo</div></div></div>
-<div class="cap-div"></div>
-<div class="cap"><div class="cap-ic g">&#10010;</div><div class="cap-tx"><div class="cap-t">Financial Health</div><div class="cap-d">A&ndash;D grade &middot; Piotroski &middot; Altman&nbsp;Z &middot; ROIC</div></div></div>
-<div class="cap-div"></div>
-<div class="cap"><div class="cap-ic a">&#8767;</div><div class="cap-tx"><div class="cap-t">Market Sentiment</div><div class="cap-d">Analyst consensus, short interest &amp; momentum</div></div></div>
-</div>
-"""
+def render_landing():
+    # Minimal top bar — brand (left) · settings gear (right). Replaces the sidebar.
+    col_brand, col_gear = st.columns([8, 1], vertical_alignment="center")
+    with col_brand:
+        st.markdown(
+            '<div class="brand brand-top">'
+            '<div class="brand-mark">◆</div>'
+            '<div class="brand-name">Intrinsic</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    with col_gear:
+        model = render_settings_menu(show_assumptions=False)
 
-
-def render_landing(model: str | None):
     # Ticker-tape pills navigate via ?q=… — pick that up and route into search
     q_param = st.query_params.get("q")
     if q_param:
@@ -325,10 +309,6 @@ def render_landing(model: str | None):
     # Personal watchlist — a reason to come back
     if not st.session_state.search_results:
         render_watchlist_section()
-
-    # De-boxed capability rail
-    if not st.session_state.search_results:
-        st.markdown(_CAP_HTML, unsafe_allow_html=True)
 
 
 def render_watchlist_section():
@@ -443,11 +423,12 @@ def _clear_analysis():
 
 
 # ─── Top navigation bar for active analysis ───────────────────────────────────
-def render_topbar():
+def render_topbar() -> str | None:
     is_simple = st.session_state.get("view_mode", "simple") == "simple"
     tk = st.session_state.selected_ticker
 
-    col_back, col_mode, col_right = st.columns([2.3, 4.6, 3.1])
+    col_back, col_mode, col_save, col_gear = st.columns(
+        [2.3, 4.6, 1.8, 1], vertical_alignment="center")
 
     with col_back:
         if st.button("← New Search", key="back"):
@@ -473,26 +454,20 @@ def render_topbar():
                     st.session_state.view_mode = "expert"
                     st.rerun()
 
-    with col_right:
-        r1, r2 = st.columns([3.5, 1])
-        with r1:
-            if is_watched(tk):
-                if st.button("★  Watching", key="watch_toggle", use_container_width=True):
-                    remove_from_watchlist(tk)
-                    st.session_state.watchlist = load_watchlist()
-                    st.rerun()
-            else:
-                if st.button("☆  Save", key="watch_toggle", use_container_width=True):
-                    add_to_watchlist(tk, st.session_state.selected_name)
-                    st.session_state.watchlist = load_watchlist()
-                    st.rerun()
-        with r2:
-            if st.button("↺", key="reanalyse", use_container_width=True,
-                         help="Re-run analysis with fresh data"):
-                for k in ("stock_data","key_metrics","dcf_results","hype_data","confidence",
-                          "ai_dcf","ai_news","ai_val","advanced_done"):
-                    st.session_state[k] = None
+    with col_save:
+        if is_watched(tk):
+            if st.button("★ Saved", key="watch_toggle", use_container_width=True):
+                remove_from_watchlist(tk)
+                st.session_state.watchlist = load_watchlist()
                 st.rerun()
+        else:
+            if st.button("☆ Save", key="watch_toggle", use_container_width=True):
+                add_to_watchlist(tk, st.session_state.selected_name)
+                st.session_state.watchlist = load_watchlist()
+                st.rerun()
+
+    with col_gear:
+        return render_settings_menu(show_assumptions=True)
 
 
 # ─── Verdict banner (verdict-first design) ────────────────────────────────────
@@ -1053,7 +1028,7 @@ def render_dcf_tab(model: str | None):
     # ── AI narrative ─────────────────────────────────────────────────────────
     st.markdown('<div class="sec">AI-Generated DCF Report</div>', unsafe_allow_html=True)
     if model is None:
-        st.info("Start Ollama and select a model in the sidebar to generate the AI analysis.")
+        st.info("Start Ollama and select a model in the ⚙ menu (top-right) to generate the AI analysis.")
     elif st.session_state.ai_dcf:
         st.markdown(f'<div class="glass">{st.session_state.ai_dcf}</div>',
                     unsafe_allow_html=True)
@@ -2031,29 +2006,11 @@ def render_simple_view(model: str | None):
                 unsafe_allow_html=True,
             )
 
-    # ── "Go deeper" CTA ───────────────────────────────────────────────────────
-    st.markdown(
-        '<div class="deeper-cta">'
-        '<div class="deeper-title">Ready to go deeper?</div>'
-        '<div class="deeper-sub">The full analysis includes the complete DCF model, Monte Carlo '
-        'simulation, Piotroski F-Score, Altman Z-Score, analyst upgrade history, institutional '
-        'ownership breakdown — and an AI analyst you can ask anything.</div>'
-        '<div class="deeper-chips">'
-        '<span class="deeper-chip">DCF Model</span>'
-        '<span class="deeper-chip">Monte Carlo</span>'
-        '<span class="deeper-chip">Piotroski F-Score</span>'
-        '<span class="deeper-chip">Altman Z</span>'
-        '<span class="deeper-chip">ROIC · WACC</span>'
-        '<span class="deeper-chip">Analyst History</span>'
-        '<span class="deeper-chip">💬 Ask the Analyst</span>'
-        '</div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
+    # ── Quiet path to the full analysis ───────────────────────────────────────
     _, c_cta, _ = st.columns([2, 3, 2])
     with c_cta:
-        if st.button("Explore Full Analysis →", key="go_expert", type="primary",
-                     use_container_width=True):
+        if st.button("Full analysis  →  DCF, Monte Carlo, scorecard & AI analyst",
+                     key="go_expert", use_container_width=True):
             st.session_state.view_mode = "expert"
             st.rerun()
 
@@ -2103,7 +2060,7 @@ def render_ai_chat_tab(model: str | None):
         st.info(
             "🤖  **AI analyst is offline.** Install [Ollama](https://ollama.ai), run "
             "`ollama serve` and pull a model (e.g. `ollama pull llama3.2`), then pick "
-            "it in the sidebar. You'll be able to ask anything — *“What is WACC?”*, "
+            "it in the ⚙ menu (top-right). You'll be able to ask anything — *“What is WACC?”*, "
             "*“Is this P/E expensive?”*, *“Explain ROIC for this stock”* — and get a "
             "plain-English answer grounded in this company's numbers."
         )
@@ -2169,12 +2126,12 @@ def render_ai_chat_tab(model: str | None):
 
 
 # ─── Full analysis view ───────────────────────────────────────────────────────
-def render_analysis(model: str | None, assumptions: dict):
+def render_analysis():
     ticker = st.session_state.selected_ticker
-    if not ensure_data(ticker, assumptions):
+    if not ensure_data(ticker, _current_assumptions()):
         return
 
-    render_topbar()
+    model = render_topbar()
 
     if st.session_state.get("view_mode", "simple") == "simple":
         render_simple_view(model)
@@ -2210,12 +2167,10 @@ def render_analysis(model: str | None, assumptions: dict):
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
-    model, assumptions = render_sidebar()
-
     if st.session_state.selected_ticker:
-        render_analysis(model, assumptions)
+        render_analysis()
     else:
-        render_landing(model)
+        render_landing()
 
 
 if __name__ == "__main__":
