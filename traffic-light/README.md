@@ -31,25 +31,29 @@ labels it (`claude` / `codex`) underneath the lights.
   - Debian/Ubuntu: `sudo apt install python3-tk`
   - Fedora: `sudo dnf install python3-tkinter`
 
-## Quick start
+## Quick start — just double-click
+
+Use the launcher for your device. It opens a small setup window where you tick
+your agent(s) and click **Install** (with optional "start at login" and a
+**Start light** button):
+
+| Device | Double-click |
+|--------|--------------|
+| **macOS** | `Install Traffic Light.command` *(first time: right-click → Open)* |
+| **Windows** | `Install Traffic Light.bat` |
+| **Linux** | `install.sh` *(or right-click → Run)* |
+
+No graphical toolkit? The same launcher falls back to a simple text menu.
+After installing, **restart your agent(s)** so they load the changes.
+
+### Or from the command line
 
 ```bash
-# 1. Wire up your agent(s). Merges into config, keeps everything else,
-#    makes a timestamped backup. Re-runnable.
-python install.py                 # both Claude Code and Codex
-#   python install.py --claude-only
-#   python install.py --codex-only
-
-# 2. Restart your agent(s) so they pick up the change.
-
-# 3. Run the light (leave it in the background):
-python traffic_light.py
-```
-
-Want to see the look first? Cycle the colors without any agent:
-
-```bash
-python traffic_light.py --demo
+python setup.py            # the same setup window / text menu
+python install.py          # wire up both agents directly (no UI)
+#   python install.py --claude-only | --codex-only | --uninstall
+python traffic_light.py    # run the light
+python traffic_light.py --demo   # preview the look with no agent running
 ```
 
 ## Using the window
@@ -116,12 +120,14 @@ python install.py --uninstall        # removes hooks/notify from both
 
 | File | Purpose |
 |------|---------|
+| `Install Traffic Light.command` / `.bat`, `install.sh` | Clickable launchers (macOS / Windows / Linux). |
+| `setup.py` | Clickable setup window (install, uninstall, start, start-at-login); text menu fallback. |
 | `traffic_light.py` | The always-on-top window (run this; `--demo` to preview). |
 | `agent_state.py` | Shared state read/write + "most recent agent" logic. |
 | `set_state.py` | Helper the Claude Code hooks call. |
 | `notify_codex.py` | Codex `notify` program (turn-complete → green). |
 | `run_red.py` | Run a command red→green (gives Codex a "working" state). |
-| `install.py` | Adds/removes the integration for both agents. |
+| `install.py` | Adds/removes the integration for both agents (used by `setup.py`). |
 
 ## Notes
 
