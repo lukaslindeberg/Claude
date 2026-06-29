@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+*.bak-*
+traffic_light.state
