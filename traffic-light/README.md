@@ -6,9 +6,16 @@ automatically shows whichever one is active right now.
 
 | Light | Meaning |
 |-------|---------|
-| 🔴 **Red** | Coding / working (running tools, editing files) |
+| 🟢 **Green** | Connected & idle — **turns on the moment an agent connects**, and when it's done |
 | 🟡 **Yellow** | Awaiting your approval or input |
-| 🟢 **Green** | Done with its turn |
+| 🔴 **Red** | Coding / working (running tools, editing files) |
+| ⚫ **Off** | Nothing connected |
+
+It **scales to any number of agents and concurrent sessions**: each session
+registers itself, and the light shows an aggregate — **red** if *anyone* is
+coding, else **yellow** if *anyone* needs you, else **green** if anything is
+connected. A `● connected` indicator under the lamps shows how many agents are
+live (e.g. `● 3: claude, codex`).
 
 It's pure Python standard library (tkinter) — no `pip install`, no
 dependencies, a few MB of RAM and ~0% idle CPU (it only redraws when the
@@ -53,7 +60,8 @@ python setup.py            # the same setup window / text menu
 python install.py          # wire up both agents directly (no UI)
 #   python install.py --claude-only | --codex-only | --uninstall
 python traffic_light.py    # run the light
-python traffic_light.py --demo   # preview the look with no agent running
+python traffic_light.py --demo        # preview the look with no agent running
+python traffic_light.py --scale 1.5   # bigger (good for high-DPI / TV displays)
 ```
 
 ## Using the window
@@ -61,18 +69,22 @@ python traffic_light.py --demo   # preview the look with no agent running
 - **Drag** it anywhere with the left mouse button.
 - **Right-click**, or press **Esc** / **q**, to quit.
 - Starts top-right of your primary screen and stays on top.
+- **Resize** with `--scale 0.5`–`4.0` or the `AGENT_TRAFFIC_LIGHT_SCALE` env var.
 
 ## What each agent supports
 
-### Claude Code — full red / yellow / green
+### Claude Code — full lifecycle, per session
 Installed as [hooks](https://docs.claude.com/en/docs/claude-code/hooks) in
-`~/.claude/settings.json`:
+`~/.claude/settings.json`. Each session's `session_id` is read from the hook
+payload, so concurrent sessions light up independently:
 
 | Hook | Light |
 |------|-------|
+| `SessionStart` | 🟢 green — **connected** (light turns on) |
 | `UserPromptSubmit`, `PreToolUse` | 🔴 red |
 | `Notification` | 🟡 yellow |
-| `Stop` | 🟢 green |
+| `Stop` | 🟢 green (idle / done) |
+| `SessionEnd` | ⚫ off — disconnected (light turns off) |
 
 ### Codex — green out of the box, red on demand
 Codex's external `notify` program currently only receives the
@@ -97,6 +109,9 @@ at the terminal.
   external programs yet, so there's no automatic yellow for Codex. You can still
   get a desktop ping by adding `notifications = ["approval-requested"]` under
   `[tui]` in `config.toml`.
+- **Disconnect:** Codex also has no session-end event, so a Codex turn that
+  finished green will stay connected until the stale window passes (see below);
+  Claude Code turns its light off immediately on `SessionEnd`.
 
 ## Uninstall
 
@@ -107,13 +122,17 @@ python install.py --uninstall        # removes hooks/notify from both
 ## Customizing
 
 - **State directory:** `~/.agent-traffic-light/` (one `*.state` file per
-  agent). Override with `AGENT_TRAFFIC_LIGHT_DIR` for every script.
+  agent/session). Override with `AGENT_TRAFFIC_LIGHT_DIR` for every script.
+- **Scaling:** `--scale` / `AGENT_TRAFFIC_LIGHT_SCALE` (0.5–4.0).
+- **Stale window:** idle (green) sessions older than `AGENT_TRAFFIC_LIGHT_STALE`
+  seconds (default 12h) are treated as disconnected, so a crashed agent that
+  never sent `SessionEnd` won't pin the light on forever.
 - **Set a state by hand** (testing, or wiring a third agent):
   ```bash
-  python set_state.py yellow --source claude
+  python set_state.py yellow --source myagent
   ```
 - **Hook → color mapping:** edit `CLAUDE_EVENTS` in `install.py`, re-run install.
-- **Colors, size, poll interval, position:** constants near the top of
+- **Colors, poll interval, position:** constants near the top of
   `traffic_light.py`.
 
 ## Files

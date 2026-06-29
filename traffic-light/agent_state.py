@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-"""Shared state helpers for the agent traffic light.
+"""Shared state for the agent traffic light. Scales to many agents/sessions.
 
-Each coding agent (Claude Code, Codex, ...) writes its current status to its
-own tiny file inside a shared directory:
+Every agent *session* writes its current status to its own tiny file in a
+shared directory:
 
-    <dir>/claude.state   ->  "red" | "yellow" | "green" | "off"
-    <dir>/codex.state    ->  ...
+    <dir>/claude-<session>.state   ->  "red" | "yellow" | "green"
+    <dir>/codex.state              ->  ...
 
-The traffic-light window reads them all and shows whichever was updated most
-recently -- i.e. whichever agent is actually doing something right now.
+(an agent that has no session id just uses "<source>.state"). The window
+reads them all and shows an aggregate:
+
+    red    -> at least one agent is coding / working
+    yellow -> at least one agent is awaiting your approval / input
+    green  -> at least one agent is connected and idle (ready / done)
+    off    -> no agent connected
+
+A file is removed when its session disconnects, so "green" means "connected".
+Idle green files older than the stale window are ignored (covers crashes).
 
 Directory defaults to ~/.agent-traffic-light and can be overridden with the
 AGENT_TRAFFIC_LIGHT_DIR environment variable.
@@ -17,19 +25,27 @@ AGENT_TRAFFIC_LIGHT_DIR environment variable.
 from __future__ import annotations
 
 import os
+import time
+from collections import namedtuple
 from pathlib import Path
 
-# canonical states
 RED, YELLOW, GREEN, OFF = "red", "yellow", "green", "off"
+PRIORITY = {OFF: 0, GREEN: 1, YELLOW: 2, RED: 3}
 
-# normalize any word an agent might write into a canonical state
 ALIASES = {
     "red": RED, "coding": RED, "working": RED, "busy": RED, "running": RED,
     "yellow": YELLOW, "awaiting": YELLOW, "approval": YELLOW,
     "waiting": YELLOW, "notification": YELLOW, "input": YELLOW,
     "green": GREEN, "done": GREEN, "complete": GREEN, "idle": GREEN,
-    "off": OFF, "": OFF,
+    "ready": GREEN, "connected": GREEN, "start": GREEN,
+    "off": OFF, "disconnected": OFF, "end": OFF, "": OFF,
 }
+
+# Idle (green) sessions older than this are treated as disconnected, so a
+# crashed agent that never sent SessionEnd doesn't pin the light on forever.
+DEFAULT_STALE_SECONDS = 12 * 3600
+
+Summary = namedtuple("Summary", ["state", "count", "sources"])
 
 
 def base_dir() -> Path:
@@ -39,9 +55,17 @@ def base_dir() -> Path:
     return Path.home() / ".agent-traffic-light"
 
 
+def _safe(name: str) -> str:
+    return "".join(c for c in name if c.isalnum() or c in "-_") or "agent"
+
+
 def state_file(source: str) -> Path:
-    safe = "".join(c for c in source.lower() if c.isalnum() or c in "-_") or "agent"
-    return base_dir() / f"{safe}.state"
+    return base_dir() / f"{_safe(source.lower())}.state"
+
+
+def base_source(file_stem: str) -> str:
+    """Group sessions back to their agent: 'claude-1a2b' -> 'claude'."""
+    return file_stem.split("-", 1)[0] or file_stem
 
 
 def normalize(word: str) -> str:
@@ -49,42 +73,72 @@ def normalize(word: str) -> str:
 
 
 def write_state(source: str, state: str) -> None:
-    """Write a state for one agent. Never raises (a status light must not
-    be able to break the agent that drives it)."""
-    path = state_file(source)
+    """Record a state for one agent/session. Never raises."""
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(normalize(state) + "\n", encoding="utf-8")
+        norm = normalize(state)
+        if norm == OFF:
+            remove_state(source)
+            return
+        p = state_file(source)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(norm + "\n", encoding="utf-8")
     except OSError:
         pass
 
 
-def read_states() -> list[tuple[str, str, float]]:
-    """Return (source, state, mtime) for every agent state file found."""
-    out: list[tuple[str, str, float]] = []
-    d = base_dir()
+def remove_state(source: str) -> None:
+    """Disconnect one agent/session (delete its file). Never raises."""
     try:
-        entries = list(d.glob("*.state"))
+        state_file(source).unlink()
+    except (FileNotFoundError, OSError):
+        pass
+
+
+def read_states() -> list[tuple[str, str, float]]:
+    """(stem, state, mtime) for every state file present."""
+    out: list[tuple[str, str, float]] = []
+    try:
+        files = list(base_dir().glob("*.state"))
     except OSError:
         return out
-    for p in entries:
+    for p in files:
         try:
-            word = p.read_text(encoding="utf-8").strip()
-            mtime = p.stat().st_mtime
+            out.append((p.stem, normalize(p.read_text(encoding="utf-8")),
+                        p.stat().st_mtime))
         except OSError:
             continue
-        out.append((p.stem, normalize(word), mtime))
     return out
 
 
-def active() -> tuple[str | None, str]:
-    """Return (source, state) for the most recently updated agent.
+def _stale_seconds() -> float:
+    try:
+        return float(os.environ.get("AGENT_TRAFFIC_LIGHT_STALE",
+                                    DEFAULT_STALE_SECONDS))
+    except ValueError:
+        return DEFAULT_STALE_SECONDS
 
-    This is how the light "auto-selects whichever agent is running": the file
-    touched most recently wins. Returns (None, "off") when nothing is known.
-    """
-    states = read_states()
-    if not states:
+
+def summary() -> Summary:
+    """Aggregate across all connected agents/sessions (scales to many)."""
+    now = time.time()
+    stale = _stale_seconds()
+    best = OFF
+    connected: list[str] = []  # base source names
+    for stem, state, mtime in read_states():
+        if state == OFF:
+            continue
+        if state == GREEN and stale > 0 and (now - mtime) > stale:
+            continue  # idle too long -> assume disconnected
+        connected.append(base_source(stem))
+        if PRIORITY[state] > PRIORITY[best]:
+            best = state
+    sources = sorted(set(connected))
+    return Summary(state=best, count=len(connected), sources=sources)
+
+
+def active() -> tuple[str | None, str]:
+    """Backward-compatible helper: (sources, aggregate state)."""
+    s = summary()
+    if s.count == 0:
         return None, OFF
-    source, state, _ = max(states, key=lambda t: t[2])
-    return source, state
+    return ", ".join(s.sources) or None, s.state
