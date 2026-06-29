@@ -1,32 +1,30 @@
 #!/usr/bin/env python3
-"""Always-on-top traffic light that reflects Claude Code's status.
+"""Always-on-top traffic light for AI coding agents (Claude Code, Codex, ...).
 
-Reads a tiny state file (written by Claude Code hooks) and shows:
+Shows whichever agent is currently active (most recent state wins):
 
-    red    -> Claude is coding / working
-    yellow -> Claude is awaiting your approval or input
-    green  -> Claude is done with its turn
+    red    -> coding / working
+    yellow -> awaiting your approval or input
+    green  -> done with its turn
 
-The window is borderless, always-on-top, and draggable. Right-click it
-(or press Esc / q) to quit.
+Borderless, always-on-top, draggable. Right-click (or Esc / q) to quit.
+Pure Python standard library (tkinter) -- no dependencies.
 
-State file:
-    Defaults to ~/.claude/traffic_light.state and can be overridden with
-    the TRAFFIC_LIGHT_STATE_FILE environment variable. The file should
-    contain a single word: red, yellow, green, or off/idle.
-
-This program uses only the Python standard library (tkinter).
+    python traffic_light.py          # run the light
+    python traffic_light.py --demo   # cycle the colors to preview the look
 """
 
 from __future__ import annotations
 
-import os
 import sys
-import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import agent_state  # noqa: E402
 
 try:
     import tkinter as tk
+    import tkinter.font as tkfont
 except ModuleNotFoundError:  # pragma: no cover - depends on the OS install
     sys.stderr.write(
         "tkinter is not available.\n"
@@ -37,157 +35,163 @@ except ModuleNotFoundError:  # pragma: no cover - depends on the OS install
     sys.exit(1)
 
 
-# ----------------------------------------------------------------------------
-# Configuration
-# ----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Look & feel
+# ---------------------------------------------------------------------------
+POLL_MS = 300
 
-def state_file_path() -> Path:
-    """Where to read the current status from."""
-    env = os.environ.get("TRAFFIC_LIGHT_STATE_FILE")
-    if env:
-        return Path(env).expanduser()
-    return Path.home() / ".claude" / "traffic_light.state"
-
-
-POLL_MS = 250  # how often to re-read the state file
-
-# Lamp colors: (bright "on" color, dim "off" color)
 LAMPS = ("red", "yellow", "green")
-ON_COLORS = {
-    "red": "#ff3b30",
-    "yellow": "#ffcc00",
-    "green": "#34c759",
-}
-OFF_COLORS = {
-    "red": "#3a1412",
-    "yellow": "#3a3410",
-    "green": "#103a1d",
-}
+ON = {"red": "#ff453a", "yellow": "#ffd60a", "green": "#30d158"}
+GLOW = {"red": "#7d211b", "yellow": "#7d6a05", "green": "#16662f"}
+OFF = {"red": "#2c1512", "yellow": "#2c2810", "green": "#11291b"}
+GLOSS = {"red": "#ffb3ad", "yellow": "#fff09a", "green": "#a6f0bd"}
 
-# Map the words that may appear in the state file to a lamp (or None = all off).
-STATE_TO_LAMP = {
-    "red": "red",
-    "coding": "red",
-    "working": "red",
-    "busy": "red",
-    "yellow": "yellow",
-    "awaiting": "yellow",
-    "approval": "yellow",
-    "waiting": "yellow",
-    "green": "green",
-    "done": "green",
-    "idle": None,
-    "off": None,
-    "": None,
+LABELS = {
+    agent_state.RED: "Coding",
+    agent_state.YELLOW: "Needs you",
+    agent_state.GREEN: "Done",
+    agent_state.OFF: "Idle",
 }
 
-# Geometry of the casing.
-LAMP_RADIUS = 22
-LAMP_GAP = 14
-PAD = 14
-WIDTH = LAMP_RADIUS * 2 + PAD * 2
-HEIGHT = LAMP_RADIUS * 2 * 3 + LAMP_GAP * 2 + PAD * 2
-CASE_COLOR = "#1c1c1e"
+WINDOW_BG = "#0a0a0c"     # shows in the rounded corners
+CASE_FILL = "#161619"
+CASE_EDGE = "#000000"
+CASE_INNER = "#2a2a30"
+TXT_MAIN = "#f2f2f7"
+TXT_SUB = "#8e8e93"
+
+R = 22                    # lamp radius
+GAP = 16                  # gap between lamps
+PADX = 18
+PADTOP = 18
+LABEL_H = 46              # room for the text under the lamps
+WIDTH = R * 2 + PADX * 2
+HEIGHT = PADTOP + (R * 2) * 3 + GAP * 2 + LABEL_H
+CORNER = 16
 
 
-# ----------------------------------------------------------------------------
-# Application
-# ----------------------------------------------------------------------------
+def _round_rect_points(x1, y1, x2, y2, r):
+    return [
+        x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r,
+        x2, y2 - r, x2, y2, x2 - r, y2, x1 + r, y2,
+        x1, y2, x1, y2 - r, x1, y1 + r, x1, y1,
+    ]
+
 
 class TrafficLight:
-    def __init__(self, root: tk.Tk) -> None:
+    def __init__(self, root: tk.Tk, demo: bool = False) -> None:
         self.root = root
-        self.path = state_file_path()
-        self.current_lamp = "__init__"  # force first draw
+        self.demo = demo
+        self._current = ("__init__", "__init__")
         self._drag = (0, 0)
+        self._demo_seq = ["red", "yellow", "green", "off"]
+        self._demo_i = 0
 
-        root.overrideredirect(True)  # borderless
+        root.overrideredirect(True)
         root.attributes("-topmost", True)
         try:
-            root.attributes("-alpha", 0.96)
+            root.attributes("-alpha", 0.97)
         except tk.TclError:
-            pass  # not supported on every platform
+            pass
 
-        # Start in the top-right corner of the primary screen.
-        screen_w = root.winfo_screenwidth()
-        root.geometry(f"{WIDTH}x{HEIGHT}+{screen_w - WIDTH - 30}+40")
+        sw = root.winfo_screenwidth()
+        root.geometry(f"{WIDTH}x{HEIGHT}+{sw - WIDTH - 28}+44")
 
-        self.canvas = tk.Canvas(
-            root,
-            width=WIDTH,
-            height=HEIGHT,
-            highlightthickness=0,
-            bg=CASE_COLOR,
-        )
-        self.canvas.pack(fill="both", expand=True)
-        self._draw_case()
+        self.c = tk.Canvas(root, width=WIDTH, height=HEIGHT,
+                           highlightthickness=0, bg=WINDOW_BG)
+        self.c.pack(fill="both", expand=True)
 
-        self.lamp_items: dict[str, int] = {}
+        # casing
+        self.c.create_polygon(_round_rect_points(3, 3, WIDTH - 3, HEIGHT - 3, CORNER),
+                              smooth=True, fill=CASE_FILL, outline=CASE_EDGE, width=2)
+        self.c.create_polygon(_round_rect_points(6, 6, WIDTH - 6, HEIGHT - 6, CORNER - 3),
+                              smooth=True, fill="", outline=CASE_INNER, width=1)
+
+        # lamps (glow ring, body, gloss highlight)
+        self.glow_items: dict[str, int] = {}
+        self.body_items: dict[str, int] = {}
+        self.gloss_items: dict[str, int] = {}
+        cx = WIDTH // 2
         for i, lamp in enumerate(LAMPS):
-            cx = WIDTH // 2
-            cy = PAD + LAMP_RADIUS + i * (LAMP_RADIUS * 2 + LAMP_GAP)
-            self.lamp_items[lamp] = self.canvas.create_oval(
-                cx - LAMP_RADIUS,
-                cy - LAMP_RADIUS,
-                cx + LAMP_RADIUS,
-                cy + LAMP_RADIUS,
-                fill=OFF_COLORS[lamp],
-                outline="#000000",
-                width=1,
-            )
+            cy = PADTOP + R + i * (R * 2 + GAP)
+            self.glow_items[lamp] = self.c.create_oval(
+                cx - R - 4, cy - R - 4, cx + R + 4, cy + R + 4,
+                fill="", outline="", width=0)
+            self.body_items[lamp] = self.c.create_oval(
+                cx - R, cy - R, cx + R, cy + R,
+                fill=OFF[lamp], outline="#000000", width=1)
+            self.gloss_items[lamp] = self.c.create_oval(
+                cx - R * 0.55, cy - R * 0.7, cx + R * 0.2, cy - R * 0.1,
+                fill="", outline="")
 
-        # Interactions: drag to move, click/keys to quit.
-        for seq in ("<ButtonPress-1>",):
-            self.canvas.bind(seq, self._start_drag)
-        self.canvas.bind("<B1-Motion>", self._on_drag)
-        self.canvas.bind("<Button-3>", lambda _e: self.root.destroy())
-        root.bind("<Escape>", lambda _e: self.root.destroy())
-        root.bind("q", lambda _e: self.root.destroy())
+        self.font_main = tkfont.Font(family="Helvetica", size=11, weight="bold")
+        self.font_sub = tkfont.Font(family="Helvetica", size=8)
+        ty = HEIGHT - LABEL_H + 14
+        self.text_main = self.c.create_text(cx, ty, text="Idle",
+                                            fill=TXT_SUB, font=self.font_main)
+        self.text_sub = self.c.create_text(cx, ty + 18, text="",
+                                           fill=TXT_SUB, font=self.font_sub)
+
+        self.c.bind("<ButtonPress-1>", self._start_drag)
+        self.c.bind("<B1-Motion>", self._on_drag)
+        self.c.bind("<Button-3>", lambda _e: root.destroy())
+        root.bind("<Escape>", lambda _e: root.destroy())
+        root.bind("q", lambda _e: root.destroy())
 
         self._poll()
 
-    def _draw_case(self) -> None:
-        self.canvas.create_rectangle(
-            2, 2, WIDTH - 2, HEIGHT - 2,
-            outline="#000000", width=2, fill=CASE_COLOR,
-        )
-
-    def _read_state(self) -> str | None:
-        try:
-            raw = self.path.read_text(encoding="utf-8").strip().lower()
-        except (FileNotFoundError, OSError):
-            return None  # treat missing/unreadable file as "all off"
-        word = raw.split()[0] if raw else ""
-        return STATE_TO_LAMP.get(word, None)
-
-    def _apply(self, lamp: str | None) -> None:
-        if lamp == self.current_lamp:
-            return
-        self.current_lamp = lamp
+    # --- rendering ---------------------------------------------------------
+    def _render(self, source: str | None, state: str) -> None:
+        lamp = state if state in ON else None
         for name in LAMPS:
-            color = ON_COLORS[name] if name == lamp else OFF_COLORS[name]
-            self.canvas.itemconfig(self.lamp_items[name], fill=color)
+            on = name == lamp
+            self.c.itemconfig(self.body_items[name],
+                              fill=ON[name] if on else OFF[name],
+                              outline=ON[name] if on else "#000000")
+            self.c.itemconfig(self.glow_items[name],
+                              fill=GLOW[name] if on else "",
+                              outline="")
+            self.c.itemconfig(self.gloss_items[name],
+                              fill=GLOSS[name] if on else "")
+        meaning = LABELS.get(state, "Idle")
+        self.c.itemconfig(self.text_main, text=meaning,
+                          fill=ON.get(lamp, TXT_SUB) if lamp else TXT_SUB)
+        self.c.itemconfig(self.text_sub, text=(source or "") if lamp else "")
 
+    # --- polling -----------------------------------------------------------
     def _poll(self) -> None:
-        self._apply(self._read_state())
+        if self.demo:
+            state = self._demo_seq[self._demo_i % len(self._demo_seq)]
+            self._demo_i += 1
+            key = ("demo", state)
+            if key != self._current:
+                self._current = key
+                self._render("demo", state)
+            self.root.after(900, self._poll)
+            return
+
+        source, state = agent_state.active()
+        key = (source, state)
+        if key != self._current:
+            self._current = key
+            self._render(source, state)
         self.root.after(POLL_MS, self._poll)
 
     # --- dragging ----------------------------------------------------------
-    def _start_drag(self, event: "tk.Event") -> None:
-        self._drag = (event.x, event.y)
+    def _start_drag(self, e: "tk.Event") -> None:
+        self._drag = (e.x, e.y)
 
-    def _on_drag(self, event: "tk.Event") -> None:
-        dx = event.x - self._drag[0]
-        dy = event.y - self._drag[1]
-        x = self.root.winfo_x() + dx
-        y = self.root.winfo_y() + dy
+    def _on_drag(self, e: "tk.Event") -> None:
+        x = self.root.winfo_x() + e.x - self._drag[0]
+        y = self.root.winfo_y() + e.y - self._drag[1]
         self.root.geometry(f"+{x}+{y}")
 
 
 def main() -> None:
+    demo = "--demo" in sys.argv[1:]
     root = tk.Tk()
-    root.title("Claude Traffic Light")
-    TrafficLight(root)
+    root.title("Agent Traffic Light")
+    TrafficLight(root, demo=demo)
     root.mainloop()
 
 

@@ -1,27 +1,28 @@
-# Claude Code Traffic Light 🚦
+# Agent Traffic Light 🚦
 
-A tiny, always-on-top desktop traffic light that shows what Claude Code is doing:
+A tiny, always-on-top desktop traffic light that shows what your AI coding
+agent is doing — works with **Claude Code** and **OpenAI Codex**, and
+automatically shows whichever one is active right now.
 
 | Light | Meaning |
 |-------|---------|
-| 🔴 **Red** | Claude is coding / working (running tools, editing files) |
-| 🟡 **Yellow** | Claude is awaiting your approval or input |
-| 🟢 **Green** | Claude is done with its turn |
+| 🔴 **Red** | Coding / working (running tools, editing files) |
+| 🟡 **Yellow** | Awaiting your approval or input |
+| 🟢 **Green** | Done with its turn |
 
-It's pure Python standard library (tkinter) — no pip installs, no dependencies.
-Claude Code drives it through [hooks](https://docs.claude.com/en/docs/claude-code/hooks):
-the hooks write one word to a small state file, and the window polls that file.
+It's pure Python standard library (tkinter) — no `pip install`, no
+dependencies, a few MB of RAM and ~0% idle CPU (it only redraws when the
+status actually changes).
 
 ```
-┌─────────────────┐        writes        ┌──────────────────────┐
-│  Claude Code     │  ── hooks ──▶  ~/.claude/traffic_light.state │
-│  (UserPromptSubmit,                     └──────────┬───────────┘
-│   PreToolUse, Notification, Stop)                  │ polls (250ms)
-└──────────────────┘                          ┌──────▼───────┐
-                                              │ traffic_light │  always-on-top
-                                              │     .py        │  window
-                                              └───────────────┘
+Claude Code ─hooks──▶ ~/.agent-traffic-light/claude.state ┐
+                                                          ├─▶ traffic_light.py
+Codex ───────notify─▶ ~/.agent-traffic-light/codex.state  ┘   (shows newest)
 ```
+
+Each agent writes its status to its own file; the window shows the one updated
+**most recently**, so it follows whichever agent you're working with — and
+labels it (`claude` / `codex`) underneath the lights.
 
 ## Requirements
 
@@ -30,69 +31,101 @@ the hooks write one word to a small state file, and the window polls that file.
   - Debian/Ubuntu: `sudo apt install python3-tk`
   - Fedora: `sudo dnf install python3-tkinter`
 
-## Install (2 steps)
+## Quick start
 
-1. **Wire up the hooks** (merges into `~/.claude/settings.json`, keeping your
-   existing settings; a timestamped backup is made):
+```bash
+# 1. Wire up your agent(s). Merges into config, keeps everything else,
+#    makes a timestamped backup. Re-runnable.
+python install.py                 # both Claude Code and Codex
+#   python install.py --claude-only
+#   python install.py --codex-only
 
-   ```bash
-   python install.py
-   ```
+# 2. Restart your agent(s) so they pick up the change.
 
-   Restart Claude Code afterward so it loads the new hooks.
+# 3. Run the light (leave it in the background):
+python traffic_light.py
+```
 
-2. **Run the light** (leave it running in the background):
+Want to see the look first? Cycle the colors without any agent:
 
-   ```bash
-   python traffic_light.py
-   ```
-
-That's it. As you work in Claude Code, the light changes color.
+```bash
+python traffic_light.py --demo
+```
 
 ## Using the window
 
 - **Drag** it anywhere with the left mouse button.
 - **Right-click**, or press **Esc** / **q**, to quit.
-- It starts in the top-right corner of your primary screen and stays on top.
+- Starts top-right of your primary screen and stays on top.
+
+## What each agent supports
+
+### Claude Code — full red / yellow / green
+Installed as [hooks](https://docs.claude.com/en/docs/claude-code/hooks) in
+`~/.claude/settings.json`:
+
+| Hook | Light |
+|------|-------|
+| `UserPromptSubmit`, `PreToolUse` | 🔴 red |
+| `Notification` | 🟡 yellow |
+| `Stop` | 🟢 green |
+
+### Codex — green out of the box, red on demand
+Codex's external `notify` program currently only receives the
+`agent-turn-complete` event ([openai/codex#11808](https://github.com/openai/codex/issues/11808)),
+so `install.py` wires `notify_codex.py` into `~/.codex/config.toml` to turn the
+light 🟢 **green when a turn finishes** — the signal that tells you to look back
+at the terminal.
+
+- **Red while it works:** Codex doesn't emit a "started" event, so for one-shot
+  runs wrap the command with `run_red.py` (red while running, green when done):
+
+  ```bash
+  python run_red.py codex -- codex exec "refactor the utils module"
+  ```
+
+  Handy as a shell alias for one-shot use:
+  ```bash
+  alias codex-go='python /path/to/run_red.py codex -- codex exec'
+  ```
+
+- **Yellow (approval):** Codex doesn't deliver approval-request events to
+  external programs yet, so there's no automatic yellow for Codex. You can still
+  get a desktop ping by adding `notifications = ["approval-requested"]` under
+  `[tui]` in `config.toml`.
 
 ## Uninstall
 
 ```bash
-python install.py --uninstall   # removes only the traffic-light hooks
+python install.py --uninstall        # removes hooks/notify from both
 ```
 
-## How it works / customizing
+## Customizing
 
-- The state lives in `~/.claude/traffic_light.state` (a single word: `red`,
-  `yellow`, `green`, or `off`). Override the location for both scripts with the
-  `TRAFFIC_LIGHT_STATE_FILE` environment variable.
-- You can set the light manually for testing:
-
+- **State directory:** `~/.agent-traffic-light/` (one `*.state` file per
+  agent). Override with `AGENT_TRAFFIC_LIGHT_DIR` for every script.
+- **Set a state by hand** (testing, or wiring a third agent):
   ```bash
-  python hooks/set_state.py yellow
+  python set_state.py yellow --source claude
   ```
-
-- The hook → color mapping is defined in `install.py` (`EVENT_STATE`):
-  - `UserPromptSubmit` → red
-  - `PreToolUse` → red
-  - `Notification` → yellow
-  - `Stop` → green
-
-  Edit that dict and re-run `python install.py` to change the behavior.
-- Colors, lamp size, poll interval, and window position are constants near the
-  top of `traffic_light.py`.
+- **Hook → color mapping:** edit `CLAUDE_EVENTS` in `install.py`, re-run install.
+- **Colors, size, poll interval, position:** constants near the top of
+  `traffic_light.py`.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `traffic_light.py` | The always-on-top window (run this). |
-| `hooks/set_state.py` | Tiny helper the hooks call to write the state. |
-| `install.py` | Merges/removes the hooks in `~/.claude/settings.json`. |
+| `traffic_light.py` | The always-on-top window (run this; `--demo` to preview). |
+| `agent_state.py` | Shared state read/write + "most recent agent" logic. |
+| `set_state.py` | Helper the Claude Code hooks call. |
+| `notify_codex.py` | Codex `notify` program (turn-complete → green). |
+| `run_red.py` | Run a command red→green (gives Codex a "working" state). |
+| `install.py` | Adds/removes the integration for both agents. |
 
 ## Notes
 
-- Hooks run shell commands on your machine; this one only writes a single word
-  to a file and exits, and it never fails loudly so it won't block Claude Code.
-- The light reflects the most recent Claude Code event in any session. If you
-  run several sessions at once they share one state file.
+- The hooks/notify only write a single word to a file and exit; they never fail
+  loudly, so they can't block or slow down your agent.
+- Run several agents at once and the light always reflects the most recent
+  activity across all of them.
