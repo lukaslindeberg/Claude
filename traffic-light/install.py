@@ -33,10 +33,12 @@ CODEX_CONFIG = Path.home() / ".codex" / "config.toml"
 
 # Claude Code: event -> state word
 CLAUDE_EVENTS = {
+    "SessionStart": "green",     # connected -> light turns on (ready)
     "UserPromptSubmit": "red",   # you sent a prompt -> Claude starts working
     "PreToolUse": "red",         # running a tool (edit/bash/...)
     "Notification": "yellow",    # needs your approval / input
-    "Stop": "green",             # finished its turn
+    "Stop": "green",             # finished its turn (connected, idle)
+    "SessionEnd": "off",         # disconnected -> light turns off
 }
 MATCHED_EVENTS = {"PreToolUse"}
 
