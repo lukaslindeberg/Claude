@@ -17,6 +17,12 @@ coding, else **yellow** if *anyone* needs you, else **green** if anything is
 connected. A `● connected` indicator under the lamps shows how many agents are
 live (e.g. `● 3: claude, codex`).
 
+**Works everywhere — local *and* cloud/web sessions.** A local session lights
+up instantly via a file on your machine; a session running in the cloud (Claude
+Code on the web / a GitHub‑connected repo, on any machine) reports through a
+shared private **GitHub Gist** that your light polls. One light, every
+environment. See [Works everywhere](#works-everywhere-cloud--web-sessions).
+
 It's pure Python standard library (tkinter) — no `pip install`, no
 dependencies, a few MB of RAM and ~0% idle CPU (it only redraws when the
 status actually changes).
@@ -113,10 +119,65 @@ at the terminal.
   finished green will stay connected until the stale window passes (see below);
   Claude Code turns its light off immediately on `SessionEnd`.
 
+## Works everywhere (cloud & web sessions)
+
+Local hooks only fire for Claude running **on your Mac**. When you work in a
+GitHub repo through Claude on the web, that session runs in the cloud and can't
+touch your Mac — so the light stays dark. The relay fixes that using a private
+**GitHub Gist** as a shared status channel that any environment can write to and
+your light polls:
+
+```
+ cloud/web session ─┐
+ another machine   ─┼─▶  private GitHub Gist  ◀─ polled by ─  traffic_light.py
+ local session     ─┘        (status per session)                (your Mac)
+```
+
+**One‑time setup:**
+
+1. Create a GitHub token with the **`gist`** scope:
+   https://github.com/settings/tokens → *Generate new token (classic)* → tick
+   **`gist`** → generate → copy the `ghp_…` value.
+2. On your Mac, create the status gist and save the config:
+   ```bash
+   python relay.py setup --token ghp_xxxxxxxx
+   ```
+   It prints two values — `TRAFFIC_LIGHT_GITHUB_TOKEN` and
+   `TRAFFIC_LIGHT_GIST_ID` — and saves them locally so your light starts polling.
+3. Add the relay hooks to the repo you work on in the cloud, then commit & push:
+   ```bash
+   python install.py --relay-repo /path/to/your/repo
+   ```
+   This writes `.claude/settings.json` and a self‑contained
+   `.claude/traffic-light/relay.py` into that repo.
+4. In your **cloud environment's variables** (see
+   [Claude Code on the web docs](https://code.claude.com/docs/en/claude-code-on-the-web)),
+   set the two variables from step 2:
+   `TRAFFIC_LIGHT_GITHUB_TOKEN` and `TRAFFIC_LIGHT_GIST_ID`.
+5. Verify from inside a cloud session (or locally):
+   ```bash
+   python relay.py doctor
+   ```
+   It checks the token, does a test write, reads it back, and tells you if the
+   relay works from that environment.
+
+Now a cloud/web repo session turns your Mac's light red/green too (a few seconds
+of polling delay). Local sessions stay instant. The light **merges both**, so
+the count can read e.g. `● 2: cloud, local`.
+
+Notes:
+- The relay only makes network calls **on a state change** (transition‑cached),
+  so it's light on rate limits.
+- The committed relay hooks are a **safe no‑op** for anyone without the token —
+  fine to commit to a shared repo.
+- Requires the cloud environment to allow outbound HTTPS to `api.github.com`
+  (governed by its network policy). `relay.py doctor` confirms this.
+
 ## Uninstall
 
 ```bash
-python install.py --uninstall        # removes hooks/notify from both
+python install.py --uninstall                 # local Claude Code + Codex
+python install.py --relay-repo /path --uninstall   # relay hooks from a repo
 ```
 
 ## Customizing
@@ -146,7 +207,9 @@ python install.py --uninstall        # removes hooks/notify from both
 | `set_state.py` | Helper the Claude Code hooks call. |
 | `notify_codex.py` | Codex `notify` program (turn-complete → green). |
 | `run_red.py` | Run a command red→green (gives Codex a "working" state). |
-| `install.py` | Adds/removes the integration for both agents (used by `setup.py`). |
+| `relay.py` | Cross-environment relay via a shared GitHub Gist (`setup`/`set`/`fetch`/`doctor`); makes cloud/web sessions light up. |
+| `install.py` | Adds/removes the integration for both agents, and `--relay-repo` for cloud (used by `setup.py`). |
+| `tests/test_relay.py` | Automated tests for the relay + aggregation logic (`python3 tests/test_relay.py`). |
 
 ## Notes
 

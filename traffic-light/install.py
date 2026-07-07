@@ -144,17 +144,86 @@ def codex(install: bool) -> None:
 
 
 # --------------------------------------------------------------------------
+# Relay: inject hooks into a repo so CLOUD / web sessions report status too.
+# The hooks call a self-contained relay.py that pushes to a shared gist.
+RELAY_SRC = HERE / "relay.py"
+
+
+def relay_repo(repo: Path, install: bool) -> None:
+    repo = repo.resolve()
+    if not repo.exists():
+        sys.exit(f"error: repo path not found: {repo}")
+    claude_dir = repo / ".claude"
+    tl_dir = claude_dir / "traffic-light"
+    settings = claude_dir / "settings.json"
+    rel_script = "$CLAUDE_PROJECT_DIR/.claude/traffic-light/relay.py"
+
+    data = {}
+    if settings.exists():
+        try:
+            data = json.loads(settings.read_text(encoding="utf-8") or "{}")
+        except json.JSONDecodeError:
+            sys.exit(f"error: {settings} is not valid JSON; fix it first.")
+    hooks = data.setdefault("hooks", {})
+    # strip any relay hooks we added before
+    for ev in list(hooks):
+        keep = [g for g in hooks[ev]
+                if not any("relay.py" in str(h.get("command", ""))
+                           for h in g.get("hooks", []))]
+        hooks[ev] = keep if keep else None
+    hooks = {k: v for k, v in hooks.items() if v}
+
+    if install:
+        tl_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(RELAY_SRC, tl_dir / "relay.py")
+        for ev, state in CLAUDE_EVENTS.items():
+            cmd = f'python3 "{rel_script}" set {state} --source claude'
+            group = {"hooks": [{"type": "command", "command": cmd}]}
+            if ev in MATCHED_EVENTS:
+                group["matcher"] = "*"
+            hooks.setdefault(ev, []).append(group)
+
+    data["hooks"] = hooks
+    if not hooks:
+        data.pop("hooks", None)
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    _backup(settings)
+    settings.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    if install:
+        print(f"  installed relay hooks in {settings}")
+        print(f"  copied relay.py -> {tl_dir / 'relay.py'}")
+        print("\nNext:")
+        print("  1) Commit & push .claude/ so cloud sessions get the hooks.")
+        print("  2) In your cloud environment's variables, set "
+              "TRAFFIC_LIGHT_GITHUB_TOKEN and TRAFFIC_LIGHT_GIST_ID")
+        print(f"     (get them from:  {PY} {RELAY_SRC} setup --token ghp_xxx)")
+        print("  3) Verify from inside a cloud session with:  "
+              "python3 .claude/traffic-light/relay.py doctor")
+    else:
+        print(f"  removed relay hooks from {settings} "
+              "(delete .claude/traffic-light manually if unused)")
+
+
+# --------------------------------------------------------------------------
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--uninstall", action="store_true")
     ap.add_argument("--claude-only", action="store_true")
     ap.add_argument("--codex-only", action="store_true")
+    ap.add_argument("--relay-repo", metavar="PATH",
+                    help="inject cloud-relay hooks into the repo at PATH")
     args = ap.parse_args()
+
+    install = not args.uninstall
+
+    if args.relay_repo:
+        print("Uninstalling relay..." if not install else "Installing cloud relay...")
+        relay_repo(Path(args.relay_repo), install)
+        return
 
     do_claude = not args.codex_only
     do_codex = not args.claude_only
-    install = not args.uninstall
 
     print("Uninstalling..." if not install else "Installing traffic-light integration...")
     if do_claude:

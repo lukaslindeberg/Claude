@@ -21,10 +21,16 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import agent_state  # noqa: E402
+try:
+    import relay  # cross-environment (cloud) status via a shared gist
+except Exception:  # pragma: no cover
+    relay = None
 
 try:
     import tkinter as tk
@@ -40,6 +46,7 @@ except ModuleNotFoundError:  # pragma: no cover - depends on the OS install
 
 
 POLL_MS = 300
+RELAY_POLL_S = 4.0          # how often to poll the shared gist for remote sessions
 LAMPS = ("red", "yellow", "green")
 ON = {"red": "#ff453a", "yellow": "#ffd60a", "green": "#30d158"}
 GLOW = {"red": "#7d211b", "yellow": "#7d6a05", "green": "#16662f"}
@@ -137,7 +144,34 @@ class TrafficLight:
         self.c.bind("<Button-3>", lambda _e: root.destroy())
         root.bind("<Escape>", lambda _e: root.destroy())
         root.bind("q", lambda _e: root.destroy())
+
+        # Cross-environment (cloud/remote) sessions via the shared gist, polled
+        # off the UI thread so the network never blocks the light.
+        self._relay = {"state": agent_state.OFF, "count": 0, "sources": []}
+        self._relay_on = bool(relay and not demo and relay.is_configured())
+        if self._relay_on:
+            threading.Thread(target=self._relay_loop, daemon=True).start()
+
         self._poll()
+
+    def _relay_loop(self) -> None:
+        while True:
+            try:
+                self._relay = relay.fetch()
+            except Exception:
+                pass
+            time.sleep(RELAY_POLL_S)
+
+    def _combined(self):
+        """Merge local (file) sessions with remote (gist) sessions."""
+        local = agent_state.summary()
+        r = self._relay
+        state = local.state
+        if agent_state.PRIORITY.get(r["state"], 0) > agent_state.PRIORITY.get(state, 0):
+            state = r["state"]
+        count = local.count + int(r.get("count", 0))
+        sources = sorted(set(list(local.sources) + list(r.get("sources", []))))
+        return state, count, sources
 
     def _render(self, state: str, connected: int, subtext: str) -> None:
         lamp = state if state in ON else None
@@ -162,14 +196,14 @@ class TrafficLight:
             self.root.after(900, self._poll)
             return
 
-        s = agent_state.summary()
-        if s.count == 0:
+        state, count, sources = self._combined()
+        if count == 0:
             sub = "offline"
-        elif s.count == 1:
-            sub = s.sources[0] if s.sources else "connected"
+        elif count == 1:
+            sub = sources[0] if sources else "connected"
         else:
-            sub = f"{s.count}: " + ", ".join(s.sources)
-        self._apply((s.state, s.count, sub))
+            sub = f"{count}: " + ", ".join(sources)
+        self._apply((state, count, sub))
         self.root.after(POLL_MS, self._poll)
 
     def _apply(self, payload) -> None:
