@@ -30,7 +30,9 @@ sys.path.insert(0, str(HERE))
 import install as installer       # noqa: E402  (reuse the tested install logic)
 
 PY = sys.executable or "python3"
-LIGHT = HERE / "traffic_light.py"
+# The light runs from the FIXED install location, so deleting the download
+# never stops it and updates never break it.
+LIGHT = installer.APP_LIGHT
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +79,10 @@ def _capture(fn, *args) -> str:
 
 
 def do_install(claude: bool, codex: bool, autostart: bool) -> str:
+    if not (claude or codex):
+        claude = True  # nothing ticked -> at least set up Claude Code
     out = "Installing...\n"
+    installer.sync_app()
     if claude:
         out += _capture(installer.claude, True)
     if codex:
@@ -85,6 +90,15 @@ def do_install(claude: bool, codex: bool, autostart: bool) -> str:
     if autostart:
         out += enable_autostart()
     out += "\nDone. Restart your agent(s) so they pick up the changes."
+    return out
+
+
+def do_all(claude: bool, codex: bool, autostart: bool = True) -> str:
+    """One click: install + (optional) auto-start at login + launch the light."""
+    out = do_install(claude, codex, autostart)
+    out += "\n" + start_light()
+    out += ("\n\n✅ All set. Now RESTART Claude Code (Cmd+Q, reopen) so it "
+            "loads the hooks. The light turns green when a session connects.")
     return out
 
 
@@ -99,6 +113,8 @@ def do_uninstall(claude: bool, codex: bool) -> str:
 
 
 def start_light() -> str:
+    if not LIGHT.exists():
+        installer.sync_app()   # make sure the fixed-location copy exists
     if not LIGHT.exists():
         return f"[error] {LIGHT} not found"
     try:
@@ -210,7 +226,7 @@ def launch_gui() -> None:
 
     claude_v = tk.BooleanVar(value=have_claude() or not have_codex())
     codex_v = tk.BooleanVar(value=have_codex())
-    auto_v = tk.BooleanVar(value=False)
+    auto_v = tk.BooleanVar(value=True)   # friendly default: start with your Mac
 
     opts = tk.Frame(root, bg="#161619")
     opts.grid(row=2, column=0, columnspan=2, sticky="w", padx=14, pady=8)
@@ -227,7 +243,8 @@ def launch_gui() -> None:
                   insertbackground=fg, relief="flat", font=("Menlo", 9),
                   wrap="word")
     log.grid(row=4, column=0, columnspan=2, padx=14, pady=(6, 12))
-    log.insert("end", "Choose what to set up, then click Install.\n")
+    log.insert("end", "Just click  “Install & Start”  — that sets everything up "
+                      "and opens the light.\nThen restart Claude Code once.\n")
     log.configure(state="disabled")
 
     def show(text: str) -> None:
@@ -247,9 +264,8 @@ def launch_gui() -> None:
         b.grid(row=0, column=col, padx=4)
         return b
 
-    mkbtn("Install", lambda: show(
-        do_install(claude_v.get(), codex_v.get(), auto_v.get())), 0,
-        bg="#1f6f3a")
+    mkbtn("✓ Install & Start", lambda: show(
+        do_all(claude_v.get(), codex_v.get(), auto_v.get())), 0, bg="#1f6f3a")
     mkbtn("Start light", lambda: show(start_light()), 1)
     mkbtn("Uninstall", lambda: show(
         do_uninstall(claude_v.get(), codex_v.get())), 2)
@@ -265,12 +281,11 @@ def cli() -> None:
     print("\n\U0001F6A6  Agent Traffic Light setup")
     print(f"   Detected: Claude Code={have_claude()}  Codex={have_codex()}\n")
     menu = (
-        "  1) Install for both Claude Code and Codex\n"
+        "  1) Install & Start  (recommended: sets up + auto-start + opens the light)\n"
         "  2) Install for Claude Code only\n"
         "  3) Install for Codex only\n"
         "  4) Start the light now\n"
-        "  5) Start the light at login\n"
-        "  6) Uninstall everything\n"
+        "  5) Uninstall everything\n"
         "  0) Quit\n"
     )
     while True:
@@ -280,7 +295,7 @@ def cli() -> None:
         except (EOFError, KeyboardInterrupt):
             return
         if choice == "1":
-            print(do_install(True, True, False))
+            print(do_all(have_claude() or not have_codex(), have_codex()))
         elif choice == "2":
             print(do_install(True, False, False))
         elif choice == "3":
@@ -288,8 +303,6 @@ def cli() -> None:
         elif choice == "4":
             print(start_light())
         elif choice == "5":
-            print(enable_autostart())
-        elif choice == "6":
             print(do_uninstall(True, True))
         elif choice == "0":
             return

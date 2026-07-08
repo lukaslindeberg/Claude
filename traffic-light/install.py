@@ -24,12 +24,33 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SET_STATE = HERE / "set_state.py"
-NOTIFY_CODEX = HERE / "notify_codex.py"
 PY = sys.executable or "python3"
+
+# Install the app into a FIXED location so re-downloading or updating never
+# breaks the hook paths. Hooks always point HERE, not at the download folder,
+# so you can delete the download afterwards and updates never orphan anything.
+APP_HOME = Path.home() / ".agent-traffic-light" / "app"
+APP_FILES = ("agent_state.py", "set_state.py", "notify_codex.py", "run_red.py",
+             "relay.py", "traffic_light.py", "install.py", "setup.py")
+SET_STATE = APP_HOME / "set_state.py"
+NOTIFY_CODEX = APP_HOME / "notify_codex.py"
+APP_LIGHT = APP_HOME / "traffic_light.py"
 
 CLAUDE_SETTINGS = Path.home() / ".claude" / "settings.json"
 CODEX_CONFIG = Path.home() / ".codex" / "config.toml"
+
+
+def sync_app() -> Path:
+    """Copy the app into APP_HOME so hook paths stay stable across downloads."""
+    APP_HOME.mkdir(parents=True, exist_ok=True)
+    for name in APP_FILES:
+        src = HERE / name
+        try:
+            if src.exists() and src.resolve() != (APP_HOME / name).resolve():
+                shutil.copy2(src, APP_HOME / name)
+        except OSError:
+            pass
+    return APP_HOME
 
 # Claude Code: event -> state word
 CLAUDE_EVENTS = {
@@ -72,8 +93,10 @@ def _strip_claude(hooks: dict) -> None:
 
 
 def claude(install: bool) -> None:
-    if install and not SET_STATE.exists():
-        sys.exit(f"error: cannot find {SET_STATE}")
+    if install:
+        sync_app()
+        if not SET_STATE.exists():
+            sys.exit(f"error: cannot find {SET_STATE}")
     data = {}
     if CLAUDE_SETTINGS.exists():
         try:
@@ -111,8 +134,10 @@ def _codex_line() -> str:
 
 
 def codex(install: bool) -> None:
-    if install and not NOTIFY_CODEX.exists():
-        sys.exit(f"error: cannot find {NOTIFY_CODEX}")
+    if install:
+        sync_app()
+        if not NOTIFY_CODEX.exists():
+            sys.exit(f"error: cannot find {NOTIFY_CODEX}")
     text = ""
     if CODEX_CONFIG.exists():
         text = CODEX_CONFIG.read_text(encoding="utf-8")
@@ -226,6 +251,9 @@ def main() -> None:
     do_codex = not args.claude_only
 
     print("Uninstalling..." if not install else "Installing traffic-light integration...")
+    if install:
+        sync_app()   # copy the app to the fixed location before wiring hooks
+        print(f"  app installed at {APP_HOME}")
     if do_claude:
         claude(install)
     if do_codex:
@@ -233,9 +261,8 @@ def main() -> None:
 
     if install:
         print("\nDone. Restart your agent(s) to load the changes, then run:")
-        print(f"  {PY} {HERE / 'traffic_light.py'}")
-        print("Preview the look any time with:  "
-              f"{PY} {HERE / 'traffic_light.py'} --demo")
+        print(f"  {PY} {APP_LIGHT}")
+        print(f"Preview the look any time with:  {PY} {APP_LIGHT} --demo")
     else:
         print("\nRemoved. (State files in ~/.agent-traffic-light can be deleted "
               "manually.)")

@@ -44,11 +44,11 @@ labels it (`claude` / `codex`) underneath the lights.
   - Debian/Ubuntu: `sudo apt install python3-tk`
   - Fedora: `sudo dnf install python3-tkinter`
 
-## Quick start — just double-click
+## Quick start — one click
 
-Use the launcher for your device. It opens a small setup window where you tick
-your agent(s) and click **Install** (with optional "start at login" and a
-**Start light** button):
+Double-click the launcher for your device, then click **“✓ Install & Start”**.
+That's the whole setup: it installs the hooks, opens the light, and turns on
+auto-start at login — one button.
 
 | Device | Double-click |
 |--------|--------------|
@@ -56,16 +56,25 @@ your agent(s) and click **Install** (with optional "start at login" and a
 | **Windows** | `Install Traffic Light.bat` |
 | **Linux** | `install.sh` *(or right-click → Run)* |
 
+Then **restart Claude Code once** so it loads the hooks. That's it — the light
+turns green when a session connects.
+
+> **Updates never break it.** The app installs itself to a fixed location
+> (`~/.agent-traffic-light/app/`) and the hooks point there — so you can delete
+> the download, and re-downloading a newer version and clicking Install again
+> just refreshes it without ever orphaning anything.
+>
+> After the first install you don't even need the download again — the setup
+> window is always at `~/.agent-traffic-light/app/setup.py`.
+
 No graphical toolkit? The same launcher falls back to a simple text menu.
-After installing, **restart your agent(s)** so they load the changes.
 
 ### Or from the command line
 
 ```bash
 python setup.py            # the same setup window / text menu
-python install.py          # wire up both agents directly (no UI)
+python install.py          # wire up both agents directly (installs to the fixed location)
 #   python install.py --claude-only | --codex-only | --uninstall
-python traffic_light.py    # run the light
 python traffic_light.py --demo        # preview the look with no agent running
 python traffic_light.py --scale 1.5   # bigger (good for high-DPI / TV displays)
 ```
