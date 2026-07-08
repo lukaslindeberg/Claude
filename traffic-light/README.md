@@ -142,7 +142,13 @@ your light polls:
  local session     ─┘        (status per session)                (your Mac)
 ```
 
-**One‑time setup:**
+**Easiest — the wizard:** in the setup window click **“☁ Cloud sessions”**. It
+opens GitHub to the right token page, takes your pasted token, creates the gist,
+copies the two environment variables to your clipboard, and (optionally) adds the
+hooks to a repo folder you pick. Then paste those two variables into your cloud
+environment's settings and you're done.
+
+**Or do it by hand:**
 
 1. Create a GitHub token with the **`gist`** scope:
    https://github.com/settings/tokens → *Generate new token (classic)* → tick

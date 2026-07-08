@@ -224,6 +224,19 @@ def fetch() -> dict:
 
 
 # --------------------------------------------------------------------------- setup / doctor
+def setup(token: str) -> str:
+    """Create the status gist and save config. Returns the gist id. Raises on
+    error (used by the CLI and the setup wizard)."""
+    _, gist = api("POST", "/gists", token, {
+        "description": "Agent Traffic Light status (do not delete)",
+        "public": False,
+        "files": {KEEPALIVE: {"content": "{}"}},
+    })
+    gid = gist["id"]
+    save_config(token, gid)
+    return gid
+
+
 def cmd_setup(token: str) -> int:
     if not token:
         token = os.environ.get("TRAFFIC_LIGHT_GITHUB_TOKEN", "")
@@ -233,11 +246,7 @@ def cmd_setup(token: str) -> int:
         print("Create one at https://github.com/settings/tokens (classic, scope: gist)")
         return 2
     try:
-        _, gist = api("POST", "/gists", token, {
-            "description": "Agent Traffic Light status (do not delete)",
-            "public": False,
-            "files": {KEEPALIVE: {"content": "{}"}},
-        })
+        gid = setup(token)
     except urllib.error.HTTPError as e:
         print(f"Could not create gist: HTTP {e.code} {e.read()[:200]!r}")
         print("Make sure the token has the `gist` scope.")
@@ -245,8 +254,6 @@ def cmd_setup(token: str) -> int:
     except Exception as e:
         print(f"Could not create gist: {e}")
         return 1
-    gid = gist["id"]
-    save_config(token, gid)
     print("\n✅ Relay ready. Saved to", CONFIG_FILE)
     print(f"   Gist: https://gist.github.com/{gid}")
     print("\nTo light up CLOUD / web sessions, add these to your cloud environment's")

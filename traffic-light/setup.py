@@ -23,11 +23,17 @@ import os
 import shutil
 import subprocess
 import sys
+import webbrowser
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import install as installer       # noqa: E402  (reuse the tested install logic)
+import relay                       # noqa: E402  (cloud relay setup)
+
+# Opens the GitHub token page with the `gist` scope already ticked.
+TOKEN_URL = ("https://github.com/settings/tokens/new"
+             "?scopes=gist&description=Agent+Traffic+Light")
 
 PY = sys.executable or "python3"
 # The light runs from the FIXED install location, so deleting the download
@@ -100,6 +106,40 @@ def do_all(claude: bool, codex: bool, autostart: bool = True) -> str:
     out += ("\n\n✅ All set. Now RESTART Claude Code (Cmd+Q, reopen) so it "
             "loads the hooks. The light turns green when a session connects.")
     return out
+
+
+def cloud_env_lines(token: str, gist_id: str) -> str:
+    return (f"TRAFFIC_LIGHT_GITHUB_TOKEN={token}\n"
+            f"TRAFFIC_LIGHT_GIST_ID={gist_id}")
+
+
+def enable_cloud(token: str, repo_path: str = "") -> str:
+    """Create the status gist from a pasted token and print the cloud env vars.
+    The heavy lifting (gist creation + config save) lives in relay.setup()."""
+    token = (token or "").strip()
+    if not (token.startswith("ghp_") or token.startswith("github_pat_")):
+        return ("Paste your GitHub token first — it starts with `ghp_` or "
+                "`github_pat_`.\nGet one (scope: gist) from the button / "
+                f"{TOKEN_URL}")
+    try:
+        gid = relay.setup(token)
+    except Exception as e:
+        return (f"[error] couldn't create the status gist: {e}\n"
+                "Make sure the token has the `gist` scope ticked.")
+    out = ["✅ Cloud relay ready — your Mac's light now polls the shared gist.",
+           f"   gist: https://gist.github.com/{gid}",
+           "",
+           "Paste these into your CLOUD environment's variables",
+           "(Claude Code on the web → environment settings):",
+           "",
+           cloud_env_lines(token, gid)]
+    if repo_path.strip():
+        out += ["", _capture(installer.relay_repo, Path(repo_path.strip()), True).strip(),
+                "→ commit & push that repo's .claude/ so cloud sessions get the hooks."]
+    else:
+        out += ["", "Last step: add the hooks to your repo, then commit & push:",
+                "   python install.py --relay-repo /path/to/your/repo"]
+    return "\n".join(out)
 
 
 def do_uninstall(claude: bool, codex: bool) -> str:
@@ -256,22 +296,117 @@ def launch_gui() -> None:
     btns = tk.Frame(root, bg="#161619")
     btns.grid(row=3, column=0, columnspan=2, padx=14, pady=2, sticky="w")
 
-    def mkbtn(text, cmd, col, bg="#2a2a30"):
+    def mkbtn(text, cmd, col, row=0, bg="#2a2a30"):
         b = tk.Button(btns, text=text, command=cmd, bg=bg, fg=fg,
                       activebackground="#3a3a40", activeforeground=fg,
                       relief="flat", padx=12, pady=5, highlightthickness=0,
                       font=("Helvetica", 10, "bold"))
-        b.grid(row=0, column=col, padx=4)
+        b.grid(row=row, column=col, padx=4, pady=3, sticky="w")
         return b
 
     mkbtn("✓ Install & Start", lambda: show(
         do_all(claude_v.get(), codex_v.get(), auto_v.get())), 0, bg="#1f6f3a")
     mkbtn("Start light", lambda: show(start_light()), 1)
+    mkbtn("☁ Cloud sessions", lambda: cloud_wizard(root, show), 2, bg="#1f4f6f")
     mkbtn("Uninstall", lambda: show(
-        do_uninstall(claude_v.get(), codex_v.get())), 2)
-    mkbtn("Quit", root.destroy, 3)
+        do_uninstall(claude_v.get(), codex_v.get())), 0, row=1)
+    mkbtn("Quit", root.destroy, 1, row=1)
 
     root.mainloop()
+
+
+def cloud_wizard(root, show) -> None:
+    """A little step-by-step window for enabling cloud/web sessions."""
+    import tkinter as tk
+
+    bg, fg, sub = "#161619", "#f2f2f7", "#8e8e93"
+    w = tk.Toplevel(root)
+    w.title("Enable cloud sessions")
+    w.configure(bg=bg)
+    w.resizable(False, False)
+
+    def lbl(text, **kw):
+        kw.setdefault("bg", bg)
+        kw.setdefault("fg", fg)
+        kw.setdefault("justify", "left")
+        return tk.Label(w, text=text, **kw)
+
+    lbl("☁  Make the light work for cloud / web sessions",
+        font=("Helvetica", 14, "bold")).grid(row=0, column=0, columnspan=2,
+                                              sticky="w", padx=16, pady=(14, 2))
+    lbl("Cloud (GitHub‑repo) sessions can't reach your Mac, so they report\n"
+        "through a private GitHub Gist that your light polls.",
+        fg=sub, font=("Helvetica", 9)).grid(row=1, column=0, columnspan=2,
+                                            sticky="w", padx=16)
+
+    lbl("1. Create a GitHub token (scope: gist)", font=("Helvetica", 10, "bold")
+        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=16, pady=(12, 0))
+    tk.Button(w, text="Open GitHub →", command=lambda: webbrowser.open(TOKEN_URL),
+              bg="#2a2a30", fg=fg, relief="flat", padx=10, pady=4,
+              activebackground="#3a3a40", activeforeground=fg).grid(
+        row=3, column=0, sticky="w", padx=16, pady=4)
+
+    lbl("2. Paste the token here (ghp_… / github_pat_…)",
+        font=("Helvetica", 10, "bold")).grid(row=4, column=0, columnspan=2,
+                                             sticky="w", padx=16, pady=(10, 0))
+    tok = tk.Entry(w, width=52, show="•", bg="#0a0a0c", fg=fg, insertbackground=fg,
+                   relief="flat")
+    tok.grid(row=5, column=0, columnspan=2, sticky="w", padx=16, pady=4)
+
+    lbl("3. (optional) repo folder to add cloud hooks to",
+        font=("Helvetica", 10, "bold")).grid(row=6, column=0, columnspan=2,
+                                             sticky="w", padx=16, pady=(10, 0))
+    repo_row = tk.Frame(w, bg=bg)
+    repo_row.grid(row=7, column=0, columnspan=2, sticky="w", padx=16)
+    repo = tk.Entry(repo_row, width=40, bg="#0a0a0c", fg=fg, insertbackground=fg,
+                    relief="flat")
+    repo.grid(row=0, column=0, sticky="w", pady=4)
+
+    def browse():
+        from tkinter import filedialog
+        p = filedialog.askdirectory()
+        if p:
+            repo.delete(0, "end")
+            repo.insert(0, p)
+    tk.Button(repo_row, text="Browse…", command=browse, bg="#2a2a30", fg=fg,
+              relief="flat", padx=8, activebackground="#3a3a40",
+              activeforeground=fg).grid(row=0, column=1, padx=6)
+
+    out = tk.Text(w, width=60, height=9, bg="#0a0a0c", fg=fg, relief="flat",
+                  font=("Menlo", 9), wrap="word")
+    out.grid(row=9, column=0, columnspan=2, padx=16, pady=(8, 6))
+    out.insert("end", "Then click Finish. You'll get two variables to paste "
+                      "into your cloud environment's settings.")
+    out.configure(state="disabled")
+
+    def finish():
+        out.configure(state="normal")
+        out.delete("1.0", "end")
+        out.insert("end", "Working…")
+        out.configure(state="disabled")
+        w.update()
+        result = enable_cloud(tok.get(), repo.get())
+        out.configure(state="normal")
+        out.delete("1.0", "end")
+        out.insert("end", result)
+        out.configure(state="disabled")
+        # copy the env vars to the clipboard if we produced them
+        for line in result.splitlines():
+            if line.startswith("TRAFFIC_LIGHT_GITHUB_TOKEN="):
+                cfg = relay.load_config()
+                w.clipboard_clear()
+                w.clipboard_append(cloud_env_lines(cfg["token"], cfg["gist_id"]))
+                break
+        show("Cloud setup ran — see the wizard window for your env vars.")
+
+    btnrow = tk.Frame(w, bg=bg)
+    btnrow.grid(row=8, column=0, columnspan=2, sticky="w", padx=16, pady=(8, 0))
+    tk.Button(btnrow, text="Finish & copy env vars", command=finish, bg="#1f6f3a",
+              fg=fg, relief="flat", padx=12, pady=5, activebackground="#2a8f4a",
+              activeforeground=fg, font=("Helvetica", 10, "bold")).grid(row=0, column=0)
+    tk.Button(btnrow, text="Close", command=w.destroy, bg="#2a2a30", fg=fg,
+              relief="flat", padx=12, pady=5, activebackground="#3a3a40",
+              activeforeground=fg).grid(row=0, column=1, padx=6)
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +420,8 @@ def cli() -> None:
         "  2) Install for Claude Code only\n"
         "  3) Install for Codex only\n"
         "  4) Start the light now\n"
-        "  5) Uninstall everything\n"
+        "  5) Enable cloud / web sessions (paste a GitHub token)\n"
+        "  6) Uninstall everything\n"
         "  0) Quit\n"
     )
     while True:
@@ -303,6 +439,14 @@ def cli() -> None:
         elif choice == "4":
             print(start_light())
         elif choice == "5":
+            print(f"\nCreate a token (scope: gist) at:\n  {TOKEN_URL}")
+            try:
+                tok = input("Paste token: ").strip()
+                rp = input("Repo folder to add cloud hooks to (blank to skip): ").strip()
+            except (EOFError, KeyboardInterrupt):
+                continue
+            print(enable_cloud(tok, rp))
+        elif choice == "6":
             print(do_uninstall(True, True))
         elif choice == "0":
             return

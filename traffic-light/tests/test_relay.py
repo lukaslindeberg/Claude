@@ -35,6 +35,8 @@ class RelayTests(unittest.TestCase):
         os.environ["AGENT_TRAFFIC_LIGHT_DIR"] = self.tmp
         os.environ["TRAFFIC_LIGHT_LABEL"] = "testbox"
         os.environ.pop("TRAFFIC_LIGHT_RELAY_STALE", None)
+        os.environ.pop("TRAFFIC_LIGHT_GITHUB_TOKEN", None)
+        os.environ.pop("TRAFFIC_LIGHT_GIST_ID", None)
         # reload module fresh so BASE_DIR picks up the temp dir
         for m in ("relay",):
             sys.modules.pop(m, None)
@@ -129,6 +131,17 @@ class RelayTests(unittest.TestCase):
         self.assertEqual(got["state"], "yellow")
         self.assertEqual(got["count"], 1)
         self.assertEqual(got["sources"], ["cloud"])
+
+    def test_setup_creates_gist_and_saves_config(self):
+        gid = self.relay.setup("ghp_abc123")
+        self.assertEqual(gid, "gid123")
+        cfg = self.relay.load_config()
+        self.assertEqual(cfg["gist_id"], "gid123")
+        self.assertEqual(cfg["token"], "ghp_abc123")
+        method, url, body = self.calls[-1]
+        self.assertEqual(method, "POST")
+        self.assertTrue(url.endswith("/gists"))
+        self.assertIn(self.relay.KEEPALIVE, body["files"])
 
     def test_fetch_network_error_is_safe(self):
         self.cfg()
