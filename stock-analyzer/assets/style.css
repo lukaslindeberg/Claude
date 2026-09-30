@@ -606,6 +606,32 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {
 .tk:hover b { color:#fff !important; }
 
 /* ════════════════════════════════════════════════════════════════
+   RISK VIEW
+   ════════════════════════════════════════════════════════════════ */
+.risk-summary { font-size:1rem; color:#c4cce0; line-height:1.7; max-width:880px;
+  margin:-0.3rem 0 1.6rem; }
+.risk-summary strong { color:var(--ink); }
+.bento-risk { grid-template-columns:1.45fr 1fr 1fr 1fr; }
+.bento-note { font-size:0.7rem; color:var(--faint); margin-top:5px; line-height:1.45; }
+
+/* Risk split — one 100% bar, 2px surface gaps, labels only where they fit */
+.rd-bar { display:flex; gap:2px; height:32px; margin:0.5rem 0 0.8rem; }
+.rd-seg { display:flex; align-items:center; justify-content:center; min-width:0;
+  font-size:0.8rem; font-weight:700; overflow:visible; white-space:nowrap; }
+.rd-seg:first-child { border-radius:4px 0 0 4px; }
+.rd-seg:last-child  { border-radius:0 4px 4px 0; }
+.rd-legend { display:flex; flex-wrap:wrap; gap:0.45rem 1.5rem; font-size:0.82rem; color:var(--ink); }
+.rd-key { display:flex; align-items:center; gap:7px; }
+.rd-key b { font-weight:600; }
+.rd-sw { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.rd-why { color:var(--muted); margin-left:4px; }
+
+/* Chart headers */
+.chart-h { font-family:'Space Grotesk',sans-serif !important; font-size:0.95rem;
+  font-weight:600; color:var(--ink); }
+.chart-sub { font-size:0.76rem; color:var(--muted); margin:2px 0 0.2rem; }
+
+/* ════════════════════════════════════════════════════════════════
    PLAIN-ENGLISH SIGNAL CARDS (Overview / simple mode)
    ════════════════════════════════════════════════════════════════ */
 .sig-grid {

@@ -24,6 +24,7 @@ from modules.scores import (
     calculate_pentagon, historical_financials, stock_rank,
     financial_health_score,
 )
+from modules.risk_view import render_risk_view
 from modules.watchlist import (
     load_watchlist, is_watched, add_to_watchlist, remove_from_watchlist,
 )
@@ -196,7 +197,7 @@ def render_settings_menu(show_assumptions: bool) -> str | None:
                          use_container_width=True):
                 for k in ("stock_data", "key_metrics", "dcf_results", "hype_data",
                           "confidence", "scores", "ai_dcf", "ai_news", "ai_val",
-                          "advanced_done"):
+                          "advanced_done", "risk_profile", "risk_summary"):
                     st.session_state[k] = None
                 st.rerun()
     return model
@@ -210,7 +211,7 @@ _HERO_HTML = """
 <div class="lp-hero-left">
 <div class="lp-eyebrow"><span class="lp-livedot"></span>Equity Valuation Engine</div>
 <h1 class="lp-title"><span class="lp-pay">Price is what you <s>pay.</s></span><span class="lp-worth">Worth is what<br>we <span class="grad">reveal.</span></span></h1>
-<p class="lp-sub">Institutional-grade DCF, a financial-health grade and a market-sentiment score — for any public company, from a single search.</p>
+<p class="lp-sub">Intrinsic value, market-vs-company risk, bond-implied default risk and adjusted EBITDA against its industry — for any public company, from a single search.</p>
 </div>
 <div class="lp-hero-right">
 <div class="reveal">
@@ -416,19 +417,23 @@ def _select_company(ticker: str, name: str):
 
 def _clear_analysis():
     for k in ("stock_data","key_metrics","dcf_results","hype_data","confidence",
-               "scores","ai_dcf","ai_news","ai_val","selected_ticker"):
+               "scores","ai_dcf","ai_news","ai_val","selected_ticker",
+               "risk_profile","risk_summary"):
         st.session_state[k] = None
     st.session_state.advanced_done = False
     st.session_state.chat_history = []
 
 
 # ─── Top navigation bar for active analysis ───────────────────────────────────
+_VIEW_MODES = [("simple", "Overview"), ("risk", "Risk"), ("expert", "Full Analysis")]
+
+
 def render_topbar() -> str | None:
-    is_simple = st.session_state.get("view_mode", "simple") == "simple"
+    current = st.session_state.get("view_mode", "simple")
     tk = st.session_state.selected_ticker
 
     col_back, col_mode, col_save, col_gear = st.columns(
-        [2.3, 4.6, 1.8, 1], vertical_alignment="center")
+        [2.1, 5.4, 1.6, 0.9], vertical_alignment="center")
 
     with col_back:
         if st.button("← New Search", key="back"):
@@ -438,21 +443,14 @@ def render_topbar() -> str | None:
             st.rerun()
 
     with col_mode:
-        m1, m2 = st.columns(2)
-        with m1:
-            if st.button("Overview", key="mode_simple",
-                         type="primary" if is_simple else "secondary",
-                         use_container_width=True):
-                if not is_simple:
-                    st.session_state.view_mode = "simple"
-                    st.rerun()
-        with m2:
-            if st.button("Full Analysis", key="mode_expert",
-                         type="secondary" if is_simple else "primary",
-                         use_container_width=True):
-                if is_simple:
-                    st.session_state.view_mode = "expert"
-                    st.rerun()
+        for col, (mode, label) in zip(st.columns([1, 0.8, 1.2]), _VIEW_MODES):
+            with col:
+                if st.button(label, key=f"mode_{mode}",
+                             type="primary" if mode == current else "secondary",
+                             use_container_width=True):
+                    if mode != current:
+                        st.session_state.view_mode = mode
+                        st.rerun()
 
     with col_save:
         if is_watched(tk):
@@ -2047,6 +2045,8 @@ def _build_ai_context() -> str:
     if m.get("dividend_yield"): p.append(f"Dividend yield {m['dividend_yield']*100:.2f}%.")
     if h.get("grade"):
         p.append(f"Financial-health grade {h['grade']} ({h.get('risk_level','')}).")
+    if st.session_state.get("risk_summary"):
+        p.append("Risk view: " + st.session_state.risk_summary)
     return " ".join(p)
 
 
@@ -2132,9 +2132,12 @@ def render_analysis():
         return
 
     model = render_topbar()
+    mode = st.session_state.get("view_mode", "simple")
 
-    if st.session_state.get("view_mode", "simple") == "simple":
+    if mode == "simple":
         render_simple_view(model)
+    elif mode == "risk":
+        render_risk_view(ticker, st.session_state.stock_data, st.session_state.key_metrics or {})
     else:
         render_verdict_banner()
         render_overview()
