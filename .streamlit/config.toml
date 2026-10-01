@@ -1,0 +1,12 @@
+# Used when the app is hosted (Streamlit Community Cloud runs from the repo root).
+# Keep in sync with stock-analyzer/.streamlit/config.toml, which local runs use.
+[theme]
+base                     = "dark"
+primaryColor             = "#7c6cff"
+backgroundColor          = "#0a0e1a"
+secondaryBackgroundColor = "#11162a"
+textColor                = "#e8edf7"
+font                     = "sans serif"
+
+[browser]
+gatherUsageStats = false

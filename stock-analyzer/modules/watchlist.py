@@ -1,18 +1,24 @@
 """
 Watchlist persistence — lightweight, dependency-free.
 
-Stores the user's saved companies in a local JSON file so the list survives
-page reloads and app restarts. Suitable for the local single-user setup this
-app targets (data lives next to the app, alongside the Ollama-local engine).
+Run locally, saved companies live in a JSON file next to the app so the list
+survives reloads and restarts. Hosted as a website, every visitor would share
+that file, so the list is kept per visitor in their browser session instead.
 """
 import json
 from datetime import datetime
 from pathlib import Path
 
+import streamlit as st
+
+from modules.hosting import HOSTED
+
 _PATH = Path(__file__).parent.parent / "data" / "watchlist.json"
 
 
 def _read() -> list[dict]:
+    if HOSTED:
+        return list(st.session_state.get("_watchlist_items", []))
     try:
         if _PATH.exists():
             data = json.loads(_PATH.read_text())
@@ -24,6 +30,9 @@ def _read() -> list[dict]:
 
 
 def _write(items: list[dict]) -> None:
+    if HOSTED:
+        st.session_state["_watchlist_items"] = items
+        return
     try:
         _PATH.parent.mkdir(parents=True, exist_ok=True)
         _PATH.write_text(json.dumps(items, indent=2))

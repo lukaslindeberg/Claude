@@ -24,6 +24,7 @@ from modules.scores import (
     calculate_pentagon, historical_financials, stock_rank,
     financial_health_score,
 )
+from modules.hosting import HOSTED
 from modules.risk_view import render_risk_view
 from modules.watchlist import (
     load_watchlist, is_watched, add_to_watchlist, remove_from_watchlist,
@@ -152,8 +153,12 @@ def _render_ai_engine() -> str | None:
         '<div class="status-chip status-idle"><span class="dot dot-idle"></span>'
         'AI · not connected</div>', unsafe_allow_html=True,
     )
-    st.caption("Everything works without AI. Install **ollama.ai** and run "
-               "`ollama serve` to enable insights.")
+    if HOSTED:
+        st.caption("Everything works without AI. The AI analyst runs privately on your "
+                   "own computer — download Intrinsic and install **ollama.ai** to use it.")
+    else:
+        st.caption("Everything works without AI. Install **ollama.ai** and run "
+                   "`ollama serve` to enable insights.")
     return None
 
 
