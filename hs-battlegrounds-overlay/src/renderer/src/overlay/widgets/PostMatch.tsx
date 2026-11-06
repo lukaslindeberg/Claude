@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import clsx from 'clsx';
+import type { BattleSimResult } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { useInteractive } from '../../hooks/useInteractive';
 import { HeroPortrait } from '../../components/HeroPortrait';
@@ -22,6 +23,7 @@ export function PostMatchWidget() {
   const history = useApp((s) => s.history);
   const dismiss = useApp((s) => s.dismissPostMatch);
   const bridge = useApp((s) => s.bridge);
+  const sims = useApp((s) => s.sims);
   const inter = useInteractive();
 
   const session = useMemo(() => {
@@ -37,10 +39,18 @@ export function PostMatchWidget() {
   const color = placementColor(place, duos);
   const sessionPlaces = session.some((m) => m.id === game.gameId) ? session.map((m) => m.placement).reverse() : [...session.map((m) => m.placement).reverse(), ...(place ? [place] : [])];
   const sessionAvg = sessionPlaces.length ? sessionPlaces.reduce((a, b) => a + b, 0) / sessionPlaces.length : NaN;
-  const battles = game.battles.filter((b) => b.actual);
+  const record = history.find((m) => m.id === game.gameId);
+  // The tracker doesn't know the simulator's predictions (they run in this renderer):
+  // take them from this window's sim runs, falling back to the saved match record.
+  const simByTurn = new Map<number, BattleSimResult>();
+  for (const c of record?.combats ?? []) if (c.prediction) simByTurn.set(c.turn, c.prediction);
+  for (const [key, run] of Object.entries(sims)) {
+    if (key.startsWith(`${game.gameId}:`) && run.result) simByTurn.set(run.turn, run.result);
+  }
+  const allBattles = game.battles.map((b) => (b.result ? b : { ...b, result: simByTurn.get(b.turn) }));
+  const battles = allBattles.filter((b) => b.actual);
   const predictedRight = battles.filter((b) => b.result && b.actual && predictedOutcome(b.result) === b.actual.result).length;
   const predictedTotal = battles.filter((b) => b.result).length;
-  const record = history.find((m) => m.id === game.gameId);
   const ratingDelta = record?.ratingAfter && record.ratingBefore ? record.ratingAfter - record.ratingBefore : undefined;
   const allTime = summarize(history);
 
@@ -122,7 +132,7 @@ export function PostMatchWidget() {
               ) : null}
             </header>
             <div className="tl-pm__combats">
-              {game.battles.map((b) => {
+              {allBattles.map((b) => {
                 const a = b.actual;
                 const pred = b.result ? predictedOutcome(b.result) : undefined;
                 return (
