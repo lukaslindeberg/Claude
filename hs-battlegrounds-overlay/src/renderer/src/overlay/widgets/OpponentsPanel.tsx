@@ -117,6 +117,8 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
   const last = p.combatsAgainst[p.combatsAgainst.length - 1];
   const board = boardFor(game, p);
   const seen = seenAgo(game, p);
+  // Your own row and eliminated players stay one line unless expanded.
+  const compactRow = p.isLocal || p.dead;
   return (
     <div
       className={clsx('tl-opp__row', p.dead && 'is-dead', p.isNextOpponent && 'is-next', fighting && 'is-fighting', p.isLocal && 'is-local', expanded && 'is-expanded')}
@@ -149,7 +151,7 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
           )}
         </div>
       </div>
-      {board && board.length ? (
+      {compactRow && !expanded ? null : board && board.length ? (
         <div className="tl-opp__board">
           {board.map((m) => (
             <MinionToken key={m.entityId} minion={m} size="sm" />
@@ -158,7 +160,7 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
       ) : (
         <div className="tl-opp__noboard">{p.isLocal ? 'Empty board' : 'Board not seen yet'}</div>
       )}
-      {seen && !p.isLocal ? (
+      {seen && !p.isLocal && !(compactRow && !expanded) ? (
         <div className="tl-opp__seen">
           {seen}
           {p.lastBoard ? <span className="tl-muted"> · T{p.lastBoard.turn}</span> : null}

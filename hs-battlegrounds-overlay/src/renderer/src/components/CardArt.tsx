@@ -8,6 +8,9 @@ import { primaryTribe, shade, tribeColor } from '../lib/tribes';
 
 /** URLs that failed to load this session (avoid hammering a blocked host). */
 const failed = new Set<string>();
+let loadedCount = 0;
+/** After several failures and no success at all, assume the art host is unreachable. */
+const hostDown = () => loadedCount === 0 && failed.size >= 8;
 
 export function useImagesEnabled(): boolean {
   return useApp((s) => s.settings.cardImages);
@@ -49,7 +52,7 @@ export function CardArt({ cardId, artId, name, tribes, className, initialsSize, 
   const images = useImagesEnabled();
   const url = cardArt.crop(artId ?? cardId);
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(() => failed.has(url));
+  const [error, setError] = useState(() => failed.has(url) || hostDown());
   const showImg = images && !error;
   return (
     <span className={clsx('tl-art', className)} style={{ background: fallbackBackground(cardId, tribes, hue) }}>
@@ -67,7 +70,10 @@ export function CardArt({ cardId, artId, name, tribes, className, initialsSize, 
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          onLoad={() => setLoaded(true)}
+          onLoad={() => {
+            loadedCount++;
+            setLoaded(true);
+          }}
           onError={() => {
             failed.add(url);
             setError(true);
@@ -82,7 +88,7 @@ export function CardArt({ cardId, artId, name, tribes, className, initialsSize, 
 export function CardRender({ cardId, className }: { cardId: string; className?: string }) {
   const images = useImagesEnabled();
   const url = cardArt.bgsRender(cardId);
-  const [error, setError] = useState(() => failed.has(url));
+  const [error, setError] = useState(() => failed.has(url) || hostDown());
   const [loaded, setLoaded] = useState(false);
   if (!images || error) return null;
   return (
@@ -92,7 +98,10 @@ export function CardRender({ cardId, className }: { cardId: string; className?: 
       alt=""
       draggable={false}
       referrerPolicy="no-referrer"
-      onLoad={() => setLoaded(true)}
+      onLoad={() => {
+        loadedCount++;
+        setLoaded(true);
+      }}
       onError={() => {
         failed.add(url);
         setError(true);

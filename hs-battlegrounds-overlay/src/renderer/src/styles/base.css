@@ -500,7 +500,7 @@ button {
   display: inline-flex;
 }
 div.tl-tip-anchor {
-  display: flex;
+  display: block;
 }
 @keyframes tl-fade-in {
   from {
