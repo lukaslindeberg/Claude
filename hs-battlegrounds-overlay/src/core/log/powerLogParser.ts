@@ -10,7 +10,7 @@
  * Hearthstone may print the same packets twice: once from `GameState.DebugPrintPower()`
  * (when the packets arrive) and once from `PowerTaskList.DebugPrintPower()` (when they
  * are played back with animations). We only use ONE source: whichever printed the
- * first CREATE_GAME. `DebugPrintGame()`, `DebugPrintEntityChoices()` and
+ * first CREATE_GAME (before that, provisionally the first source seen). `DebugPrintGame()`, `DebugPrintEntityChoices()` and
  * `DebugPrintEntitiesChosen()` only exist on GameState and are always parsed.
  *
  * Multi-line packets (FULL_ENTITY + its `tag=` lines, META_DATA + `Info[i]`, choices +
@@ -351,6 +351,7 @@ export interface ParserOptions {
 export class PowerLogParser {
   private pending: Pending | null = null;
   private activeSource: LogSource | undefined;
+  private locked = false;
   private readonly forcedSource: LogSource | undefined;
   /** Number of lines seen. */
   lineCount = 0;
@@ -358,6 +359,7 @@ export class PowerLogParser {
   constructor(opts: ParserOptions = {}) {
     this.forcedSource = opts.source;
     this.activeSource = opts.source;
+    this.locked = !!opts.source;
   }
 
   get source(): LogSource | undefined {
@@ -367,6 +369,7 @@ export class PowerLogParser {
   reset(): void {
     this.pending = null;
     this.activeSource = this.forcedSource;
+    this.locked = !!this.forcedSource;
     this.lineCount = 0;
   }
 
@@ -518,10 +521,14 @@ export class PowerLogParser {
     const p = line.slice(i);
 
     if (this.activeSource !== source) {
-      if (this.activeSource === undefined && p.startsWith('CREATE_GAME')) {
+      // Before any CREATE_GAME the first power source seen is used provisionally (e.g. a log
+      // tailed mid-game); the source that prints the first CREATE_GAME is then locked in.
+      if (this.activeSource === undefined || (!this.locked && p.startsWith('CREATE_GAME'))) {
+        if (this.pending) this.flush(out);
         this.activeSource = source;
       } else return out;
     }
+    if (!this.locked && p.startsWith('CREATE_GAME')) this.locked = true;
 
     const c = p.charCodeAt(0);
     const pend = this.pending;

@@ -232,6 +232,32 @@ describe('deaths and summons', () => {
   });
 });
 
+describe('auras', () => {
+  registerMinion('TEST_WARLEADER', {
+    aura: (_b, self, target) => (target !== self && target.side === self.side ? { attack: 2, health: 1 } : null),
+  });
+
+  it('snapshot stats are not double counted, summons gain the aura, death removes it', () => {
+    // Snapshot of a 1/1 under the aura is 3/2.
+    const p = side([minion('TEST_WARLEADER', { attack: 1, health: 1 }), minion('BG28_300', { attack: 3, health: 2 })]);
+    const b = newBattle(battle(p, side([vanilla(0, 100)])));
+    const [leader, bonehead] = b.sides[0].board;
+    expect([bonehead.attack, bonehead.health]).toEqual([3, 2]);
+    bonehead.health = 0;
+    resolveDeaths(b);
+    expect(b.sides[0].board.slice(1).map((m) => [m.attack, m.health])).toEqual([
+      [3, 2],
+      [3, 2],
+    ]);
+    leader.health = 0;
+    resolveDeaths(b);
+    expect(b.sides[0].board.map((m) => [m.attack, m.health])).toEqual([
+      [1, 1],
+      [1, 1],
+    ]);
+  });
+});
+
 describe('damage', () => {
   it('is the tavern tier plus the tiers of surviving minions', () => {
     const p = side([vanilla(5, 5, {}, 3), vanilla(5, 5, {}, 5)], { tavernTier: 4 });

@@ -243,6 +243,26 @@ describe('start of combat', () => {
     expect(b.sides[0].board.map((m) => m.name)).toEqual(['Stone Elemental']);
   });
 
+  it('Flighty Scout summons a copy of itself from the hand', () => {
+    const p = side([vanilla(1, 1)], { hand: [minion('BG32_330')] });
+    const b = newBattle(battle(p, dummy()));
+    startOfCombat(b);
+    expect(b.sides[0].board.map((m) => m.name)).toEqual(['TEST_VANILLA', 'Flighty Scout']);
+    expect(b.sides[0].hand.length).toBe(1);
+  });
+
+  it('Diremuck Forager summons the highest-Attack Murloc from hand when there is space', () => {
+    const full = [minion('BG27_556'), ...Array.from({ length: 6 }, () => vanilla(1, 1))];
+    const hand = [minion('BG31_149', { attack: 2 }), minion('BG32_860', { attack: 9 }), minion('BG31_803', { attack: 50 })];
+    const b = newBattle(battle(side(full, { hand }), dummy()));
+    startOfCombat(b);
+    expect(b.sides[0].board.length).toBe(7);
+    b.sides[0].board[3].health = 0;
+    resolveDeaths(b);
+    expect(b.sides[0].board[6].name).toBe('Shoalfin Mystic');
+    expect(b.sides[0].board[6].attack).toBe(9);
+  });
+
   it('Runic Arcanist casts Shiny Ring twice', () => {
     const b = newBattle(battle(side([minion('BG36_245'), vanilla(1, 1)]), dummy()));
     startOfCombat(b);

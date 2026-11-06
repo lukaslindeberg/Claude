@@ -33,7 +33,11 @@ export function BattleSimWidget() {
   const visible = useBattleVisible();
   if (!visible) return null;
   return (
-    <FloatingWidget id="battleSim" defaultPosition={(vp, size) => ({ left: vp.width / 2 - size.width / 2, top: 6 })}>
+    <FloatingWidget
+      id="battleSim"
+      // Top centre, just left of the opponent's hero portrait so it never covers it.
+      defaultPosition={(vp, size) => ({ left: vp.width / 2 - size.width - vp.height * 0.085, top: Math.round(vp.height * 0.012) })}
+    >
       {(handle) => <BattleSimPanel handle={handle} />}
     </FloatingWidget>
   );

@@ -104,6 +104,7 @@ export function registerNeutrals(): void {
       'BG34_319', // Highkeeper Ra (gets cards)
       'BGDUO_108', // Mirror Monster
       'BGDUO_120', // Well Wisher
+      'BGDUO31_212', // Mantid King (triggers on Pass: shop)
       'TB_BaconShop_HP_033t', // Amalgam (Venomous)
       'BG28_Reward_518t', // Totally Normal Horse
     ],

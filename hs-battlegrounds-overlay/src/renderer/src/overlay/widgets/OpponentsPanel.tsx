@@ -103,7 +103,7 @@ export function OpponentsPanel() {
 function CollapsedRow({ game, p }: { game: BgGameState; p: PlayerState }) {
   const fighting = game.phase === 'combat' && game.currentOpponentPlayerId === p.playerId;
   return (
-    <div className={clsx('tl-opp__mini', p.dead && 'is-dead', p.isNextOpponent && 'is-next', fighting && 'is-fighting', p.isLocal && 'is-local')} title={`${p.heroName} · ${p.health + p.armor} hp`}>
+    <div className={clsx('tl-opp__mini', p.dead && 'is-dead', p.isNextOpponent && !fighting && 'is-next', fighting && 'is-fighting', p.isLocal && 'is-local')} title={`${p.heroName} · ${p.health + p.armor} hp`}>
       <HeroPortrait cardId={p.heroCardId} name={p.heroName} size={34} dead={p.dead}>
         <span className="tl-opp__mini-place">{p.leaderboardPlace}</span>
       </HeroPortrait>
@@ -121,7 +121,7 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
   const compactRow = p.isLocal || p.dead;
   return (
     <div
-      className={clsx('tl-opp__row', p.dead && 'is-dead', p.isNextOpponent && 'is-next', fighting && 'is-fighting', p.isLocal && 'is-local', expanded && 'is-expanded')}
+      className={clsx('tl-opp__row', p.dead && 'is-dead', p.isNextOpponent && !fighting && 'is-next', fighting && 'is-fighting', p.isLocal && 'is-local', expanded && 'is-expanded')}
       onClick={onToggle}
       role="button"
       tabIndex={0}
@@ -135,7 +135,7 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
         <div className="tl-opp__info">
           <div className="tl-opp__line">
             <span className="tl-opp__hero">{p.isLocal ? 'You' : p.heroName}</span>
-            {p.isNextOpponent ? <span className="tl-tag is-next">Next</span> : null}
+            {p.isNextOpponent && !fighting ? <span className="tl-tag is-next">Next</span> : null}
             {fighting ? <span className="tl-tag is-fighting">Fighting</span> : null}
             {!p.isNextOpponent && !fighting && last ? <ResultChip result={last.result} damage={last.damage} size="sm" /> : null}
           </div>
@@ -158,7 +158,7 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
           ))}
         </div>
       ) : (
-        <div className="tl-opp__noboard">{p.isLocal ? 'Empty board' : 'Board not seen yet'}</div>
+        <div className="tl-opp__noboard">{p.isLocal || p.lastBoard ? 'Empty board' : 'Board not seen yet'}</div>
       )}
       {seen && !p.isLocal && !(compactRow && !expanded) ? (
         <div className="tl-opp__seen">

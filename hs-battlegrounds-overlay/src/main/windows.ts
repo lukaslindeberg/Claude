@@ -46,6 +46,9 @@ export function createOverlayWindow(bounds: Rectangle): BrowserWindow {
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
+    // macOS: a non-activating NSPanel, so clicking the overlay doesn't make Tavern Lens
+    // the frontmost app (which would take focus from Hearthstone and hide the overlay).
+    ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
     title: 'Tavern Lens Overlay',
     webPreferences: {
       preload: preloadPath(),
