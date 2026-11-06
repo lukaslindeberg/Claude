@@ -22,7 +22,7 @@ import type {
 } from '@shared/types';
 import { CardDb } from '../cards/cardDb';
 import { CardType, GameTag as T, PlayState, Zone } from '../log/enums';
-import { PowerLogParser, type Packet } from '../log/powerLogParser';
+import { PowerLogParser, tagName, type Packet } from '../log/powerLogParser';
 import { EntityStore, type Entity } from '../game/entityStore';
 import {
   displayName,
@@ -117,6 +117,9 @@ interface GameCtx {
 }
 
 const EMPTY_BATTLE: BattleState = { status: 'idle', turn: 0 };
+
+/** GameEntity tags copied into every SimSide.playerTags (lobby-wide modifiers). */
+const GLOBAL_GAME_TAGS = [T.BACON_GLOBAL_OLD_GOD_DBID, T.BACON_GLOBAL_ANOMALY_DBID, T.BACON_COMBAT_DAMAGE_CAP];
 
 /** Empty trinket slots ("Lesser Trinket" / "Greater Trinket") before a trinket is picked. */
 function isTrinketPlaceholder(cardId: string): boolean {
@@ -989,7 +992,7 @@ export class BgTracker {
         return o;
       }),
       questRewards: rewards.map((r) => r.cardId),
-      playerTags: playerEntity ? tagsRecord(playerEntity) : {},
+      playerTags: this.playerTagsOf(playerEntity),
       heroTags: tagsRecord(hero),
     };
     if (hp) {
@@ -1007,6 +1010,22 @@ export class BgTracker {
       if (hpCard) side.heroPowerCardId = hpCard;
     }
     return side;
+  }
+
+  /**
+   * All tags of the Player entity (blood gem / tavern spell / Old God counters...), plus the
+   * lobby-wide GameEntity tags the simulator reads from playerTags (e.g. BACON_GLOBAL_OLD_GOD_DBID).
+   */
+  private playerTagsOf(playerEntity: Entity | undefined): Record<string, number> {
+    const out = playerEntity ? tagsRecord(playerEntity) : {};
+    const ge = this.store.game;
+    if (ge) {
+      for (const t of GLOBAL_GAME_TAGS) {
+        const v = ge.tags.get(t);
+        if (v !== undefined && out[tagName(t)] === undefined) out[tagName(t)] = v;
+      }
+    }
+    return out;
   }
 
   private buildTemplateSide(t: TemplateGroup): Omit<SimSide, 'teammate'> {

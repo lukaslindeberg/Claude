@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BattleSimInput, BgGameState, CombatRecord } from '@shared/types';
 import { BgTracker } from '../../src/core/bg';
+import { simulateBattle } from '../../src/core/sim';
 import { PowerLogParser, type Packet } from '../../src/core/log/powerLogParser';
 import { fixtureLines, ofType, rng, runFixture, type Run } from './helpers';
 
@@ -616,6 +617,13 @@ describe.each(SPECS)('fixture $file', (spec) => {
       expect(unknown).toEqual([]);
     }
     if (midGame) expect(nonEmpty / midGame).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it('every combatStart input runs through the simulator', () => {
+    for (const c of combats) {
+      const r = simulateBattle(c.input, { iterations: 30, maxDurationMs: 500, seed: 1 });
+      expect(r.win + r.tie + r.loss).toBeCloseTo(100, 0);
+    }
   });
 
   it('opponent boards, histories and deaths', () => {
