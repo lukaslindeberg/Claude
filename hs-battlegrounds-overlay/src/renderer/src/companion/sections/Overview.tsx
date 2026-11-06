@@ -1,0 +1,262 @@
+import { useMemo, useState } from 'react';
+import clsx from 'clsx';
+import type { AppStatus } from '@shared/types';
+import { useApp } from '../../store/appStore';
+import { HeroPortrait } from '../../components/HeroPortrait';
+import { MinionToken } from '../../components/MinionToken';
+import { HealthBar, PlacementPips, TierBadge, TribeChip } from '../../components/Bits';
+import { CheckIcon, PlayIcon, StopIcon, WarningIcon, CrossIcon } from '../../components/Icons';
+import { num, ordinal } from '../../lib/format';
+import { sortByDate, summarize, todays } from '../../lib/stats';
+import { Card, Kpi, SectionHeader } from '../ui';
+
+type Level = 'ok' | 'warn' | 'bad' | 'idle';
+
+function Check({ level, title, detail, action }: { level: Level; title: string; detail: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className={clsx('tl-check', `is-${level}`)}>
+      <span className="tl-check__icon">
+        {level === 'ok' ? <CheckIcon size={13} /> : level === 'bad' ? <CrossIcon size={12} /> : level === 'warn' ? <WarningIcon size={13} /> : <span className="tl-check__dash" />}
+      </span>
+      <div className="tl-check__text">
+        <span className="tl-check__title">{title}</span>
+        <span className="tl-check__detail">{detail}</span>
+      </div>
+      {action ? <div className="tl-check__action">{action}</div> : null}
+    </div>
+  );
+}
+
+const LOG_CONFIG: Record<AppStatus['logConfig'], [Level, string]> = {
+  ok: ['ok', 'Power logging is enabled.'],
+  updated: ['warn', 'log.config was updated — restart Hearthstone to apply.'],
+  'missing-restart-required': ['bad', 'Power logging is not enabled yet.'],
+  error: ['bad', 'Could not read or write log.config.'],
+  unknown: ['idle', 'Not checked yet.'],
+};
+
+function shortPath(p?: string): string | undefined {
+  if (!p) return p;
+  const parts = p.split(/[\\/]/);
+  return parts.length > 4 ? `…${p.includes('\\') ? '\\' : '/'}${parts.slice(-3).join(p.includes('\\') ? '\\' : '/')}` : p;
+}
+
+export function Overview() {
+  const status = useApp((s) => s.status);
+  const bridge = useApp((s) => s.bridge);
+  const [fixing, setFixing] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  const fix = async () => {
+    if (!bridge) return;
+    setFixing(true);
+    try {
+      await bridge.fixLogConfig();
+    } finally {
+      setFixing(false);
+    }
+  };
+  const toggleDemo = async () => {
+    if (!bridge) return;
+    setStarting(true);
+    try {
+      if (status?.demo.running) await bridge.stopDemo();
+      else await bridge.startDemo();
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const [lcLevel, lcText] = LOG_CONFIG[status?.logConfig ?? 'unknown'];
+  const gw = status?.gameWindow;
+  const demoRunning = !!status?.demo.running;
+
+  return (
+    <div className="tl-section">
+      <SectionHeader
+        title="Overview"
+        subtitle="Everything Tavern Lens needs to follow your Battlegrounds games."
+        actions={
+          <span className={clsx('tl-pill', status?.watching ? 'is-ok' : 'is-off')}>
+            <span className="tl-dot" />
+            {status?.watching ? 'Watching' : 'Idle'}
+          </span>
+        }
+      />
+      <div className="tl-overview">
+        <Card title="Setup checks" className="tl-overview__checks">
+          <div className="tl-checks">
+            <Check
+              level={status?.hearthstoneRunning ? 'ok' : status?.hearthstoneInstallPath ? 'idle' : 'bad'}
+              title="Hearthstone"
+              detail={
+                status?.hearthstoneRunning
+                  ? `Running · ${shortPath(status.hearthstoneInstallPath) ?? 'install found'}`
+                  : status?.hearthstoneInstallPath
+                    ? `Installed at ${shortPath(status.hearthstoneInstallPath)} · not running`
+                    : 'Install not found — set the path in Settings.'
+              }
+            />
+            <Check
+              level={lcLevel}
+              title="log.config"
+              detail={lcText}
+              action={
+                status && status.logConfig !== 'ok' && status.logConfig !== 'updated' ? (
+                  <button className="tl-btn tl-btn--gold" onClick={fix} disabled={fixing}>
+                    {fixing ? 'Fixing…' : 'Fix'}
+                  </button>
+                ) : null
+              }
+            />
+            <Check
+              level={status?.powerLogPath ? 'ok' : status?.watching ? 'warn' : 'idle'}
+              title="Power.log"
+              detail={status?.powerLogPath ? <span title={status.powerLogPath}>Tailing {shortPath(status.powerLogPath)}</span> : 'Waiting for Hearthstone to write a log.'}
+            />
+            <Check
+              level={gw?.found ? (gw.minimized ? 'warn' : 'ok') : 'idle'}
+              title="Game window"
+              detail={
+                gw?.found
+                  ? `${gw.focused ? 'Focused' : gw.minimized ? 'Minimized' : 'In background'}${gw.bounds ? ` · ${gw.bounds.width}×${gw.bounds.height}` : ''}`
+                  : 'Not detected — the overlay appears when it is.'
+              }
+            />
+            <Check
+              level={status?.cardData.cards ? 'ok' : 'warn'}
+              title="Card data"
+              detail={status ? `Patch ${status.cardData.patch ?? '?'} · build ${status.cardData.build} · ${status.cardData.cards.toLocaleString()} cards (${status.cardData.source})` : '—'}
+            />
+          </div>
+          {status?.errors.length ? (
+            <div className="tl-errors">
+              {status.errors.map((e, i) => (
+                <div key={i} className="tl-errors__item">
+                  <WarningIcon size={12} /> {e}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </Card>
+
+        <Card className="tl-demo-card">
+          <div className="tl-demo-card__body">
+            <div>
+              <h2 className="tl-card__title">Try it without a game</h2>
+              <p className="tl-muted">Replays a recorded Battlegrounds game through the tracker and simulator so you can see every overlay widget.</p>
+            </div>
+            <button className={clsx('tl-bigbtn', demoRunning && 'is-running')} onClick={toggleDemo} disabled={starting}>
+              {demoRunning ? <StopIcon size={16} /> : <PlayIcon size={16} />}
+              {demoRunning ? 'Stop demo' : 'Start demo'}
+            </button>
+          </div>
+          {demoRunning ? (
+            <div className="tl-progress">
+              <span style={{ width: `${Math.round((status?.demo.progress ?? 0) * 100)}%` }} />
+            </div>
+          ) : null}
+        </Card>
+
+        <CurrentGame />
+        <TodayCard />
+      </div>
+    </div>
+  );
+}
+
+function CurrentGame() {
+  const game = useApp((s) => s.game);
+  const db = useApp((s) => s.cardDb);
+  if (!game || !game.active) {
+    return (
+      <Card title="Current game" className="tl-overview__game">
+        <div className="tl-nogame">
+          <span className="tl-nogame__title">No game in progress</span>
+          <span className="tl-muted">Queue up for Battlegrounds — the overlay wakes up when the hero choice appears.</span>
+        </div>
+      </Card>
+    );
+  }
+  const local = game.players.find((p) => p.isLocal);
+  const next = game.players.find((p) => p.playerId === game.nextOpponentPlayerId);
+  const anomaly = db.get(game.anomalyCardId);
+  const phaseLabel = { idle: 'Idle', heroSelection: 'Choosing a hero', recruit: 'Recruit phase', combat: 'Combat', gameOver: 'Game over' }[game.phase];
+  return (
+    <Card title="Current game" extra={<span className="tl-pill is-live">{phaseLabel}</span>} className="tl-overview__game">
+      {game.phase === 'heroSelection' ? (
+        <div className="tl-curgame__picks">
+          {game.heroOptions.map((h) => (
+            <div key={h.cardId} className="tl-curgame__pick">
+              <HeroPortrait cardId={h.cardId} size={52} />
+              <span>{h.name}</span>
+            </div>
+          ))}
+        </div>
+      ) : local ? (
+        <>
+          <div className="tl-curgame">
+            <HeroPortrait cardId={local.heroCardId} size={64} />
+            <div className="tl-curgame__info">
+              <div className="tl-curgame__hero">{local.heroName}</div>
+              <div className="tl-curgame__facts">
+                <span>
+                  Turn <b>{game.turn}</b>
+                </span>
+                <span className="tl-curgame__tier">
+                  <TierBadge tier={local.tavernTier} size={18} /> Tier
+                </span>
+                <span>
+                  Place <b>{ordinal(game.finalPlacement ?? local.leaderboardPlace)}</b>
+                </span>
+                {next ? (
+                  <span>
+                    Next: <b>{next.heroName}</b>
+                  </span>
+                ) : null}
+              </div>
+              <div className="tl-curgame__hp">
+                <HealthBar health={local.health} maxHealth={local.maxHealth} armor={local.armor} />
+              </div>
+            </div>
+          </div>
+          <div className="tl-curgame__board">
+            {game.localBoard.map((m) => (
+              <MinionToken key={m.entityId} minion={m} size="sm" />
+            ))}
+          </div>
+          <div className="tl-curgame__lobby">
+            {game.availableTribes.map((t) => (
+              <TribeChip key={t} tribe={t} compact />
+            ))}
+            {anomaly ? <span className="tl-curgame__anomaly">✦ {anomaly.name}</span> : null}
+          </div>
+        </>
+      ) : (
+        <span className="tl-muted">Waiting for the game to start…</span>
+      )}
+    </Card>
+  );
+}
+
+function TodayCard() {
+  const history = useApp((s) => s.history);
+  const today = useMemo(() => sortByDate(todays(history)), [history]);
+  const s = summarize(today);
+  return (
+    <Card title="Today" className="tl-overview__today">
+      <div className="tl-kpis is-3">
+        <Kpi label="Games" value={s.games} />
+        <Kpi label="Avg place" value={s.games ? num(s.avgPlacement, 2) : '—'} tone="gold" />
+        <Kpi label="Top 4" value={s.games ? `${Math.round(s.top4Rate)}%` : '—'} />
+      </div>
+      {today.length ? (
+        <div className="tl-today__pips">
+          <PlacementPips placements={today.map((m) => m.placement).reverse()} size={20} />
+        </div>
+      ) : (
+        <span className="tl-muted">No games yet today.</span>
+      )}
+    </Card>
+  );
+}
