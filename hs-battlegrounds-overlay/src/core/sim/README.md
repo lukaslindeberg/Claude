@@ -208,7 +208,7 @@ Also implemented: 22 non-pool minions that appear through tokens/portraits/Ghast
 effects (Sewer Rat, Kaboom Bot, Scallywag, Fish of N'Zoth, Selfless Hero, Harvest Golem, Cave Hydra,
 Foe Reaper, Imp Gang Boss, Nest Swarmer, Runed Progenitor, Silky Shimmermoth, Impulsive Trickster,
 Prized Promo-Drake, Bassgill, Stomping Stegodon, Fishbait, Ancestral Automaton, Flourishing
-Frostling, Timewarped Nest Swarmer, C'Thun and Y'Shaarj Deities); 23 hero powers, ~50 trinkets, 7
+Frostling, Timewarped Nest Swarmer, C'Thun and Y'Shaarj Deities); 23 hero powers, 55 trinket ids (incl. greater versions), 7
 quest rewards, 3 anomalies.
 
 ## Known simplifications

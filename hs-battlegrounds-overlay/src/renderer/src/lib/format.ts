@@ -98,6 +98,8 @@ export function cleanCardText(text: string | undefined): string {
   t = t.replace(/([.!)>])\s*[0-9X]{1,3}$/, '$1');
   t = t.replace(/<(?!\/?(b|i|br)\s*\/?>)[^>]*>/gi, '');
   t = t.replace(/[$#@](\d)/g, '$1');
+  // Separate stand-alone keywords ("<b>Taunt</b> <b>Deathrattle:</b> …").
+  t = t.replace(/(<b>[^<:]+<\/b>)\s+(?=<b>)/g, '$1 · ');
   return t.trim();
 }
 

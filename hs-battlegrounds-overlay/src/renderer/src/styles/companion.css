@@ -390,7 +390,41 @@ body.tl-body--companion #root {
   align-items: start;
 }
 .tl-overview__checks {
-  grid-row: span 2;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+.tl-demo-card,
+.tl-overview__game,
+.tl-overview__today {
+  grid-column: 2;
+}
+.tl-overview__recent {
+  grid-column: 1;
+}
+.tl-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tl-recent__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.tl-recent__hero {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-recent__board {
+  display: flex;
+  gap: 2px;
 }
 .tl-checks {
   display: flex;
@@ -641,7 +675,7 @@ body.tl-body--companion #root {
 .tl-hist__row {
   width: 100%;
   display: grid;
-  grid-template-columns: 50px 40px minmax(150px, 1.1fr) auto minmax(120px, 0.8fr) 44px 16px;
+  grid-template-columns: 50px 40px minmax(120px, 1fr) auto auto 44px 16px;
   align-items: center;
   gap: 14px;
   padding: 9px 14px 9px 16px;
@@ -708,13 +742,22 @@ body.tl-body--companion #root {
 .tl-hist__fullboard {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px 12px;
+  gap: 14px 4px;
   padding-top: 8px;
+}
+.tl-hist__fullboard .tl-token {
+  width: 70px;
+}
+.tl-hist__fullboard .tl-token__name {
+  max-width: 70px;
+}
+.tl-hist__tiers .tl-tiertl {
+  flex-wrap: nowrap;
 }
 .tl-hist__combats {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 6px 8px;
 }
 .tl-hist__combat {
   display: flex;
@@ -1299,4 +1342,7 @@ kbd {
 .tl-about__links {
   display: flex;
   gap: 8px;
+}
+.tl-about .tl-btn--danger {
+  align-self: flex-start;
 }

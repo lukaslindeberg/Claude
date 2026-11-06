@@ -26,6 +26,10 @@ const shots = [
   ['overlay-recruit', '/overlay.html?scene=recruit', overlay],
   ['overlay-leaderboard-hover', '/overlay.html?scene=recruit&hover=0', overlay],
   ['overlay-tier-list', '/overlay.html?scene=recruit&tierList=4', overlay],
+  ['overlay-tier-list-filtered', '/overlay.html?scene=recruit&tierList=3', overlay, async (p) => {
+    await p.locator('.tl-kwbtn').nth(2).click();
+    await p.getByText('Every tier').click();
+  }],
   ['overlay-opponent-expanded', '/overlay.html?scene=recruit', overlay, async (p) => {
     await p.locator('.tl-opp__row').nth(2).click();
   }],
@@ -44,6 +48,9 @@ const shots = [
   ['companion-heroes', '/settings.html?scene=recruit#heroes', companion],
   ['companion-minions', '/settings.html?scene=recruit#minions', companion],
   ['companion-settings', '/settings.html?scene=recruit#settings', companion],
+  ['companion-settings-calibration', '/settings.html?scene=recruit#settings', companion, async (p) => {
+    await p.locator('.tl-main').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  }],
   ['companion-about', '/settings.html?scene=recruit#about', companion],
 ];
 

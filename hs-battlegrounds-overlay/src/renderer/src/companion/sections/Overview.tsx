@@ -4,9 +4,9 @@ import type { AppStatus } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { HeroPortrait } from '../../components/HeroPortrait';
 import { MinionToken } from '../../components/MinionToken';
-import { HealthBar, PlacementPips, TierBadge, TribeChip } from '../../components/Bits';
+import { HealthBar, PlacementBadge, PlacementPips, TierBadge, TribeChip } from '../../components/Bits';
 import { CheckIcon, PlayIcon, StopIcon, WarningIcon, CrossIcon } from '../../components/Icons';
-import { num, ordinal } from '../../lib/format';
+import { formatDate, num, ordinal } from '../../lib/format';
 import { sortByDate, summarize, todays } from '../../lib/stats';
 import { Card, Kpi, SectionHeader } from '../ui';
 
@@ -159,6 +159,7 @@ export function Overview() {
         </Card>
 
         <CurrentGame />
+        <RecentGames />
         <TodayCard />
       </div>
     </div>
@@ -234,6 +235,44 @@ function CurrentGame() {
         </>
       ) : (
         <span className="tl-muted">Waiting for the game to start…</span>
+      )}
+    </Card>
+  );
+}
+
+function RecentGames() {
+  const history = useApp((s) => s.history);
+  const recent = useMemo(() => sortByDate(history).slice(0, 4), [history]);
+  return (
+    <Card
+      title="Recent games"
+      className="tl-overview__recent"
+      extra={
+        history.length ? (
+          <button className="tl-btn tl-btn--ghost" onClick={() => (window.location.hash = 'history')}>
+            All games →
+          </button>
+        ) : null
+      }
+    >
+      {recent.length ? (
+        <div className="tl-recent">
+          {recent.map((m) => (
+            <div key={m.id} className="tl-recent__row">
+              <PlacementBadge place={m.placement} size="sm" duos={m.mode === 'duos'} />
+              <HeroPortrait cardId={m.heroCardId} size={28} />
+              <span className="tl-recent__hero">{m.heroName}</span>
+              <span className="tl-recent__board">
+                {m.finalBoard.slice(0, 7).map((x) => (
+                  <MinionToken key={x.entityId} minion={x} size="xs" tooltip={false} />
+                ))}
+              </span>
+              <span className="tl-muted tl-small tl-nowrap">{formatDate(m.startedAt)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <span className="tl-muted">Your finished games will show up here.</span>
       )}
     </Card>
   );

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import type { BgCard, Tribe } from '@shared/types';
+import type { BgCard, MinionKeywords, Tribe } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { useViewport } from '../../hooks/useViewport';
 import { CardTooltip } from '../../components/MinionToken';
 import { CardArt } from '../../components/CardArt';
 import { TribeChip } from '../../components/Bits';
-import { CloseIcon, CrownIcon, KeywordIcons, SearchIcon, keywordsFromMechanics } from '../../components/Icons';
+import { CloseIcon, CrownIcon, KEYWORD_BY_KEY, KeywordIcons, keywordsFromMechanics } from '../../components/Icons';
 import { Tooltip } from '../../components/Tooltip';
 import { LOBBY_TRIBES, tribeColor } from '../../lib/tribes';
 import { DragHandle, FloatingWidget } from '../Widget';
@@ -85,31 +85,56 @@ export function TierListWidget() {
   );
 }
 
+/** Keyword filters (mouse-only: the overlay window never takes keyboard focus). */
+const KEYWORD_FILTERS: { key: keyof MinionKeywords; mechanics: string[] }[] = [
+  { key: 'taunt', mechanics: ['TAUNT'] },
+  { key: 'divineShield', mechanics: ['DIVINE_SHIELD'] },
+  { key: 'deathrattle', mechanics: ['DEATHRATTLE'] },
+  { key: 'startOfCombat', mechanics: ['START_OF_COMBAT'] },
+  { key: 'avenge', mechanics: ['AVENGE'] },
+  { key: 'reborn', mechanics: ['REBORN'] },
+  { key: 'venomous', mechanics: ['VENOMOUS', 'POISONOUS'] },
+  { key: 'windfury', mechanics: ['WINDFURY', 'MEGA_WINDFURY'] },
+  { key: 'magnetic', mechanics: ['MAGNETIC'] },
+];
+
 function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => void; onTier: (t: number) => void }) {
   const db = useApp((s) => s.cardDb);
   const game = useApp((s) => s.game);
   const vp = useViewport();
   const [allTribes, setAllTribes] = useState(false);
-  const [query, setQuery] = useState('');
+  const [tribeFilter, setTribeFilter] = useState<Set<Tribe>>(new Set());
+  const [kwFilter, setKwFilter] = useState<keyof MinionKeywords | null>(null);
+  const [allTiers, setAllTiers] = useState(false);
   const lobbyTribes = game && game.availableTribes.length && game.tribesSource !== 'unknown' ? game.availableTribes : null;
   const tribes = allTribes ? null : lobbyTribes;
   const shopIds = useMemo(() => new Set((game?.shop ?? []).map((s) => db.normalOf(s.cardId))), [game?.shop, db]);
-  const q = query.trim().toLowerCase();
+  const kwMechanics = KEYWORD_FILTERS.find((k) => k.key === kwFilter)?.mechanics;
+  const crossTier = allTiers && !!kwMechanics;
 
   const minions = useMemo(() => {
     const pool = db.poolMinions().filter((c) => !c.duosOnly || game?.mode === 'duos').filter((c) => !c.soloOnly || game?.mode !== 'duos');
-    const list = q
-      ? pool.filter((c) => c.name.toLowerCase().includes(q) || (c.text ?? '').toLowerCase().includes(q))
-      : pool.filter((c) => c.tier === tier);
-    return list.filter((c) => inLobby(c, tribes));
-  }, [db, tier, q, tribes, game?.mode]);
-  const spells = useMemo(() => db.poolSpells().filter((c) => (q ? c.name.toLowerCase().includes(q) : c.tier === tier)), [db, tier, q]);
-  const groups = useMemo(() => groupByTribe(minions, tribes), [minions, tribes]);
+    return pool
+      .filter((c) => crossTier || c.tier === tier)
+      .filter((c) => inLobby(c, tribes))
+      .filter((c) => !tribeFilter.size || c.tribes.length === 0 || c.tribes.includes('ALL') || c.tribes.some((t) => tribeFilter.has(t)))
+      .filter((c) => !kwMechanics || c.mechanics.some((m) => kwMechanics.includes(m)));
+  }, [db, tier, tribes, tribeFilter, kwMechanics, crossTier, game?.mode]);
+  const spells = useMemo(() => (kwMechanics || tribeFilter.size ? [] : db.poolSpells().filter((c) => c.tier === tier)), [db, tier, kwMechanics, tribeFilter]);
+  const groups = useMemo(() => groupByTribe(minions, tribeFilter.size ? [...tribeFilter] : tribes), [minions, tribes, tribeFilter]);
+  const chipTribes = tribes ?? LOBBY_TRIBES;
+
+  const toggleTribe = (t: Tribe) => {
+    const next = new Set(tribeFilter);
+    if (next.has(t)) next.delete(t);
+    else next.add(t);
+    setTribeFilter(next);
+  };
 
   return (
     <div className="tl-panel tl-tierpanel" style={{ maxHeight: `calc(${Math.round(vp.height * 0.82)}px / var(--tl-scale))` }}>
       <div className="tl-tierpanel__head">
-        <span className="tl-heading">{q ? 'Search' : `Tier ${tier}`}</span>
+        <span className="tl-heading">{crossTier ? 'All tiers' : `Tier ${tier}`}</span>
         <span className="tl-muted tl-small">
           {minions.length} minion{minions.length === 1 ? '' : 's'}
           {tribes ? ' in this lobby' : ' · all tribes'}
@@ -118,24 +143,64 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
           <CloseIcon size={12} />
         </button>
       </div>
-      <div className="tl-tierpanel__tools">
-        <label className="tl-search">
-          <SearchIcon size={12} />
-          <input className="tl-input" placeholder="Search name or text…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </label>
-        <button className={clsx('tl-chipbtn', allTribes && 'is-on')} onClick={() => setAllTribes(!allTribes)} disabled={!lobbyTribes} title="Show minions of tribes not in this lobby">
+      <div className="tl-tierpanel__tiers">
+        {TIERS.map((t) => (
+          <button
+            key={t}
+            className={clsx('tl-tierpanel__tier', t === tier && !crossTier && 'is-on')}
+            onClick={() => {
+              setAllTiers(false);
+              onTier(t);
+            }}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+      <div className="tl-tierpanel__filters">
+        {chipTribes.map((t) => (
+          <TribeChip key={t} tribe={t} compact onClick={() => toggleTribe(t)} active={tribeFilter.size === 0 || tribeFilter.has(t)} />
+        ))}
+        <button className={clsx('tl-chipbtn', allTribes && 'is-on')} onClick={() => setAllTribes(!allTribes)} disabled={!lobbyTribes} title="Include tribes that are not in this lobby">
           All tribes
         </button>
       </div>
-      {q ? null : (
-        <div className="tl-tierpanel__tiers">
-          {TIERS.map((t) => (
-            <button key={t} className={clsx('tl-tierpanel__tier', t === tier && 'is-on')} onClick={() => onTier(t)}>
-              {t}
+      <div className="tl-tierpanel__filters is-keywords">
+        {KEYWORD_FILTERS.map(({ key }) => {
+          const info = KEYWORD_BY_KEY[key];
+          return (
+            <button
+              key={key}
+              className={clsx('tl-kwbtn', kwFilter === key && 'is-on')}
+              style={{ '--c': info.color } as React.CSSProperties}
+              onClick={() => setKwFilter(kwFilter === key ? null : key)}
+              title={`Only ${info.label} minions`}
+            >
+              <info.Icon size={12} />
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+        <button
+          className={clsx('tl-chipbtn', crossTier && 'is-on')}
+          onClick={() => setAllTiers(!allTiers)}
+          disabled={!kwFilter}
+          title="With a keyword selected, list matching minions from every tier"
+        >
+          Every tier
+        </button>
+        {kwFilter || tribeFilter.size ? (
+          <button
+            className="tl-chipbtn"
+            onClick={() => {
+              setKwFilter(null);
+              setTribeFilter(new Set());
+              setAllTiers(false);
+            }}
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
       <div className="tl-tierpanel__body tl-scroll">
         {groups.map((g) => (
           <section key={g.tribe} className="tl-tiergroup" style={{ '--c': tribeColor(g.tribe) } as React.CSSProperties}>
@@ -144,11 +209,11 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
               <span className="tl-tiergroup__count">{g.cards.length}</span>
             </header>
             {g.cards.map((c) => (
-              <MinionRow key={c.id} card={c} inShop={shopIds.has(c.id)} showTier={!!q} />
+              <MinionRow key={c.id} card={c} inShop={shopIds.has(c.id)} showTier={crossTier} />
             ))}
           </section>
         ))}
-        {groups.length === 0 ? <div className="tl-tierpanel__empty">No minions match.</div> : null}
+        {groups.length === 0 ? <div className="tl-tierpanel__empty">No minions match these filters.</div> : null}
         {spells.length ? (
           <section className="tl-tiergroup is-spells">
             <header className="tl-tiergroup__head">
@@ -161,7 +226,6 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
                   <span className="tl-tierrow__cost">{c.cost ?? '?'}</span>
                   <span className="tl-tierrow__name">{c.name}</span>
                   {shopIds.has(c.id) ? <span className="tl-tag is-shop">Shop</span> : null}
-                  {q ? <span className="tl-tierrow__tier">T{c.tier}</span> : null}
                 </div>
               </Tooltip>
             ))}

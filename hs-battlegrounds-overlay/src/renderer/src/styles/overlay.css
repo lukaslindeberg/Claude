@@ -879,17 +879,40 @@ body.tl-body--overlay {
   margin-left: auto;
   align-self: center;
 }
-.tl-tierpanel__tools {
+.tl-tierpanel__filters {
   display: flex;
-  gap: 6px;
-  padding: 8px 10px 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px 0;
 }
-.tl-tierpanel__tools .tl-search {
-  flex: 1;
+.tl-tierpanel__filters .tl-chipbtn {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10.5px;
 }
-.tl-tierpanel__tools .tl-input {
-  height: 27px;
-  font-size: 12px;
+.tl-tierpanel__filters.is-keywords .tl-chipbtn:first-of-type {
+  margin-left: auto;
+}
+.tl-kwbtn {
+  width: 24px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--tl-border-soft);
+  background: var(--tl-inset);
+  color: color-mix(in srgb, var(--c) 65%, #777);
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.tl-kwbtn:hover {
+  color: var(--c);
+}
+.tl-kwbtn.is-on {
+  color: var(--c);
+  border-color: color-mix(in srgb, var(--c) 60%, transparent);
+  background: color-mix(in srgb, var(--c) 16%, transparent);
 }
 .tl-chipbtn {
   height: 27px;
