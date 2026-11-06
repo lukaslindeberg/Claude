@@ -380,7 +380,9 @@ export class TavernLensApp {
         onLines: (lines) => this.live.feed(lines),
         onFileChange: ({ path, reason }) => {
           this.status.update({ powerLogPath: path, watching: !!path });
-          if (reason !== 'initial') this.live.reset();
+          // A new client session (or a truncated log): finish a game whose end was already
+          // seen, and keep one in progress so a reconnect after a client restart continues it.
+          if (reason !== 'initial') this.live.restartLog();
         },
       });
       this.tailer.start();

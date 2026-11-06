@@ -157,11 +157,18 @@ export class BgTracker {
     return this._version;
   }
 
-  reset(): void {
+  /**
+   * Forget everything (e.g. the client started a new log file). With
+   * `keepUnfinishedGame`, a BG game that has not ended is remembered so that a
+   * reconnect in the new log (same GAME_SEED, after a client restart) continues it.
+   */
+  reset(opts: { keepUnfinishedGame?: boolean } = {}): void {
+    const unfinished = this.g?.isBg && !this.g.ended ? this.g : this.g ? undefined : this.prevGame;
+    const keep = opts.keepUnfinishedGame ? unfinished : undefined;
     this.parser.reset();
     this.store.reset();
     this.g = undefined;
-    this.prevGame = undefined;
+    this.prevGame = keep;
     this.pendingNewGame = false;
     this.depth = 0;
     this.events = [];
@@ -229,7 +236,8 @@ export class BgTracker {
       case 'CreateGame': {
         if (this.g && this.g.isBg && this.g.ended && !this.g.matchRecord) this.finishGame(this.g);
         if (this.g && this.g.isBg && !this.g.ended) this.prevGame = this.g;
-        else this.prevGame = undefined;
+        else if (this.g) this.prevGame = undefined;
+        // (no current game: keep a game remembered by reset({ keepUnfinishedGame }))
         if (this.g?.isBg) this.bump();
         this.g = undefined;
         this.depth = 0;

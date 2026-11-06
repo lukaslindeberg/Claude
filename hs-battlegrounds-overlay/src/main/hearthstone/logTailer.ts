@@ -6,7 +6,8 @@
  * - Bytes are buffered until a newline so only complete lines are emitted.
  * - Truncation (size < position) and rotation (inode change) restart at 0.
  * - `resolvePath` is re-evaluated every couple of seconds so a newer
- *   `Hearthstone_*` session folder is picked up (read from its beginning).
+ *   `Hearthstone_*` session folder is picked up (read from its beginning). A switch
+ *   from no file at all (Hearthstone found later) catches up like the initial file.
  * - On start, if the current file contains a game in progress, reading starts at
  *   the LAST CREATE_GAME so the tracker catches up; otherwise at end of file.
  */
@@ -224,7 +225,9 @@ export class LogTailer {
         if (!this.started) {
           this.started = true;
           await this.switchTo(next, 'initial');
-        } else if (next !== this.path) {
+        } else if (next !== undefined && next !== this.path) {
+          // (undefined = can't tell right now, e.g. the Logs folder is unreadable: keep
+          // following the current file rather than dropping and later re-reading it.)
           await this.switchTo(next, 'switched');
         }
       }
@@ -239,6 +242,11 @@ export class LogTailer {
   }
 
   private async switchTo(path: string | undefined, reason: FileChangeReason): Promise<void> {
+    // Following nothing before (Hearthstone not found yet, Logs folder unreadable): an
+    // existing file's content was never seen, so treat it like the initial file and only
+    // catch up on a game in progress. Reading it from 0 would replay (and save to history
+    // again) every finished game of the session.
+    const catchUp = reason === 'initial' || this.path === undefined;
     this.path = path;
     this.pending = Buffer.alloc(0);
     this.pos = 0;
@@ -249,7 +257,7 @@ export class LogTailer {
         const st = await stat(path);
         this.exists = true;
         this.ino = st.ino;
-        if (reason === 'initial') {
+        if (catchUp) {
           const offset = this.opts.catchUpOnStart ? await findGameInProgressOffset(path) : undefined;
           this.pos = offset ?? st.size;
           if (offset !== undefined) log.info(`game in progress: catching up from byte ${offset} of ${path}`);

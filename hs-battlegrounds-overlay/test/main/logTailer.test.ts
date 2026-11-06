@@ -142,6 +142,51 @@ describe('LogTailer', () => {
     expect(t.currentPath).toBe(current);
   });
 
+  it('catches up (instead of replaying finished games) when a log is found only later', async () => {
+    const dir = tmpDir();
+    const f = join(dir, 'Power.log');
+    writeFileSync(f, gameText(1, true) + gameText(2, false));
+    let current: string | undefined; // Hearthstone not found at startup
+    const c = collector();
+    const changes: string[] = [];
+    const t = new LogTailer({
+      resolvePath: () => current,
+      onLines: c.onLines,
+      onFileChange: (i) => changes.push(i.reason),
+      resolveIntervalMs: 0,
+    });
+    await drain(t);
+    current = f; // e.g. the folder was set in Settings
+    await drain(t);
+    expect(changes).toEqual(['initial', 'switched']);
+    expect(c.lines[0]).toContain('D 10:02:00.0000000 GameState.DebugPrintPower() - CREATE_GAME');
+    expect(c.lines).toHaveLength(7);
+  });
+
+  it('keeps following the current file while the path cannot be resolved', async () => {
+    const dir = tmpDir();
+    const f = join(dir, 'Power.log');
+    writeFileSync(f, gameText(1, true));
+    let current: string | undefined = f;
+    const c = collector();
+    const changes: string[] = [];
+    const t = new LogTailer({
+      resolvePath: () => current,
+      onLines: c.onLines,
+      onFileChange: (i) => changes.push(i.reason),
+      resolveIntervalMs: 0,
+    });
+    await drain(t);
+    current = undefined; // Logs folder briefly unreadable
+    appendFileSync(f, 'a\n');
+    await drain(t);
+    current = f;
+    appendFileSync(f, 'b\n');
+    await drain(t);
+    expect(c.lines).toEqual(['a', 'b']);
+    expect(changes).toEqual(['initial']);
+  });
+
   it('reads large backlogs in bounded chunks', async () => {
     const dir = tmpDir();
     const f = join(dir, 'Power.log');

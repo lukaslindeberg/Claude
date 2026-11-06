@@ -33,6 +33,7 @@ describe('window helper output', () => {
     expect(script).toContain('$parentPid = 1234');
     expect(script).toContain('FindWindow("UnityWndClass", "Hearthstone")');
     expect(WINDOWS_HELPER_SCRIPT).toContain('SetProcessDPIAware');
+    expect(WINDOWS_HELPER_SCRIPT).toContain('SetThreadDpiAwarenessContext(new IntPtr(-4))');
   });
 
   it('parses macOS osascript output', () => {

@@ -138,6 +138,39 @@ describe('BgTracker (synthetic)', () => {
     expect(t.getState().chosenHeroCardId).toBe('TB_BaconShop_HERO_12');
   });
 
+  it('reset({ keepUnfinishedGame }) lets a reconnect in a new log continue the game', () => {
+    let now = 1000;
+    const running = power('TAG_CHANGE Entity=GameEntity tag=STATE value=RUNNING ');
+    const t = new BgTracker({ now: () => now++ });
+    const ev1 = t.feedLines([...bgHeader(), running]);
+    expect(ofType(ev1, 'gameStart')).toHaveLength(1);
+    const id = t.getState().gameId;
+    // Client restarted: new Power.log in a new session folder.
+    t.reset({ keepUnfinishedGame: true });
+    expect(t.getState().active).toBe(false);
+    t.reset({ keepUnfinishedGame: true }); // e.g. switched, then truncated: still remembered
+    const ev2 = t.feedLines([...bgHeader(), running]);
+    expect(ofType(ev2, 'gameStart')).toHaveLength(0);
+    expect(t.getState().active).toBe(true);
+    expect(t.getState().gameId).toBe(id);
+
+    // A plain reset forgets the game: the same lines start a new one.
+    t.reset();
+    const ev3 = t.feedLines([...bgHeader(), running]);
+    expect(ofType(ev3, 'gameStart')).toHaveLength(1);
+    expect(t.getState().gameId).not.toBe(id);
+  });
+
+  it('reset({ keepUnfinishedGame }) does not resume a finished game', () => {
+    const lines = fixtureLines('bg_kelthuzad_37060.power.log.gz');
+    const t = new BgTracker();
+    t.feedLines(lines);
+    expect(t.getState().phase).toBe('gameOver');
+    t.reset({ keepUnfinishedGame: true });
+    const ev = t.feedLines(lines);
+    expect(ofType(ev, 'gameStart')).toHaveLength(1);
+  });
+
   it('emits a pending gameEnd on flush when the log stops before STATE=COMPLETE', () => {
     const lines = fixtureLines('bg_kelthuzad_37060.power.log.gz');
     const cut = lines.findIndex((l) => l.includes('tag=STATE value=COMPLETE'));

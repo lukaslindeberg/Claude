@@ -11,7 +11,9 @@ export interface TrackerLike {
   feedLines(lines: string[]): BgEvent[];
   getState(): BgGameState;
   readonly version: number;
-  reset(): void;
+  reset(opts?: { keepUnfinishedGame?: boolean }): void;
+  /** End of input: emits a buffered packet and a pending gameEnd. */
+  flush?(): BgEvent[];
 }
 
 /** Leading + trailing throttle. `request(true)` fires synchronously. */
@@ -112,6 +114,31 @@ export class GameFeed {
     this.tracker.reset();
     this.publishedVersion = -1;
     this.throttle.request(true);
+  }
+
+  /**
+   * The followed log was replaced (new client session, truncation). A game whose end
+   * was already seen is finished (and its gameEnd emitted) instead of being dropped; a
+   * game still in progress is kept so a reconnect in the new log continues it.
+   */
+  restartLog(): BgEvent[] {
+    let events: BgEvent[] = [];
+    try {
+      events = this.tracker.flush?.() ?? [];
+    } catch (err) {
+      this.log.error('tracker flush failed', err);
+    }
+    if (events.length) {
+      try {
+        this.opts.onEvents(events);
+      } catch (err) {
+        this.log.error('event handler failed', err);
+      }
+    }
+    this.tracker.reset({ keepUnfinishedGame: true });
+    this.publishedVersion = -1;
+    this.throttle.request(true);
+    return events;
   }
 
   /** Publishes the current state now (even if unchanged). */

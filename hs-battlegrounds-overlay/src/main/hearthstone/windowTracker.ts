@@ -2,7 +2,7 @@
  * Tracks the Hearthstone game window (found / focused / minimized / client bounds).
  *
  * - Windows: ONE persistent `powershell.exe` child compiling a tiny C# helper via
- *   Add-Type (user32: SetProcessDPIAware, FindWindow("UnityWndClass","Hearthstone"),
+ *   Add-Type (user32: per-monitor DPI awareness, FindWindow("UnityWndClass","Hearthstone"),
  *   GetForegroundWindow, IsIconic, GetClientRect + ClientToScreen) that prints a
  *   JSON line every 250 ms. Physical px are converted to DIP by the injected
  *   `toDip` (Electron's `screen.screenToDipRect`). Restarted if it dies.
@@ -41,6 +41,7 @@ public static class TavernLensWin {
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
   [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X; public int Y; }
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  [DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr ctx);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string title);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
@@ -49,7 +50,18 @@ public static class TavernLensWin {
   public static bool ParentAlive(int pid) {
     try { Process p = Process.GetProcessById(pid); return !p.HasExited; } catch { return false; }
   }
+  // Physical pixels on every monitor. A system-DPI-aware caller gets coordinates of a
+  // window on a monitor with another scale factor rescaled to the system DPI, which
+  // screenToDipRect would then convert a second time.
+  public static void UsePhysicalPixels() {
+    try {
+      if (SetThreadDpiAwarenessContext(new IntPtr(-4)) != IntPtr.Zero) return; // PER_MONITOR_AWARE_V2 (Win10 1703+)
+      if (SetThreadDpiAwarenessContext(new IntPtr(-3)) != IntPtr.Zero) return; // PER_MONITOR_AWARE (Win10 1607)
+    } catch (EntryPointNotFoundException) { }
+    SetProcessDPIAware(); // older Windows: system DPI only
+  }
   public static string Poll() {
+    UsePhysicalPixels();
     IntPtr h = FindWindow("UnityWndClass", "Hearthstone");
     if (h == IntPtr.Zero) return "{\"found\":false}";
     bool focused = GetForegroundWindow() == h;
@@ -63,7 +75,7 @@ public static class TavernLensWin {
   }
 }
 '@
-[void][TavernLensWin]::SetProcessDPIAware()
+[TavernLensWin]::UsePhysicalPixels()
 $parentPid = __PARENT_PID__
 $n = 0
 while ($true) {
@@ -303,28 +315,35 @@ export class GameWindowTracker {
   }
 
   // ------------------------------------------------------------------- macOS
+  /** Fallback without Accessibility permission: is the process running at all? */
+  private pollMacProcess(done: () => void): void {
+    execFile('pgrep', ['-x', 'Hearthstone'], { timeout: 2000 }, (err) => {
+      done();
+      if (this.stopped) return;
+      const running = !err;
+      this.emit(running ? { found: true, focused: true, minimized: false } : { ...NOT_FOUND });
+    });
+  }
+
   private pollMac(): void {
     if (this.macBusy || this.stopped) return;
     this.macBusy = true;
     const done = () => (this.macBusy = false);
     if (this.macDenied && Date.now() < this.macDeniedRetryAt) {
-      // Fallback: is the process running at all?
-      execFile('pgrep', ['-x', 'Hearthstone'], { timeout: 2000 }, (err) => {
-        done();
-        const running = !err;
-        this.emit(running ? { found: true, focused: true, minimized: false } : { ...NOT_FOUND });
-      });
+      this.pollMacProcess(done);
       return;
     }
     execFile('osascript', ['-e', MAC_APPLESCRIPT], { timeout: 3000 }, (err, stdout, stderr) => {
-      done();
       if (err) {
         if (!this.macDenied) log.warn(`osascript failed (Accessibility permission?): ${String(stderr || err.message).trim()}`);
         this.macDenied = true;
         this.macDeniedRetryAt = Date.now() + 15000;
-        this.emit({ found: true, focused: true, minimized: false });
+        // Don't assume the game runs (that flashed the overlay over the desktop on every
+        // retry): ask the process list right away.
+        this.pollMacProcess(done);
         return;
       }
+      done();
       this.macDenied = false;
       const info = parseMacOutput(String(stdout));
       if (info) this.emit(info);
