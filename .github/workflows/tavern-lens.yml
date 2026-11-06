@@ -1,7 +1,11 @@
 name: Tavern Lens
 
 on:
+  # Branch pushes are covered by the pull_request trigger; only run on push for
+  # the main branches and release tags so a PR push doesn't run everything twice.
   push:
+    branches: [main, master]
+    tags: ['tavern-lens-v*']
     paths:
       - 'hs-battlegrounds-overlay/**'
       - '.github/workflows/tavern-lens.yml'
@@ -24,8 +28,8 @@ jobs:
     name: Typecheck & unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -46,8 +50,8 @@ jobs:
       # Unsigned builds: don't look for signing identities in the keychain.
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -55,7 +59,7 @@ jobs:
       - run: npm ci
       - run: npx electron-vite build
       - run: npx electron-builder --publish never
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: tavern-lens-${{ matrix.os }}
           path: |
