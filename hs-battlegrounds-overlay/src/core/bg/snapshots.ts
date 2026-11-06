@@ -53,23 +53,26 @@ export function tribesOf(e: Entity, db: CardDb): Tribe[] {
 }
 
 /**
- * Tribe(s) a shop-offered pool minion proves to be in the lobby: a pool minion
- * belonging to a single tribe. Returns undefined if inconclusive (neutral, multi-tribe).
+ * Tribe a shop-offered minion proves to be in the lobby, from the log's own data:
+ *  - BACON_SUBSET_* tags (pool sub-sets the card belongs to; dual-tribe minions carry two,
+ *    some neutrals carry one, e.g. Nadina the Red -> DRAGON): exactly one => that tribe.
+ *  - logs without subset tags (very old): the single CARDRACE.
+ * The card DB is deliberately NOT used: cards get re-tagged between patches.
+ * Returns undefined if inconclusive (neutral, multi-tribe).
  */
-export function lobbyTribeEvidence(e: Entity, db: CardDb): Tribe | undefined {
-  const card = db.get(e.cardId);
-  if (card) {
-    if (card.type !== 'MINION') return undefined;
-    const tribes = card.tribes.filter((t) => t !== 'ALL');
-    return tribes.length === 1 && card.tribes.length === 1 ? tribes[0] : undefined;
-  }
-  // Unknown card (newer/older than the bundled data): use pool subset tags, then CARDRACE.
+export function lobbyTribeEvidence(e: Entity, _db?: CardDb): Tribe | undefined {
   if ((e.tags.get(T.CARDTYPE) ?? 0) !== CardType.MINION) return undefined;
-  const subsets: Tribe[] = [];
-  for (const [tag, tribe] of SUBSET_TAG_TRIBE) if ((e.tags.get(tag) ?? 0) > 0) subsets.push(tribe);
-  if (subsets.length === 1) return subsets[0];
-  if (subsets.length > 1) return undefined;
-  if (!e.tags.get(T.IS_BACON_POOL_MINION)) return undefined;
+  let subset: Tribe | undefined;
+  let n = 0;
+  for (const [tag, tribe] of SUBSET_TAG_TRIBE) {
+    if ((e.tags.get(tag) ?? 0) > 0) {
+      subset = tribe;
+      n++;
+    }
+  }
+  if (n === 1) return subset;
+  if (n > 1) return undefined;
+  if ((e.tags.get(T.BACON_SUBSET_ALL) ?? 0) > 0) return undefined;
   const t = raceToTribe(e.tags.get(T.CARDRACE) ?? 0);
   return t && t !== 'ALL' ? t : undefined;
 }

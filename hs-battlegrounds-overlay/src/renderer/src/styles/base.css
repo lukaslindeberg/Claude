@@ -988,3 +988,13 @@ div.tl-tip-anchor {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* compact tokens keep their badges inside their own footprint so rows can pack tightly */
+.tl-token--xs .tl-token__atk,
+.tl-token--sm .tl-token__atk {
+  left: -1px;
+}
+.tl-token--xs .tl-token__hp,
+.tl-token--sm .tl-token__hp {
+  right: -1px;
+}
