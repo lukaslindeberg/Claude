@@ -367,12 +367,12 @@ export function registerTrinkets(): void {
       const copies = victims.map((m) => copyMinion(b, m));
       for (const v of victims) destroy(b, v);
       e.data.pending = 1;
-      (e as EffectInstance & { stash?: Minion[] }).stash = copies;
+      e.stash = copies;
     },
     onBoardEmpty: (b, e) => {
       if (!e.data.pending) return;
       e.data.pending = 0;
-      const copies = (e as EffectInstance & { stash?: Minion[] }).stash ?? [];
+      const copies = e.stash ?? [];
       for (const c of copies) summon(b, e.side, copyMinion(b, c), endAnchor(e.side));
     },
   });

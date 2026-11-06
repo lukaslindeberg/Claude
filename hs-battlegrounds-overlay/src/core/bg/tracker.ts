@@ -1004,11 +1004,21 @@ export class BgTracker {
         return !(src && src.id !== e.id && !memberSet.has(src.id) && src.cardId === e.cardId && src.tags.get(T.CONTROLLER) === lctl);
       });
     const byType = (ct: number) => members.filter((e) => e.tags.get(T.CARDTYPE) === ct);
+    // Hand cards inside a template carry a "Costs 0" shop enchantment (TB_BaconShopBadsongE).
+    const inHand = new Set<number>();
+    for (const e of s.entities.values()) {
+      if (e.cardId === 'TB_BaconShopBadsongE' && memberSet.has(e.tags.get(T.ATTACHED) ?? -1)) inHand.add(e.tags.get(T.ATTACHED)!);
+    }
+    const isHand = (e: Entity) => e.tags.get(T.ZONE) === Zone.HAND || inHand.has(e.id);
+    const cards = members.filter((e) => {
+      const ct = e.tags.get(T.CARDTYPE);
+      return ct === CardType.MINION || ct === CardType.SPELL || ct === CardType.BATTLEGROUND_SPELL;
+    });
     const side = this.makeSide(
       hero,
       t.playerId,
-      byType(CardType.MINION).filter((e) => e.tags.get(T.ZONE) !== Zone.HAND),
-      members.filter((e) => e.tags.get(T.ZONE) === Zone.HAND),
+      byType(CardType.MINION).filter((e) => !isHand(e)),
+      cards.filter(isHand),
       byType(CardType.BATTLEGROUND_TRINKET),
       byType(CardType.BATTLEGROUND_QUEST_REWARD),
       byType(CardType.HERO_POWER),

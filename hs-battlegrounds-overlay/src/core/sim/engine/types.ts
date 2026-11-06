@@ -336,6 +336,8 @@ export interface EffectInstance {
   scriptData2?: number;
   /** Scratch space. */
   data: Record<string, number>;
+  /** Minions remembered by the effect (e.g. Soul Fermenter). */
+  stash?: Minion[];
 }
 
 export interface EffectHandler {
