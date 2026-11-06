@@ -1,0 +1,65 @@
+# electron-builder configuration for Tavern Lens.
+# Build: npx electron-vite build && npx electron-builder --publish never
+appId: com.tavernlens.app
+productName: Tavern Lens
+copyright: Copyright © 2026 Lukas Lindeberg
+
+directories:
+  output: release
+  buildResources: resources
+
+# The main/preload/renderer bundles are self-contained (electron-vite), so no
+# runtime node_modules are needed inside the package.
+files:
+  - out/**
+  - package.json
+  - "!node_modules/**"
+
+extraResources:
+  - from: resources/demo
+    to: demo
+    filter: ["*.gz"]
+  - from: resources/icons
+    to: icons
+    filter: ["*.png"]
+
+asar: true
+compression: normal
+
+win:
+  icon: resources/icons/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Tavern Lens
+  artifactName: Tavern-Lens-Setup-${version}.${ext}
+
+portable:
+  artifactName: Tavern-Lens-Portable-${version}.${ext}
+
+mac:
+  icon: resources/icons/icon.png
+  category: public.app-category.games
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+
+dmg:
+  artifactName: Tavern-Lens-${version}-${arch}.${ext}
+
+linux:
+  icon: resources/icons/icon.png
+  category: Game
+  target:
+    - target: AppImage
+      arch: [x64]
+  artifactName: Tavern-Lens-${version}-${arch}.${ext}

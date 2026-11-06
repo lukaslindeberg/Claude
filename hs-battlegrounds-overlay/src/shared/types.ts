@@ -468,6 +468,8 @@ export interface HeroStatsBundle {
   label: string; // e.g. "Your games" or "Community (last patch, all ranks)"
   updatedAt: string;
   stats: HeroStat[];
+  /** Game mode the stats refer to (placements are 1..4 in duos). Absent = solo. */
+  mode?: GameMode;
 }
 
 // ---------------------------------------------------------------------------

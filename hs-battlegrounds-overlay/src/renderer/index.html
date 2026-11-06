@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tavern Lens — browser demo</title>
+    <style>
+      body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at 50% 0%, #1d2140, #0b0d18 70%); color: #ece9f5; font: 14px/1.5 Inter, system-ui, sans-serif; display: grid; place-items: center; }
+      main { width: min(760px, 92vw); padding: 32px 0; }
+      h1 { font-family: Cinzel, Georgia, serif; color: #f2c14e; letter-spacing: .06em; margin: 0 0 4px; }
+      p { color: #b3b2c8; margin: 0 0 24px; }
+      h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: #7d8099; margin: 24px 0 10px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+      a { display: block; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(242,193,78,.22); background: rgba(13,16,32,.9); color: #ece9f5; text-decoration: none; font-weight: 600; }
+      a:hover { border-color: rgba(242,193,78,.6); }
+      a small { display: block; color: #7d8099; font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Tavern Lens</h1>
+      <p>Browser demo of the overlay and companion window with a mock bridge and sample data. Not shipped in the Electron build.</p>
+      <h2>Overlay scenes</h2>
+      <div class="grid">
+        <a href="overlay.html?scene=heroSelection">Hero selection<small>stat cards per hero</small></a>
+        <a href="overlay.html?scene=recruit">Recruit<small>opponents, tiers, lobby</small></a>
+        <a href="overlay.html?scene=recruit&hover=0">Leaderboard hover<small>slot 1 hovered</small></a>
+        <a href="overlay.html?scene=recruit&tierList=4">Minions by tier<small>tier 4 open</small></a>
+        <a href="overlay.html?scene=combat">Combat<small>battle simulation</small></a>
+        <a href="overlay.html?scene=gameOver">Game over<small>post-match summary</small></a>
+        <a href="overlay.html?scene=replay">Replay<small>real Power.log, 40x</small></a>
+        <a href="overlay.html?scene=recruit&calibrate=1">Calibration<small>leaderboard slots</small></a>
+      </div>
+      <h2>Companion window</h2>
+      <div class="grid">
+        <a href="settings.html?scene=recruit">Overview<small>status + current game</small></a>
+        <a href="settings.html?scene=recruit#history">Match history</a>
+        <a href="settings.html?scene=recruit#stats">Stats</a>
+        <a href="settings.html?scene=recruit#heroes">Heroes</a>
+        <a href="settings.html?scene=recruit#minions">Minions</a>
+        <a href="settings.html?scene=recruit#settings">Settings</a>
+      </div>
+    </main>
+  </body>
+</html>

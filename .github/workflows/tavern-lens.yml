@@ -1,0 +1,67 @@
+name: Tavern Lens
+
+on:
+  push:
+    paths:
+      - 'hs-battlegrounds-overlay/**'
+      - '.github/workflows/tavern-lens.yml'
+  pull_request:
+    paths:
+      - 'hs-battlegrounds-overlay/**'
+      - '.github/workflows/tavern-lens.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: tavern-lens-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: hs-battlegrounds-overlay
+
+jobs:
+  test:
+    name: Typecheck & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hs-battlegrounds-overlay/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run
+
+  build:
+    name: Package (${{ matrix.os }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      # Unsigned builds: don't look for signing identities in the keychain.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hs-battlegrounds-overlay/package-lock.json
+      - run: npm ci
+      - run: npx electron-vite build
+      - run: npx electron-builder --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tavern-lens-${{ matrix.os }}
+          path: |
+            hs-battlegrounds-overlay/release/**
+            !hs-battlegrounds-overlay/release/*-unpacked/**
+            !hs-battlegrounds-overlay/release/mac/**
+            !hs-battlegrounds-overlay/release/mac-*/**
+          if-no-files-found: error
+          retention-days: 14
