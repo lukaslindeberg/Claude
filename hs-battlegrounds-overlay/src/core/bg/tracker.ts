@@ -238,7 +238,7 @@ export class BgTracker {
       case 'BlockEnd': {
         this.depth--;
         const g = this.g;
-        if (g?.isBg && g.combat) {
+        if (g?.isBg && g.combat && !g.ended) {
           const c = g.combat;
           if (c.installed && !c.captured && this.depth < c.installDepth) this.captureCombat(g);
           if (c.templateOpen && this.depth < c.templateDepth) c.templateOpen = undefined;
@@ -491,6 +491,8 @@ export class BgTracker {
     if (!g || !g.isBg) return;
     const s = this.store;
     if (e.id === s.gameEntityId) {
+      // After our game ended the server keeps simulating (victory laps, ghost combats): ignore.
+      if (g.ended) return;
       if (tag === T.TURN) this.onTurn(g, value);
       else if (tag === T.BOARD_VISUAL_STATE) {
         if (value === 2) this.startCombat(g);
@@ -653,7 +655,7 @@ export class BgTracker {
 
   private onBlockStart(g: GameCtx, pk: Extract<Packet, { type: 'BlockStart' }>): void {
     const c = g.combat;
-    if (!c || c.ended) return;
+    if (!c || c.ended || g.ended) return;
     const s = this.store;
     if (pk.blockType === 1 /* ATTACK */) {
       if (!c.installed && this.store.tag(this.store.gameEntityId, T.BOARD_VISUAL_STATE) === 2) {
@@ -718,7 +720,7 @@ export class BgTracker {
       return;
     }
     const c = g.combat;
-    if (!c || c.ended) return;
+    if (!c || c.ended || g.ended) return;
     if (!c.installed) {
       c.installed = true;
       c.installDepth = this.depth;
