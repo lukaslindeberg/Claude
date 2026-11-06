@@ -143,6 +143,7 @@ export function summon(b: Battle, side: SideState, m: Minion, anchor: SummonAnch
     if (m.handler?.aura) b.hasAuras = true;
     recalcAuras(b);
   }
+  if (b.log) b.log.push(`summon ${side.index === 0 ? 'P' : 'O'}:${m.name}#${m.entityId} @${idx}`);
   m.handler?.onSummoned?.(b, m);
   emitSummon(b, m);
   return true;

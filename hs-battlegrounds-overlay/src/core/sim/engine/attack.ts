@@ -16,6 +16,11 @@ import { resolveDeaths } from './deaths';
 import { emitAfterAttack, emitFriendlyAttack, guarded } from './events';
 import type { AttackInfo, Battle, Minion, SideState } from './types';
 
+/** Short label used by the debug log: side:name#entityId. */
+export function label(m: Minion): string {
+  return `${m.side.index === 0 ? 'P' : 'O'}:${m.name}#${m.entityId}`;
+}
+
 export function canAttack(m: Minion): boolean {
   return m.attack > 0 && isAlive(m);
 }
@@ -77,6 +82,7 @@ export function doAttack(b: Battle, attacker: Minion, opts: AttackOptions): void
   const target = opts.forcedTarget && isAlive(opts.forcedTarget) ? opts.forcedTarget : pickTarget(b, defender);
   if (!target) return;
   b.attacks++;
+  if (b.log) b.log.push(`attack ${label(attacker)} -> ${label(target)}${opts.inTurn ? '' : ' (immediate)'}`);
   if (opts.inTurn) {
     side.attackPtr = indexOf(attacker) + 1;
     side.lastAttacker = attacker;

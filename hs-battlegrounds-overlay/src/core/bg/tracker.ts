@@ -182,12 +182,17 @@ export class BgTracker {
     return this.events;
   }
 
-  /** Emit any buffered multi-line packet (call at end of input). */
+  /**
+   * Emit any buffered multi-line packet and, if the local player's game is over but the
+   * log ended before STATE=COMPLETE, the pending gameEnd. Call at end of input.
+   */
   flush(): BgEvent[] {
     const pk: Packet[] = [];
     this.parser.flush(pk);
     this.events = [];
     for (const p of pk) this.handle(p);
+    const g = this.g;
+    if (g && g.isBg && g.ended && !g.matchRecord) this.finishGame(g);
     return this.events;
   }
 
@@ -214,6 +219,7 @@ export class BgTracker {
     const s = this.store;
     switch (pk.type) {
       case 'CreateGame': {
+        if (this.g && this.g.isBg && this.g.ended && !this.g.matchRecord) this.finishGame(this.g);
         if (this.g && this.g.isBg && !this.g.ended) this.prevGame = this.g;
         else this.prevGame = undefined;
         if (this.g?.isBg) this.bump();
@@ -491,14 +497,17 @@ export class BgTracker {
     if (!g || !g.isBg) return;
     const s = this.store;
     if (e.id === s.gameEntityId) {
+      if (tag === T.STATE && value === 3) {
+        this.finishGame(g);
+        return;
+      }
       // After our game ended the server keeps simulating (victory laps, ghost combats): ignore.
       if (g.ended) return;
       if (tag === T.TURN) this.onTurn(g, value);
       else if (tag === T.BOARD_VISUAL_STATE) {
         if (value === 2) this.startCombat(g);
         else if (value === 1 && g.combat && !g.combat.ended) this.endCombat(g);
-      } else if (tag === T.STATE && value === 3) this.endGame(g);
-      else if (tag === T.BACON_COMBAT_DAMAGE_CAP_ENABLED) g.damageCapEnabled = value > 0;
+      } else if (tag === T.BACON_COMBAT_DAMAGE_CAP_ENABLED) g.damageCapEnabled = value > 0;
       return;
     }
     const player = s.players.get(e.id);
@@ -1035,21 +1044,13 @@ export class BgTracker {
   // Game end
   // -------------------------------------------------------------------------
 
+  /** Local player reached a final PLAYSTATE: stop combat tracking (the server keeps simulating). */
   private endGame(g: GameCtx): void {
     if (g.ended) return;
-    const s = this.store;
-    const lp = s.localPlayer;
-    const ps = lp ? s.tag(lp.entityId, T.PLAYSTATE) : 0;
     if (g.combat && !g.combat.ended) this.endCombat(g);
     g.ended = true;
     g.endedAt = this.now();
     const heroes = this.syncPlayers(g);
-    const localPid = this.localPid(g);
-    const lh = s.get(g.localHeroId);
-    let place = lh?.tags.get(T.PLAYER_LEADERBOARD_PLACE) ?? 0;
-    if (ps === PlayState.WON) place = 1;
-    g.finalPlacement = place > 0 ? place : undefined;
-    // final health snapshot
     const turn = this.bgTurn();
     for (const [pid, e] of heroes) {
       const tr = g.players.get(pid)!;
@@ -1060,6 +1061,30 @@ export class BgTracker {
         else tr.healthHistory.push({ turn, value });
       }
     }
+    g.finalPlacement = this.currentPlacement(g);
+    this.bump();
+  }
+
+  /**
+   * Placement of the local player. NB: after a loss the client updates the local hero's
+   * PLAYER_LEADERBOARD_PLACE only AFTER PLAYSTATE=LOST, so read it as late as possible.
+   */
+  private currentPlacement(g: GameCtx): number | undefined {
+    const s = this.store;
+    const lp = s.localPlayer;
+    if (lp && s.tag(lp.entityId, T.PLAYSTATE) === PlayState.WON) return 1;
+    const place = s.tag(g.localHeroId, T.PLAYER_LEADERBOARD_PLACE);
+    return place > 0 ? place : undefined;
+  }
+
+  /** Game over for good (GameEntity STATE=COMPLETE, next CREATE_GAME or flush): emit gameEnd. */
+  private finishGame(g: GameCtx): void {
+    if (g.matchRecord) return;
+    if (!g.ended) this.endGame(g);
+    g.finalPlacement = this.currentPlacement(g) ?? g.finalPlacement;
+    const s = this.store;
+    const lh = s.get(g.localHeroId);
+    const turn = this.bgTurn();
     const state = this.buildState();
     const local = state.players.find((p) => p.isLocal);
     const heroCardId = lh?.cardId ?? g.chosenHeroCardId ?? '';
@@ -1067,7 +1092,7 @@ export class BgTracker {
     const rec: MatchRecord = {
       id: g.gameId,
       startedAt: g.startedAt,
-      endedAt: g.endedAt,
+      endedAt: g.endedAt ?? this.now(),
       mode: state.mode,
       gameType: g.gameType,
       heroCardId,
@@ -1093,10 +1118,9 @@ export class BgTracker {
       }),
     };
     if (state.anomalyCardId) rec.anomalyCardId = state.anomalyCardId;
-    g.matchRecord = rec;
-    void localPid;
+    g.matchRecord = JSON.parse(JSON.stringify(rec)) as MatchRecord;
     this.bump();
-    this.emit({ type: 'gameEnd', record: JSON.parse(JSON.stringify(rec)) as MatchRecord });
+    this.emit({ type: 'gameEnd', record: rec });
   }
 
   // -------------------------------------------------------------------------
@@ -1335,7 +1359,8 @@ export class BgTracker {
       state.gold = Math.max(0, gold);
       state.maxGold = resources;
     }
-    if (g.finalPlacement !== undefined) state.finalPlacement = g.finalPlacement;
+    const placement = g.ended && !g.matchRecord ? (this.currentPlacement(g) ?? g.finalPlacement) : g.finalPlacement;
+    if (placement !== undefined) state.finalPlacement = placement;
     if (g.endedAt !== undefined) state.endedAt = g.endedAt;
     // Plain JSON (no shared references with internal state).
     return JSON.parse(JSON.stringify(state)) as BgGameState;

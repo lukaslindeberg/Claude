@@ -191,6 +191,7 @@ export function resolveDeaths(b: Battle): void {
       }
       if (records.length === 0) break;
 
+      if (b.log) for (const rec of records) b.log.push(`dies ${rec.side.index === 0 ? 'P' : 'O'}:${rec.minion.name}#${rec.minion.entityId}`);
       const avenges: AvengeEntry[] = [];
       for (const rec of records) onDeath(b, rec.minion, avenges);
       fireAvenges(b, avenges);
