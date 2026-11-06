@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import clsx from 'clsx';
 import type { HeroOption } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { useViewport } from '../../hooks/useViewport';
@@ -50,7 +51,7 @@ function HeroStatCard({ option, index }: { option: HeroOption; index: number }) 
       <div className="tl-herocard__top">
         <HeroPortrait cardId={option.cardId} name={name} size={50} />
         <div className="tl-herocard__title">
-          <span className="tl-herocard__name">{name}</span>
+          <span className={clsx('tl-herocard__name', (name.length > 16 || name.split(/\s+/).some((w) => w.length > 9)) && 'is-long')}>{name}</span>
           {armor ? (
             <span className="tl-herocard__sub">
               <ShieldIcon size={10} /> {armor} armor

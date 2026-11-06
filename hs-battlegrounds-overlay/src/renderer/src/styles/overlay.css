@@ -128,6 +128,9 @@ body.tl-body--overlay {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.tl-herocard__name.is-long {
+  font-size: 13px;
+}
 .tl-herocard__sub {
   display: flex;
   align-items: center;
@@ -435,7 +438,8 @@ body.tl-body--overlay {
   gap: 8px;
 }
 .tl-opp__label {
-  width: 40px;
+  width: 46px;
+  white-space: nowrap;
   flex: none;
   font-size: 9.5px;
   font-weight: 800;

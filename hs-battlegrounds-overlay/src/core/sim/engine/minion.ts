@@ -60,7 +60,6 @@ function blankMinion(b: Battle, side: SideState): Minion {
     snapshot: null,
     stash: null,
   };
-  void b;
 }
 
 function attachEnchantments(b: Battle, m: Minion, ids: readonly string[]): void {

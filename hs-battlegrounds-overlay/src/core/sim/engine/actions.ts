@@ -109,7 +109,6 @@ export function destroy(b: Battle, m: Minion, source: Minion | null = null): voi
   if (m.removed || m.destroyed) return;
   m.destroyed = true;
   if (!m.killedBy) m.killedBy = source;
-  void b;
 }
 
 // ---------------------------------------------------------------------------

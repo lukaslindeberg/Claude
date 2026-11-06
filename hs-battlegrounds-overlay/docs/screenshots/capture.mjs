@@ -56,8 +56,9 @@ for (const [name, path, viewport, action, wait] of shots) {
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => m.type() === 'error' && !/art\.hearthstonejson|ERR_|Failed to load resource/.test(m.text()) && errors.push(m.text()));
   await page.goto(base + path, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.tl-overlay-root, .tl-app');
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(900);
   if (action) {
     await action(page);
     await page.waitForTimeout(500);
