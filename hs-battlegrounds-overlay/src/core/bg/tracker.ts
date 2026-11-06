@@ -642,6 +642,8 @@ export class BgTracker {
 
   private onFullEntity(g: GameCtx, e: Entity): void {
     this.inferTribe(g, e);
+    const lp = this.store.localPlayer;
+    if (lp && e.id === this.store.tag(lp.entityId, T.HERO_ENTITY)) this.refreshLocalHero(g);
     const c = g.combat;
     if (!c || c.ended || c.installed) return;
     // Duos: SETASIDE templates of the other combatants' boards, controlled by the local player.
@@ -1148,7 +1150,7 @@ export class BgTracker {
     return cap;
   }
 
-  /** Updates tribe inference from the current shop; returns offers. */
+  /** Bob's current offers (dummy-controlled minions/spells in PLAY during the recruit phase). */
   private shopOffers(g: GameCtx): ShopOffer[] {
     const s = this.store;
     const dummy = this.dummyController;
@@ -1159,10 +1161,7 @@ export class BgTracker {
       if (ct === CardType.MINION || ct === CardType.BATTLEGROUND_SPELL || ct === CardType.SPELL) ents.push(e);
     }
     ents.sort((a, b) => (a.tags.get(T.ZONE_POSITION) ?? 0) - (b.tags.get(T.ZONE_POSITION) ?? 0) || a.id - b.id);
-    for (const e of ents) {
-      const t = lobbyTribeEvidence(e, this.cardDb);
-      if (t) g.tribes.add(t);
-    }
+    void g;
     return ents.map((e) => shopOffer(e, this.cardDb));
   }
 
@@ -1198,8 +1197,7 @@ export class BgTracker {
     }
     const s = this.store;
     const db = this.cardDb;
-    this.refreshLocalHero(g);
-    const heroes = this.syncPlayers(g);
+    const heroes = this.leaderboardHeroes(g);
     const lp = s.localPlayer;
     const localPid = this.localPid(g);
     const nextOpp = lp ? s.tag(lp.entityId, T.NEXT_OPPONENT_PLAYER_ID) || s.tag(g.localHeroId, T.NEXT_OPPONENT_PLAYER_ID) : 0;
@@ -1246,14 +1244,14 @@ export class BgTracker {
     if (!inCombat) {
       boardEnts.sort(byPos);
       localBoard = boardEnts.map((e) => minionSnapshot(e, s, db, enchants));
-      if (localBoard.length || phase === 'recruit') g.lastLocalBoard = localBoard;
     }
     handEnts.sort(byPos);
     localHand = handEnts.map((e) => minionSnapshot(e, s, db, enchants));
 
     const players: PlayerState[] = [];
+    const emptyTrack: PlayerTrack = { playerId: 0, heroEntityId: 0, tierHistory: [], maxTier: 1, healthHistory: [], combatsAgainst: [], nameVotes: new Map(), dead: false };
     for (const [pid, e] of heroes) {
-      const tr = g.players.get(pid)!;
+      const tr = g.players.get(pid) ?? emptyTrack;
       const isLocal = pid === localPid && e.id === g.localHeroId;
       const card = db.get(e.cardId);
       const health = (e.tags.get(T.HEALTH) ?? 0) - (e.tags.get(T.DAMAGE) ?? 0);

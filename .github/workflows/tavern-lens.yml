@@ -10,6 +10,7 @@ on:
       - 'hs-battlegrounds-overlay/**'
       - '.github/workflows/tavern-lens.yml'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'hs-battlegrounds-overlay/**'
       - '.github/workflows/tavern-lens.yml'
@@ -26,6 +27,8 @@ defaults:
 jobs:
   test:
     name: Typecheck & unit tests
+    # Skip while the PR is a draft (work in progress); runs again when it's marked ready.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
