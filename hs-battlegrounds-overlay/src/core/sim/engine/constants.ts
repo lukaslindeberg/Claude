@@ -22,6 +22,9 @@ export const TAG = {
   OLD_GOD_ATK: 'BACON_OLD_GOD_ATTACK',
   OLD_GOD_HP: 'BACON_OLD_GOD_HEALTH',
   NUM_SPELLS_PLAYED_THIS_GAME: 'NUM_SPELLS_PLAYED_THIS_GAME',
+  /** Player-entity tags for "your Tavern spells give an extra +X/+Y" (used when the SIM_* keys are absent). */
+  SPELL_ATK_REAL: 'TAVERN_SPELL_ATTACK_INCREASE',
+  SPELL_HP_REAL: 'TAVERN_SPELL_HEALTH_INCREASE',
 
   // Simulator-specific keys (optional; see README "Player tags")
   /** "Your Undead have +X Attack this game" total. */
