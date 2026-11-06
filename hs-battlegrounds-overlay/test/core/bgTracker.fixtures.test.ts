@@ -205,11 +205,18 @@ const SPECS: Spec[] = [
       [5, 7],
       [6, 8],
     ],
-    extra: ({ state }) => {
+    extra: ({ state, events }) => {
       expect(state.availableTribes).toContain('ABERRATION');
       expect(state.availableTribes).toHaveLength(5);
       expect(state.trinketsActive).toBe(true);
       expect(state.players.find((p) => p.playerId === 5)!.isTeammate).toBe(true);
+      // the whole Player entity tag set (+ lobby-wide GameEntity tags) reaches the simulator
+      const last = ofType(events, 'combatStart').at(-1)!.input;
+      const ours = last.player.playerId === 4 ? last.player : last.player.teammate!;
+      expect(ours.playerTags.BACON_GLOBAL_OLD_GOD_DBID).toBe(132532);
+      expect(ours.playerTags.BACON_OLD_GOD_ATTACK).toBeGreaterThan(0);
+      expect(ours.playerTags.PLAYER_ID).toBe(4);
+      expect(last.opponent.playerTags.BACON_GLOBAL_OLD_GOD_DBID).toBe(132532);
     },
   },
   {
