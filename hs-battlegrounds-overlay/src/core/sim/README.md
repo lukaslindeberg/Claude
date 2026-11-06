@@ -194,8 +194,8 @@ keywords and snapshot stats are still simulated. Counted by first tribe.
 | Dragon | 11 | 11 | 1 | - |
 | Quilboar | 8 | 19 | 0 | - |
 | Aberration | 7 | 20 | 0 | - |
-| Murloc | 6 | 18 | 0 | - |
-| Mech | 5 | 20 | 0 | - |
+| Murloc | 9 | 15 | 0 | - |
+| Mech | 8 | 17 | 0 | - |
 | Naga | 5 | 18 | 0 | - |
 | Neutral | 5 | 25 | 0 | Sandy (Duos) |
 | Pirate | 3 | 22 | 0 | - |
@@ -213,6 +213,11 @@ quest rewards, 3 anomalies.
 
 ## Known simplifications
 
+- Magnetization in combat (Glambot's Satellites) triggers Mechagnome Interpreter and Polarizing
+  Beatboxer; Enchanted Sentinel's spell bonus is assumed to be part of the player's
+  `TAVERN_SPELL_*_INCREASE` tags and is removed when it dies (magnetized Sentinels are not tracked).
+- Hand buffs in combat (Murcules, Winterfinner, Tidehunter, Tidecaller) carry over to minions summoned
+  from hand later in the same combat (Diremuck Forager, Bassgill).
 - "Improve this permanently" parts are not simulated within a combat (Lurking Leviathan, The Last
   One Standing, Tasty Lobster's future lobsters); current values come from snapshot script data.
 - Start of Combat minion order alternates between sides; hero powers/trinkets before minions.
