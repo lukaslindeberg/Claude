@@ -118,6 +118,11 @@ interface GameCtx {
 
 const EMPTY_BATTLE: BattleState = { status: 'idle', turn: 0 };
 
+/** Empty trinket slots ("Lesser Trinket" / "Greater Trinket") before a trinket is picked. */
+function isTrinketPlaceholder(cardId: string): boolean {
+  return /_Trinket_(1st|2nd)$/.test(cardId);
+}
+
 function isPlaceholderHero(cardId: string): boolean {
   return cardId === 'TB_BaconShop_HERO_PH' || cardId === '' || cardId.startsWith('TB_BaconShop_HERO_PH');
 }
@@ -938,8 +943,9 @@ export class BgTracker {
       if (z === Zone.PLAY) {
         if (ct === CardType.MINION) {
           if (e.id > minId) minions.push(e);
-        } else if (ct === CardType.BATTLEGROUND_TRINKET) trinkets.push(e);
-        else if (ct === CardType.BATTLEGROUND_QUEST_REWARD) rewards.push(e);
+        } else if (ct === CardType.BATTLEGROUND_TRINKET) {
+          if (!isTrinketPlaceholder(e.cardId)) trinkets.push(e);
+        } else if (ct === CardType.BATTLEGROUND_QUEST_REWARD) rewards.push(e);
         else if (ct === CardType.HERO_POWER) heroPowers.push(e);
       } else if (z === Zone.HAND && (side === 'local' || e.id > minId)) {
         if (ct === CardType.MINION || ct === CardType.SPELL || ct === CardType.BATTLEGROUND_SPELL) hand.push(e);
@@ -1032,7 +1038,7 @@ export class BgTracker {
       t.playerId,
       byType(CardType.MINION).filter((e) => !isHand(e)),
       cards.filter(isHand),
-      byType(CardType.BATTLEGROUND_TRINKET),
+      byType(CardType.BATTLEGROUND_TRINKET).filter((e) => !isTrinketPlaceholder(e.cardId)),
       byType(CardType.BATTLEGROUND_QUEST_REWARD),
       byType(CardType.HERO_POWER),
       undefined,
@@ -1236,7 +1242,9 @@ export class BgTracker {
         else if (ct === CardType.HERO_POWER) {
           const linked = s.tag(g.localHeroId, T.HERO_POWER_ENTITY);
           if (!localHp || e.id === linked) localHp = e;
-        } else if (ct === CardType.BATTLEGROUND_TRINKET) localTrinkets.push(e.cardId);
+        } else if (ct === CardType.BATTLEGROUND_TRINKET) {
+          if (!isTrinketPlaceholder(e.cardId)) localTrinkets.push(e.cardId);
+        }
         else if (ct === CardType.BATTLEGROUND_QUEST_REWARD) localRewards.push(e.cardId);
       } else if (z === Zone.HAND && (ct === CardType.MINION || ct === CardType.SPELL || ct === CardType.BATTLEGROUND_SPELL)) handEnts.push(e);
     }
