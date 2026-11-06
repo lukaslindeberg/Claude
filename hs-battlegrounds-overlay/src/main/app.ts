@@ -71,6 +71,7 @@ export class TavernLensApp {
   private liveActive = false;
   private pendingCardDb: CardDb | undefined;
   private hotkeyErrors: string[] = [];
+  private hotkeysActive = false;
 
   async init(opts: AppLaunchOptions): Promise<void> {
     const userData = app.getPath('userData');
@@ -226,14 +227,18 @@ export class TavernLensApp {
     if (!win || win.isDestroyed()) return;
     const s = this.store.getSettings();
     const info = this.windowTracker?.info ?? { found: false, focused: false, minimized: false };
-    const visible = shouldShowOverlay({
+    const policy = {
       overlayEnabled: s.overlayEnabled,
       hideWhenUnfocused: s.hideWhenUnfocused,
       demoRunning: this.demoActive,
       window: info,
       trackerSupported: this.windowTracker?.supported ?? false,
       gameActive: this.liveActive,
-    });
+    };
+    const visible = shouldShowOverlay(policy);
+    // Hotkeys are held while the overlay could show (the game is in front, or the demo
+    // runs), so toggleOverlay still works when the overlay is disabled.
+    this.setHotkeysActive(shouldShowOverlay({ ...policy, overlayEnabled: true }));
     const bounds = overlayBounds({ demoRunning: this.demoActive, window: info, fallback: this.fallbackBounds() });
     const cur = win.getBounds();
     if (cur.x !== bounds.x || cur.y !== bounds.y || cur.width !== bounds.width || cur.height !== bounds.height) {
@@ -325,9 +330,20 @@ export class TavernLensApp {
     return next;
   }
 
+  private setHotkeysActive(active: boolean): void {
+    if (active === this.hotkeysActive) return;
+    this.hotkeysActive = active;
+    if (active) this.applyHotkeys(this.store.getSettings());
+    else unregisterHotkeys();
+  }
+
   private applyHotkeys(s: Settings): void {
     for (const e of this.hotkeyErrors) this.status.clearError((x) => x === e);
     this.hotkeyErrors = registerHotkeys(s.hotkeys, (action) => this.onHotkey(action));
+    // Global shortcuts are system-wide: holding Ctrl/Cmd+Shift+T/O/H while Hearthstone is
+    // not in front would take them from every other app (reopen tab, bookmarks...). When
+    // inactive, registering just validated the accelerators.
+    if (!this.hotkeysActive) unregisterHotkeys();
     for (const e of this.hotkeyErrors) this.status.addError(e);
   }
 

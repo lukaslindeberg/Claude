@@ -24,6 +24,22 @@ The **companion window** (tray icon → *Open Tavern Lens*) has setup checks, ma
 a hero tier list, a full minion browser and all settings. A **demo mode** replays a recorded game so you
 can see everything without launching Hearthstone.
 
+### Screenshots
+
+The overlay screenshots come from the browser demo, which draws a placeholder game behind the overlay.
+Card art is loaded from HearthstoneJSON at runtime and couldn't be fetched where these were captured, so
+minions show their initials instead of art.
+
+| | |
+| --- | --- |
+| ![Recruit phase](docs/screenshots/overlay-recruit.jpg) Recruit phase: tier bar, lobby info, opponents panel, session widget | ![Battle simulation](docs/screenshots/overlay-combat-result.jpg) Battle simulation with the actual result |
+| ![Leaderboard hover](docs/screenshots/overlay-leaderboard-hover.jpg) Leaderboard hover | ![Minions by tier](docs/screenshots/overlay-tier-list.jpg) Minions by tier |
+| ![Hero selection](docs/screenshots/overlay-hero-selection.jpg) Hero selection | ![Post-match summary](docs/screenshots/overlay-game-over.jpg) Post-match summary |
+| ![Companion overview](docs/screenshots/companion-overview.jpg) Companion: overview and setup checks | ![Match history](docs/screenshots/companion-history-detail.jpg) Companion: match history |
+
+More in [`docs/screenshots/`](docs/screenshots/); regenerate them with `node docs/screenshots/capture.mjs`
+while `npm run demo:web` is running.
+
 ## Install & run
 
 Requirements: Windows 10/11 or macOS, Hearthstone installed, Node.js 22+ (to build from source).
@@ -60,7 +76,7 @@ first launch.
    Settings) and enables Hearthstone's `Power` log in `log.config`. **If Hearthstone was already running,
    restart it once** so the log setting takes effect.
 2. Start a Battlegrounds game. The overlay appears over the game window while Hearthstone is focused.
-3. Hotkeys: `Ctrl/Cmd+Shift+H` toggle overlay, `Ctrl/Cmd+Shift+T` tier list, `Ctrl/Cmd+Shift+O`
+3. Hotkeys (active while Hearthstone is in front): `Ctrl/Cmd+Shift+H` toggle overlay, `Ctrl/Cmd+Shift+T` tier list, `Ctrl/Cmd+Shift+O`
    opponents panel (configurable).
 4. On macOS, grant Accessibility permission so the overlay can follow the Hearthstone window; without it
    the overlay covers the main display.
@@ -119,8 +135,10 @@ npm run typecheck
 
 - Hearthstone's log has no MMR, so rating tracking is manual.
 - The lobby's tribes are inferred from the minions offered in the shop until enough have been seen.
-- The simulator models core combat rules and the most common card effects, not every card; affected
-  results are marked *approximate* and list the cards involved.
+- The simulator implements the in-combat effects of 111 of the 302 current-pool minions; the other 189
+  were checked one by one and have no effect inside combat (their stats and keywords are simulated).
+  Some trinkets, hero powers and older cards aren't modelled; results involving them are marked
+  *approximate* and list the cards. Start-of-combat ordering between the two sides is a best estimate.
 - Leaderboard hover zones assume the standard Hearthstone layout; use the calibration sliders if they're
   offset on your resolution.
 

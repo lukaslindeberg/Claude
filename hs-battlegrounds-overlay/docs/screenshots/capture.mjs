@@ -71,7 +71,7 @@ for (const [name, path, viewport, action, wait] of shots) {
     await page.waitForTimeout(500);
   }
   if (wait) await page.waitForTimeout(wait);
-  await page.screenshot({ path: join(outDir, `${name}.png`) });
+  await page.screenshot({ path: join(outDir, `${name}.jpg`), type: "jpeg", quality: 82 });
   if (errors.length) {
     failures++;
     console.log(`✗ ${name}\n  ${errors.join('\n  ')}`);
