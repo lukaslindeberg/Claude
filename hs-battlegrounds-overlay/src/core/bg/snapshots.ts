@@ -58,13 +58,15 @@ export function tribesOf(e: Entity, db: CardDb): Tribe[] {
  *    some neutrals carry one, e.g. Nadina the Red -> DRAGON): exactly one => that tribe.
  *  - logs without subset tags (very old): the single CARDRACE.
  * Only entities flagged IS_BACON_POOL_MINION are considered.
- * The card DB is deliberately NOT used: cards get re-tagged between patches.
+ * The card DB's tribes are deliberately NOT used: cards get re-tagged between patches.
  * Returns undefined if inconclusive (neutral, multi-tribe).
  */
-export function lobbyTribeEvidence(e: Entity, _db?: CardDb): Tribe | undefined {
+export function lobbyTribeEvidence(e: Entity, db?: CardDb): Tribe | undefined {
   if ((e.tags.get(T.CARDTYPE) ?? 0) !== CardType.MINION) return undefined;
   // Only pool minions count (late-game effects can put buddies/tokens in the shop).
-  if (!e.tags.get(T.IS_BACON_POOL_MINION)) return undefined;
+  // HSReplay XML omits tags equal to the card definition: fall back to the card DB then.
+  const pool = e.tags.has(T.IS_BACON_POOL_MINION) ? (e.tags.get(T.IS_BACON_POOL_MINION) ?? 0) > 0 : !!db?.get(e.cardId)?.pool;
+  if (!pool) return undefined;
   let subset: Tribe | undefined;
   let n = 0;
   for (const [tag, tribe] of SUBSET_TAG_TRIBE) {
