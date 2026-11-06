@@ -11,6 +11,8 @@ import {
   summon,
 } from './helpers';
 
+import { getsCards } from './aberration';
+
 export const JAILBIRD_GOLEM = 'BG36_333t';
 
 export function registerQuilboar(): void {
@@ -80,20 +82,22 @@ export function registerQuilboar(): void {
     },
   });
 
+  // Cards gained in combat (only the hand count matters, for The Shadow of Doubt; golden: 2):
+  registerMinion('BG20_101', getsCards(1, 'rally')); // Roadboar: Rally: Get a Blood Gem
+  registerMinion('BG36_331', getsCards(1, 'rally')); // Bramble Tunneler: Rally: Get a Choose One card
+  registerMinion('BG34_682', getsCards(1, 'deathrattle')); // Razorfen Flapper: Deathrattle: Get a Blood Gem Barrage
+  registerMinion('BGDUO_111', getsCards(1, 'deathrattle')); // Generous Geomancer: Deathrattle: Get a Blood Gem
+
   registerMinion(
     [
       'BG20_100', // Razorfen Geomancer
       'BG31_320', // Crater Miner
-      'BG20_101', // Roadboar (Rally: get a Blood Gem)
-      'BGDUO_111', // Generous Geomancer (deathrattle: get Blood Gems)
       'BG30_123', // Fearless Foodie
       'BG31_326', // Gem Rat
       'BG28_582', // Mangled Bandit
       'BG36_330', // Sly Infiltrator
       'BG31_327', // Thorned Trailblazer
       'BG34_684', // Trench Fighter
-      'BG36_331', // Bramble Tunneler (Rally: get a card)
-      'BG34_682', // Razorfen Flapper (deathrattle: get a card)
       'BG36_332', // Snare Trapper
       'BG30_121', // Hot-Air Surveyor
       'BG31_323', // Turbo Hogrider

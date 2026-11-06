@@ -2,10 +2,10 @@
  * Primitive game actions used by the engine and by card handlers:
  * stat changes, keywords, damage, destroy, summon, Blood Gems, spells, Deity.
  */
-import type { Tribe } from '@shared/types';
+import { LOBBY_TRIBES, type Tribe } from '@shared/types';
 import { recalcAuras } from './auras';
 import { aliveCount, aliveMinions, anchorIndex, endAnchor, insertAt, isAlive } from './board';
-import { emitDamageDealt, emitDivineShieldLost, emitSpellCast, emitSummon, guarded } from './events';
+import { emitDamageDealt, emitDivineShieldLost, emitFriendlyDamaged, emitSpellCast, emitSummon, guarded } from './events';
 import { hasTribe } from './minion';
 import { MAX_BOARD, type Battle, type Minion, type SideState, type SpaceSummon, type SummonAnchor } from './types';
 
@@ -76,6 +76,9 @@ export interface DamageResult {
   excess: number;
 }
 
+/** `Minion.counters` key: extra hits the Divine Shield absorbs before breaking. */
+export const SHIELD_HITS = 'extraShieldHits';
+
 const NO_DAMAGE: DamageResult = Object.freeze({ dealt: 0, killed: false, excess: 0 });
 
 /**
@@ -91,6 +94,12 @@ export function dealDamage(
 ): DamageResult {
   if (amount <= 0 || target.removed) return NO_DAMAGE;
   if (target.divineShield) {
+    // "This minion's Divine Shield takes N hits to break" (counter set by its handler/enchantment).
+    const extra = target.counters?.[SHIELD_HITS];
+    if (extra && extra > 0) {
+      target.counters![SHIELD_HITS] = extra - 1;
+      return NO_DAMAGE;
+    }
     loseDivineShield(b, target);
     return NO_DAMAGE;
   }
@@ -101,6 +110,7 @@ export function dealDamage(
   const killed = wasAlive && !isAlive(target);
   if (killed && !target.killedBy) target.killedBy = source;
   target.handler?.onDamaged?.(b, target, amount, source);
+  if (target.side.effects.length) emitFriendlyDamaged(b, target, amount);
   if (source && !source.removed) emitDamageDealt(b, source, target, amount);
   return { dealt: amount, killed, excess: killed ? Math.max(0, amount - Math.max(0, before)) : 0 };
 }
@@ -243,6 +253,19 @@ const SPELLS: Record<string, (b: Battle, side: SideState, target: Minion | null)
   },
   // Chef's Choice: adds a card to hand (no combat stats).
   BG28_518: () => {},
+  // Misplaced Tea Set: Give a friendly minion of each type +3/+3.
+  BG28_888: (b, side) => {
+    const a = 3 + side.spellAttackBonus;
+    const h = 3 + side.spellHealthBonus;
+    const used = new Set<Minion>();
+    for (const tribe of LOBBY_TRIBES) {
+      const pool = aliveMinions(side).filter((m) => !used.has(m) && m.tribes.length > 0 && hasTribe(m, tribe));
+      const t = b.rng.pick(pool);
+      if (!t) continue;
+      used.add(t);
+      buff(b, t, a, h);
+    }
+  },
 };
 
 /** Number of times a spell targeting a friendly minion is cast (Balinda Stonehearth). */

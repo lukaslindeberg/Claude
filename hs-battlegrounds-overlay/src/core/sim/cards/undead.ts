@@ -21,6 +21,7 @@ import {
   summonRightOf,
   tribeFilter,
 } from './helpers';
+import { avengeGetsCards, cardsAddedToHand } from './aberration';
 import type { Minion } from '../engine/types';
 
 const isUndead = tribeFilter('UNDEAD');
@@ -89,7 +90,8 @@ export function registerUndead(): void {
   // Mummifier (T3): Deathrattle: Give a different friendly Undead Reborn (golden: 2).
   registerMinion('BG28_309', {
     deathrattle: (b, self, ctx) => {
-      const pool = (m: Minion) => isUndead(m) && !m.reborn && m.cardId !== self.cardId;
+      // "Different": not another Mummifier (normal or golden).
+      const pool = (m: Minion) => isUndead(m) && !m.reborn && m.cardId !== 'BG28_309' && m.cardId !== 'BG28_309_G';
       for (const t of randomFriendlies(b, self.side, ctx.mult, pool, self)) giveReborn(t);
     },
   });
@@ -127,7 +129,7 @@ export function registerUndead(): void {
   // for this combat only (golden: 2 each).
   registerMinion('BG31_835', {
     avenge: 4,
-    onAvenge: (_b, self) => setCounter(self, 'got', counter(self, 'got', 0) + self.mult),
+    onAvenge: (b, self) => setCounter(self, 'got', counter(self, 'got', 0) + cardsAddedToHand(b, self.side, self.mult)),
     deathrattle: (b, self, ctx) => {
       const n = counter(self, 'got', 0);
       for (let i = 0; i < n; i++) {
@@ -182,17 +184,23 @@ export function registerUndead(): void {
     },
   });
 
+  // Friendly Geist (T4): Deathrattle: Your Tavern spells give an extra +1 Attack this game.
+  registerMinion('BG32_880', {
+    deathrattle: (b, self, ctx) => void (self.side.spellAttackBonus += sd(b, self, 1, ctx.mult)),
+  });
+  // Drustfallen Butcher (T5): Avenge (4): Get a Butchering. Lichling Hoarder (T5): Avenge (3): Get a
+  // plain copy of a minion (golden: 2). Only the cards reaching the hand matter in combat.
+  registerMinion('BG32_324', avengeGetsCards(4, 1));
+  registerMinion('BG36_848', avengeGetsCards(3, 1));
+
   registerMinion(
     [
       'BG25_001', // Risen Rider (keywords)
       'BG25_011', // Nerubian Deathswarmer (battlecry)
       'BG28_303', // Disguised Graverobber
-      'BG32_880', // Friendly Geist (deathrattle: Tavern spells)
       'BG36_511', // Dead Bellringer
       'BG32_340', // Maw Caster
       'BGDUO_112', // Grave Narrator (Avenge: teammate gets a card)
-      'BG32_324', // Drustfallen Butcher (Avenge: get a card)
-      'BG36_848', // Lichling Hoarder (Avenge: get a card)
       'BG34_Giant_330', // Timewarped Radio Star (deathrattle: get a card)
       SKELETON,
       'BG25_010t', // Helping Hand (Reborn)

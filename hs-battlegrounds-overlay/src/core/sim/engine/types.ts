@@ -357,6 +357,14 @@ export interface EffectHandler {
   onBoardEmpty?(b: Battle, e: EffectInstance): void;
   /** After this side's Deity awakened (was summoned). */
   onDeityAwakened?(b: Battle, e: EffectInstance, deity: Minion): void;
+  /** An enemy minion died (`dead.killedBy` = its killer, if known). */
+  onEnemyDeath?(b: Battle, e: EffectInstance, dead: Minion): void;
+  /** A friendly minion took damage (also fatal damage). */
+  onFriendlyDamaged?(b: Battle, e: EffectInstance, damaged: Minion, amount: number): void;
+  /** After a friendly minion lost Divine Shield. */
+  onFriendlyDivineShieldLost?(b: Battle, e: EffectInstance, lost: Minion): void;
+  /** Its owner cast a (Tavern) spell in combat (`target` = the minion it was cast on, if any). */
+  onSpellCast?(b: Battle, e: EffectInstance, spellId: string, target: Minion | null): void;
   noCombatEffect?: boolean;
 }
 

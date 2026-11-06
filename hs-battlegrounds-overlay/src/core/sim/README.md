@@ -155,7 +155,8 @@ registerEnchantment('BG22_HERO_001p_t1e', { deathrattle: EARTH_DR });
 
 `EffectHandler` (side-level) has `init`, `startOfCombat`, `avenge`/`onAvenge`, `onFriendlyDeath`,
 `onFriendlyAttack`, `afterFriendlyAttack`, `onFriendlySummon`, `afterFriendlySummon`,
-`onFriendlyReborn`, `onDeathrattleTriggered`, `onBoardEmpty`, `onDeityAwakened`; `e.side`,
+`onFriendlyReborn`, `onDeathrattleTriggered`, `onBoardEmpty`, `onDeityAwakened`, `onEnemyDeath`,
+`onFriendlyDamaged`, `onFriendlyDivineShieldLost`, `onSpellCast`; `e.side`,
 `e.scriptData1/2` (trinket / hero power script data), `e.data` scratch.
 
 Useful helpers (`cards/helpers.ts`): `summonForDeath`, `summonRightOf`, `summonTokens`, `summon`,
@@ -190,26 +191,26 @@ keywords and snapshot stats are still simulated. Counted by first tribe.
 | Tribe | Combat handler | No combat effect | Keyword-only | Unsupported |
 |---|---:|---:|---:|---|
 | Beast | 17 | 5 | 0 | - |
-| Undead | 16 | 8 | 0 | - |
+| Undead | 19 | 5 | 0 | - |
 | Dragon | 11 | 11 | 1 | - |
-| Quilboar | 8 | 19 | 0 | - |
-| Aberration | 7 | 20 | 0 | - |
+| Quilboar | 12 | 15 | 0 | - |
+| Aberration | 11 | 16 | 0 | - |
 | Murloc | 9 | 15 | 0 | - |
 | Mech | 8 | 17 | 0 | - |
 | Naga | 5 | 18 | 0 | - |
-| Neutral | 5 | 25 | 0 | Sandy (Duos) |
-| Pirate | 3 | 22 | 0 | - |
+| Neutral | 7 | 24 | 0 | - |
+| Pirate | 6 | 19 | 0 | - |
 | Elemental | 2 | 20 | 1 | - |
 | Demon | 1 | 21 | 0 | - |
-| All-type | 1 | 3 | 1 | Gatekeeper Amalgam |
-| **Total** | **87** | **210** | **3** | **2** |
+| All-type | 3 | 3 | 0 | - |
+| **Total** | **111** | **189** | **2** | **0** |
 
 Also implemented: 22 non-pool minions that appear through tokens/portraits/Ghastcoiler-style
 effects (Sewer Rat, Kaboom Bot, Scallywag, Fish of N'Zoth, Selfless Hero, Harvest Golem, Cave Hydra,
 Foe Reaper, Imp Gang Boss, Nest Swarmer, Runed Progenitor, Silky Shimmermoth, Impulsive Trickster,
 Prized Promo-Drake, Bassgill, Stomping Stegodon, Fishbait, Ancestral Automaton, Flourishing
-Frostling, Timewarped Nest Swarmer, C'Thun and Y'Shaarj Deities); 23 hero powers, 55 trinket ids (incl. greater versions), 7
-quest rewards, 3 anomalies.
+Frostling, Timewarped Nest Swarmer, C'Thun and Y'Shaarj Deities); 25 hero powers, 82 trinket ids (incl. greater versions), 9
+quest rewards, 4 anomalies. Dark Paradox is handled per Dark Gift variant (`BG36_360t*`).
 
 ## Known simplifications
 
@@ -225,8 +226,15 @@ quest rewards, 3 anomalies.
   keep current stats and granted deathrattles.
 - Deity: awakens after 4 friendly Aberration deaths (from `BG_OldGod` data) at the right end of the
   board when there is space; C'Thun splits stats evenly (remainder random).
-- Cards added to hand in combat are not tracked (except Deathly Striker's Undead); The Shadow of
-  Doubt therefore does nothing in combat.
-- Duos: the teammate board joins without Start of Combat; Sandy / Glorious Gloop unsupported.
-- Unhandled hero powers with targets chosen in the shop (Deadeye before a choice, Wax Warband) are
-  reported in `unsupported`.
+- Cards added to hand in combat are only counted (for The Shadow of Doubt, 10-card limit) by the
+  "get a card" effects of the Naga/Pirate/Quilboar/Undead/Aberration/neutral files and a few side
+  effects (`cardsAddedToHand` in `cards/aberration.ts`); other files' "get" effects do not count.
+- Duos: the teammate board joins without Start of Combat; Sandy, Glorious Gloop and Summoning Sphere
+  copy from `SimSide.teammate` (they do nothing without it).
+- "Make Golden" in combat (Stolen Gold, Yu'lon Sticker, Golden Sandy) adds the card's base stats and
+  switches to the golden card's script data.
+- Unsupported (reported): Lock and Load (Deadeye; how the removed minion is "fired" is unclear),
+  Wax Warband (its +X/+X lives in hero power script data 3, which the input does not carry),
+  Battle Horn, Rylak/Assembler Portraits (battlecries / Auto Assembler not simulated). Dark Gift
+  enchantments from the "Dark Gifts!" anomaly (Toreth's Blessing, Golemancy, ...) are ignored
+  (which enchantment id carries the effect is unknown).

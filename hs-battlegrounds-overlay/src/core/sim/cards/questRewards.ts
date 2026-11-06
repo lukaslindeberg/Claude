@@ -12,11 +12,24 @@ import {
   leftMost,
   minionFromCard,
   queueSpaceSummon,
+  rightMost,
   rightOfAnchor,
   summon,
 } from './helpers';
+import { makeGolden } from './neutral';
+import { cardsAddedToHand } from './aberration';
 
 export function registerQuestRewards(): void {
+  // Stolen Gold: Start of Combat: Make your left and right-most minions Golden.
+  registerEffect('BG24_Reward_109', {
+    startOfCombat: (b, e) => {
+      const l = leftMost(e.side);
+      const r = rightMost(e.side);
+      if (l) makeGolden(b, l);
+      if (r && r !== l) makeGolden(b, r);
+    },
+  });
+
   // Staff of Origination: Start of Combat: Give your minions +12/+12.
   registerEffect('BG24_Reward_312', { startOfCombat: (b, e) => buffAll(b, e.side, 12, 12) });
   // Evil Twin: Start of Combat: Summon a copy of your highest-Health minion.
@@ -59,10 +72,12 @@ export function registerQuestRewards(): void {
       queueSpaceSummon(e.side, { remaining: 1, make: (bb, s) => minionFromCard(bb, s, 'BG28_Reward_518t') }),
   });
 
+  // Cycle of Energy: Avenge (3): Get a random Tavern spell (only the hand count matters in combat).
+  registerEffect('BG28_Reward_504', { avenge: 3, onAvenge: (b, e) => void cardsAddedToHand(b, e.side, 1) });
+
   registerEffect(
     [
       'BG24_Reward_113', // Ritual Dagger (permanent stats on dead minions)
-      'BG28_Reward_504', // Cycle of Energy (get a spell)
       'BG33_Reward_004', // Grim Freshener (free Refresh)
     ],
     { noCombatEffect: true },

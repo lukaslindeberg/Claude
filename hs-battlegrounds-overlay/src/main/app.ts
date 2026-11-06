@@ -145,6 +145,7 @@ export class TavernLensApp {
     // Windows
     this.overlay = createOverlayWindow(this.fallbackBounds());
     this.overlay.on('closed', () => (this.overlay = undefined));
+    this.watchOverlayRenderer(this.overlay);
     if (this.store.firstRun || (isDev() && !opts.hidden) || process.argv.includes('--show')) this.showSettings();
 
     // Tray & hotkeys
@@ -252,7 +253,35 @@ export class TavernLensApp {
   private setInteractive(sender: WebContents, interactive: boolean): void {
     const win = this.overlay;
     if (!win || win.isDestroyed() || sender !== win.webContents) return;
+    // A hidden overlay stays click-through (it is reset on hide), so it can't come back
+    // capturing the mouse from a request that raced the hide.
+    if (interactive && !win.isVisible()) return;
     win.setIgnoreMouseEvents(!interactive, { forward: true });
+  }
+
+  /**
+   * The renderer tracks whether it asked for the window to be interactive. If it reloads
+   * or crashes while it was, nothing would ever make the window click-through again and
+   * the transparent overlay would swallow every click meant for the game.
+   */
+  private watchOverlayRenderer(win: BrowserWindow): void {
+    const wc = win.webContents;
+    const clickThrough = () => {
+      if (!win.isDestroyed()) win.setIgnoreMouseEvents(true, { forward: true });
+    };
+    let lastCrashReload = 0;
+    wc.on('did-start-loading', clickThrough);
+    wc.on('render-process-gone', (_e, details) => {
+      clickThrough();
+      if (this.quitting || details.reason === 'clean-exit') return;
+      // Bring the widgets back, but don't spin if the page keeps crashing.
+      const now = Date.now();
+      if (now - lastCrashReload < 60000) return;
+      lastCrashReload = now;
+      setTimeout(() => {
+        if (!win.isDestroyed() && !this.quitting) wc.reload();
+      }, 1000);
+    });
   }
 
   private broadcast(channel: string, payload: unknown): void {

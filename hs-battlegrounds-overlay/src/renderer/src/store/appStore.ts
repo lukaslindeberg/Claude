@@ -97,33 +97,51 @@ export const useApp = create<AppStore>((set, get) => ({
 /** Subscribe the store to a bridge. Returns an unsubscribe function. */
 export async function connectStore(bridge: TavernLensBridge, demo: boolean): Promise<() => void> {
   useApp.setState({ bridge, demo });
+  // Fields pushed by the main process while the initial fetch was in flight are newer
+  // than the fetched snapshot and must not be overwritten by it.
+  const pushed = new Set<'game' | 'status' | 'settings' | 'history'>();
   const subs = [
-    bridge.onState((game) => useApp.setState({ game })),
-    bridge.onStatus((status) => useApp.setState({ status })),
-    bridge.onSettings((settings) => useApp.setState((s) => ({ settings: { ...s.settings, ...settings } }))),
-    bridge.onHistory((history) => useApp.setState({ history })),
+    bridge.onState((game) => {
+      pushed.add('game');
+      useApp.setState({ game });
+    }),
+    bridge.onStatus((status) => {
+      pushed.add('status');
+      useApp.setState({ status });
+    }),
+    bridge.onSettings((settings) => {
+      pushed.add('settings');
+      const prev = useApp.getState().settings;
+      useApp.setState((s) => ({ settings: { ...s.settings, ...settings } }));
+      if (prev.communityStats !== settings.communityStats) void refreshHeroStats();
+    }),
+    bridge.onHistory((history) => {
+      pushed.add('history');
+      useApp.setState({ history });
+      // Personal hero stats are derived from the history.
+      void refreshHeroStats();
+    }),
     bridge.onEvent((ev) => useApp.setState((s) => ({ events: [...s.events.slice(-49), ev] }))),
     bridge.onToggleWidget((w) =>
       useApp.setState((s) => ({ togglePulse: { ...s.togglePulse, [w]: (s.togglePulse[w] ?? 0) + 1 } })),
     ),
   ];
 
-  const settled = await Promise.allSettled([
-    bridge.getSettings(),
-    bridge.getState(),
-    bridge.getStatus(),
-    bridge.getHistory(),
-    bridge.getHeroStats(),
-  ]);
-  const [settings, game, status, history, heroStats] = settled.map((r) =>
-    r.status === 'fulfilled' ? r.value : undefined,
-  ) as [Settings?, BgGameState?, AppStatus?, MatchRecord[]?, HeroStatsBundle[]?];
+  // Hero stats may need a network fetch (community stats): never block startup on them.
+  void refreshHeroStats();
+
+  const settled = await Promise.allSettled([bridge.getSettings(), bridge.getState(), bridge.getStatus(), bridge.getHistory()]);
+  const [settings, game, status, history] = settled.map((r) => (r.status === 'fulfilled' ? r.value : undefined)) as [
+    Settings?,
+    BgGameState?,
+    AppStatus?,
+    MatchRecord[]?,
+  ];
   useApp.setState((s) => ({
-    settings: settings ? { ...DEFAULT_SETTINGS, ...s.settings, ...settings } : s.settings,
-    game: game ?? s.game,
-    status: status ?? s.status,
-    history: history ?? s.history,
-    heroStats: heroStats ?? s.heroStats,
+    settings: settings && !pushed.has('settings') ? { ...DEFAULT_SETTINGS, ...s.settings, ...settings } : s.settings,
+    game: game && !pushed.has('game') ? game : s.game,
+    status: status && !pushed.has('status') ? status : s.status,
+    history: history && !pushed.has('history') ? history : s.history,
     ready: true,
   }));
 
@@ -141,11 +159,16 @@ export async function connectStore(bridge: TavernLensBridge, demo: boolean): Pro
 }
 
 /** Refresh hero stats (e.g. when history or community setting changes). */
+let heroStatsSeq = 0;
+
 export async function refreshHeroStats(): Promise<void> {
   const { bridge } = useApp.getState();
   if (!bridge) return;
+  const seq = ++heroStatsSeq;
   try {
-    useApp.setState({ heroStats: await bridge.getHeroStats() });
+    const heroStats = await bridge.getHeroStats();
+    // A slower, older request (e.g. waiting on the network) must not overwrite a newer one.
+    if (seq === heroStatsSeq) useApp.setState({ heroStats });
   } catch {
     /* ignore */
   }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useApp } from '../store/appStore';
 
 /**
@@ -69,6 +69,7 @@ export interface InteractiveProps {
 export function useInteractive(enabled = true): InteractiveProps {
   const key = useRef<symbol>(Symbol('interactive'));
   const inside = useRef(false);
+  const hovered = useRef<Element | null>(null);
 
   useEffect(() => {
     const k = key.current;
@@ -77,12 +78,28 @@ export function useInteractive(enabled = true): InteractiveProps {
     return () => releaseInteractive(k);
   }, [enabled]);
 
-  const onPointerEnter = useCallback(() => {
-    inside.current = true;
-    if (enabled) acquireInteractive(key.current);
-  }, [enabled]);
+  // A hovered element that is removed from the DOM never gets a pointerleave (e.g. a
+  // component that keeps this hook but renders null once its panel is dismissed or
+  // the phase changes). Drop the hold then, or the overlay stays interactive over the game.
+  useLayoutEffect(() => {
+    if (inside.current && hovered.current && !hovered.current.isConnected) {
+      inside.current = false;
+      hovered.current = null;
+      releaseInteractive(key.current);
+    }
+  });
+
+  const onPointerEnter = useCallback(
+    (e: React.PointerEvent) => {
+      inside.current = true;
+      hovered.current = e.currentTarget as Element;
+      if (enabled) acquireInteractive(key.current);
+    },
+    [enabled],
+  );
   const onPointerLeave = useCallback(() => {
     inside.current = false;
+    hovered.current = null;
     releaseInteractive(key.current);
   }, []);
   return { onPointerEnter, onPointerLeave };

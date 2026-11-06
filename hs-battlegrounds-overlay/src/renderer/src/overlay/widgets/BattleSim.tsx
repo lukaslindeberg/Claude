@@ -18,13 +18,17 @@ function useBattleVisible(): boolean {
   const [linger, setLinger] = useState(false);
   const prev = useRef(phase);
   useEffect(() => {
-    if (prev.current === 'combat' && phase !== 'combat') {
+    const was = prev.current;
+    prev.current = phase;
+    if (was === 'combat' && phase !== 'combat') {
       setLinger(true);
       const t = setTimeout(() => setLinger(false), LINGER_MS);
-      prev.current = phase;
       return () => clearTimeout(t);
     }
-    prev.current = phase;
+    // Any other phase change ends the linger (its timer was just cleared): otherwise a
+    // concede right after a combat left `linger` stuck and the panel reappeared in the
+    // next game's first recruit turn.
+    setLinger(false);
   }, [phase]);
   return phase === 'combat' || (linger && phase !== 'gameOver' && phase !== 'heroSelection');
 }

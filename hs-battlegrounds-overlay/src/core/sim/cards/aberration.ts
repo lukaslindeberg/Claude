@@ -20,9 +20,53 @@ import {
   summon,
   summonForDeath,
 } from './helpers';
-import type { Minion } from '../engine/types';
+import type { Battle, CardHandler, Minion, SideState } from '../engine/types';
 
 const TENTACLE = 'BGFYM_002t';
+const HAND_LIMIT = 10;
+
+// ---------------------------------------------------------------------------
+// Cards added to the hand during combat. Only The Shadow of Doubt reacts to it;
+// the "get a card" effects of the group-2 files (and a few side effects) call this.
+// ---------------------------------------------------------------------------
+
+/** The Shadow of Doubt (T6): Whenever a card is added to your hand, give your Deity +4/+5. */
+const SHADOW_OF_DOUBT: CardHandler = {};
+const addedThisCombat = new WeakMap<SideState, number>();
+
+/**
+ * `n` cards are added to `side`'s hand in combat (stops at the 10-card hand limit; the
+ * combat hand holds every card in hand). Returns how many fit.
+ */
+export function cardsAddedToHand(b: Battle, side: SideState, n: number): number {
+  const added = addedThisCombat.get(side) ?? 0;
+  const k = Math.min(n, Math.max(0, HAND_LIMIT - side.hand.length - added));
+  if (k <= 0) return 0;
+  addedThisCombat.set(side, added + k);
+  for (const m of aliveMinions(side)) {
+    if (m.handler !== SHADOW_OF_DOUBT) continue;
+    const a = sd(b, m, 1, 4 * m.mult);
+    const h = sd(b, m, 2, 5 * m.mult);
+    for (let i = 0; i < k; i++) giveDeity(b, side, a, h);
+  }
+  return k;
+}
+
+/** Handler for "Deathrattle / Rally / Avenge: Get N card(s)" (golden: double): only notifies the hand. */
+export const getsCards = (n: number, ...hooks: ('deathrattle' | 'rally')[]): CardHandler => {
+  const h: CardHandler = {};
+  for (const hook of hooks) {
+    if (hook === 'deathrattle') h.deathrattle = (b, self, ctx) => void cardsAddedToHand(b, self.side, n * ctx.mult);
+    else h.rally = (b, self) => void cardsAddedToHand(b, self.side, n * self.mult);
+  }
+  return h;
+};
+
+/** "Avenge (X): Get N card(s)" (golden: double). */
+export const avengeGetsCards = (avenge: number, n: number): CardHandler => ({
+  avenge,
+  onAvenge: (b, self) => void cardsAddedToHand(b, self.side, n * self.mult),
+});
 
 export function registerAberrations(): void {
   // Underrot Spawn (T2): Deathrattle: Summon an 0/2 Tentacle with Taunt. Give your minions +1 Attack.
@@ -109,6 +153,17 @@ export function registerAberrations(): void {
     },
   });
 
+  // Dark Puppeteer (T6): Deathrattle: Your Tavern spells give an extra +4 Health this game.
+  registerMinion('BG36_104', {
+    deathrattle: (b, self, ctx) => void (self.side.spellHealthBonus += sd(b, self, 1, 4 * ctx.mult)),
+  });
+
+  registerMinion('BG36_109', SHADOW_OF_DOUBT);
+  // Unwilling Slacker (T3): Deathrattle: Get a random 1-Cost Tavern spell (golden: two).
+  registerMinion('BG36_101', getsCards(1, 'deathrattle'));
+  // N'raqi Sapper (T5): Battlecry and Deathrattle: Get an Energizing Chamber (golden: two).
+  registerMinion('BG36_103', getsCards(1, 'deathrattle'));
+
   registerMinion(
     [
       'BG36_110', // Joyous (battlecry)
@@ -117,7 +172,6 @@ export function registerAberrations(): void {
       'BG36_100', // Wandering Willbreaker
       'BG36_311', // Abyssal Envoy
       'BG36_112', // Fetid Corroder
-      'BG36_101', // Unwilling Slacker (deathrattle: get a spell)
       'BGDUO_700', // Voidpriest Cloner
       'BG36_106', // Cutthroat K'Thir (discard)
       'BG36_308', // Faceless Operative
@@ -128,9 +182,6 @@ export function registerAberrations(): void {
       'BG36_097', // Mindbender Ghur'sha (discard)
       'BG36_320', // Mysterious K'Thir
       'BG36_300', // N'raqi Frostcaller
-      'BG36_103', // N'raqi Sapper (deathrattle: get a card)
-      'BG36_104', // Dark Puppeteer (deathrattle: Tavern spells)
-      'BG36_109', // The Shadow of Doubt (cards added to hand; not simulated in combat)
       TENTACLE,
       'TB_BaconShop_HERO_29_Buddy', // Tentacle of C'Thun
     ],

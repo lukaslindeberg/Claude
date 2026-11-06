@@ -1,6 +1,7 @@
 /** Naga handlers (Spellcraft is a shop mechanic; a few react to spells cast in combat). */
 import { registerMinion } from './registry';
 import { buff, buffAll, castSpell, hasTribe, neighbours, sd, tribeFilter } from './helpers';
+import { cardsAddedToHand } from './aberration';
 
 const isNaga = tribeFilter('NAGA');
 
@@ -24,7 +25,10 @@ export function registerNaga(): void {
       const i = board.indexOf(self);
       const right = neighbours(self).find((n) => board.indexOf(n) > i);
       if (!right) return;
+      const before = self.side.spellsCastThisCombat;
       for (let k = 0; k < self.mult; k++) castSpell(b, self.side, 'BG28_518', right);
+      // Each Chef's Choice cast gets a card.
+      cardsAddedToHand(b, self.side, self.side.spellsCastThisCombat - before);
     },
   });
 

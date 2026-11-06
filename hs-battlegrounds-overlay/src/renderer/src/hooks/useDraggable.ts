@@ -40,6 +40,17 @@ export function useDraggable(id: WidgetId, computeDefault: DefaultPosition, enab
     if (!drag.current) setDragPos(null);
   }, [saved?.x, saved?.y]);
 
+  // A widget can unmount mid-drag (phase change hides it): release the drag's hold,
+  // otherwise the overlay stays interactive (not click-through) over the game.
+  useEffect(
+    () => () => {
+      const d = drag.current;
+      drag.current = null;
+      if (d) releaseInteractive(d.key);
+    },
+    [],
+  );
+
   const base = saved ? { left: saved.x * vp.width, top: saved.y * vp.height } : computeDefault(vp, size);
   const raw = dragPos ?? base;
   const pos = {
@@ -106,6 +117,8 @@ export function useDraggable(id: WidgetId, computeDefault: DefaultPosition, enab
         onPointerMove,
         onPointerUp: finish,
         onPointerCancel: finish,
+        // Capture lost without a pointerup (e.g. the overlay was hidden mid-drag).
+        onLostPointerCapture: finish,
         onDoubleClick: reset,
         title: 'Drag to move · double-click to reset',
       }

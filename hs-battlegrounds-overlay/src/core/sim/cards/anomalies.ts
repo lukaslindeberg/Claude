@@ -16,6 +16,14 @@ import {
 } from './helpers';
 
 export function registerAnomalies(): void {
+  // Curse of Aggramar: Your hero can only take 1 damage at a time (combat damage is capped at 1).
+  registerEffect('BG27_Anomaly_006', {
+    init: (b) => {
+      const cap = b.input.damageCap;
+      if (!(typeof cap === 'number' && cap > 0 && cap <= 1)) b.input = { ...b.input, damageCap: 1 };
+    },
+  });
+
   // Anomalous Twin: Start of Combat: Summon a copy of your highest-Health minion.
   registerEffect('BG27_Anomaly_560', {
     startOfCombat: (b, e) => {

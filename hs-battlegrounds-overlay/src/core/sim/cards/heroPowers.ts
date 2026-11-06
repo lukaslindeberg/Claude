@@ -24,6 +24,8 @@ import {
   summon,
   summonForDeath,
 } from './helpers';
+import { cardsAddedToHand } from './aberration';
+import { teammateHighest, transformInto } from './neutral';
 import type { Battle, DeathrattleFn, EffectInstance, Minion, SideState } from '../engine/types';
 
 /** Deal `dmg` to `n` random living enemy minions (re-rolled each hit). */
@@ -196,7 +198,27 @@ export function registerHeroPowers(): void {
     startOfCombat: (b, e) => {
       const tier = Math.min(6, e.side.tavernTier);
       const card = randomPoolMinion(b, `tier-${tier}`, (c) => c.tier === tier);
-      if (card) summon(b, e.side, minionFromCard(b, e.side, card.id), endAnchor(e.side));
+      if (!card) return;
+      summon(b, e.side, minionFromCard(b, e.side, card.id), endAnchor(e.side));
+      cardsAddedToHand(b, e.side, 1);
+    },
+  });
+
+  // Rokara - Glory of Combat: After a friendly minion kills an enemy, give it +1 Attack permanently.
+  registerEffect('BG20_HERO_100p', {
+    onEnemyDeath: (b, e, dead) => {
+      const k = dead.killedBy;
+      if (k && k.side === e.side && !k.removed && k.health > 0 && !k.destroyed) buff(b, k, 1, 0);
+    },
+  });
+
+  // Flobbidinous Floop - Glorious Gloop (Duos): Start of Combat: Transform the chosen minion
+  // (enchanted "In the Gloop") into your teammate's highest-Tier minion.
+  registerEffect('BGDUO_HERO_101p', {
+    startOfCombat: (b, e) => {
+      const m = aliveMinions(e.side).find((x) => x.enchantments.includes('BGDUO_HERO_101pe2'));
+      const t = m && teammateHighest(b, e.side, (s) => s.tier ?? b.db.tier(s.cardId) ?? 1);
+      if (m && t) transformInto(b, m, t);
     },
   });
   // Sprout It Out!: Give +1/+2 and Taunt to minions you summon during combat.

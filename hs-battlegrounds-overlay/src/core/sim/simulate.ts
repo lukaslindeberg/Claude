@@ -38,10 +38,22 @@ function minionNeedsHandler(card: BgCard | undefined, snap: MinionSnapshot): boo
   return triggered && COMBAT_TEXT.test(stripText(card.text));
 }
 
+/** Wording of persistent hero power / trinket / reward effects that can change a combat. */
+const EFFECT_COMBAT_TEXT =
+  /start of combat|in combat|this combat|attacks?\b|dies|died|takes damage|deals? damage|kills?\b|is reborn|summon|doesn't fit|divine shield|venomous|deathrattle|avenge|rally/i;
+/** Effects whose outcome only happens in the shop (or in the hand) even if a combat event triggers them. */
+const SHOP_ONLY_TEXT =
+  /tavern is refreshed|refresh|you buy|you sell|you play|minion you play|played from your hand|spend \d+ gold|gold next turn|spellcraft|start of each turn|outside combat|passes|cast a tavern spell|replace this with|get a random|get a triple reward|lucky egg/i;
+
 function effectNeedsHandler(card: BgCard | undefined): boolean {
   if (!card) return false;
   if (card.mechanics.includes('START_OF_COMBAT') || card.mechanics.includes('AVENGE')) return true;
-  return /start of combat|in combat|this combat|avenge|attacks|dies|reborn/i.test(stripText(card.text));
+  const text = stripText(card.text);
+  if (/start of combat|in combat|this combat|avenge|attacks|dies|reborn/i.test(text)) return true;
+  // Persistent triggers / auras (e.g. "Whenever a friendly minion loses Venomous...",
+  // "Your Kaboom Bots' Deathrattles deal 10 extra damage") change combats too.
+  const persistent = card.mechanics.includes('TRIGGER_VISUAL') || card.mechanics.includes('AURA');
+  return persistent && EFFECT_COMBAT_TEXT.test(text) && !SHOP_ONLY_TEXT.test(text);
 }
 
 function collectSide(side: SimSide | undefined, db: CardDb, out: Set<string>): void {

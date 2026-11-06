@@ -31,8 +31,26 @@ import {
   hasDeathrattle,
   tribeFilter,
 } from './helpers';
+import {
+  dealDamage,
+  giveDivineShield as shield,
+  improveUndeadAttack,
+  minionFromSnapshot as fromSnapshot,
+  randomPoolMinion,
+  buffAll as buffEach,
+} from './helpers';
+import { cardsAddedToHand } from './aberration';
+import { makeGolden, teammateHighest } from './neutral';
 import { LOBBY_TRIBES } from '@shared/types';
 import type { Battle, DeathrattleFn, EffectInstance, Minion } from '../engine/types';
+
+/** Trinket script data: tracker value, else the card's own TAG_SCRIPT_DATA_NUM_n, else `fallback`. */
+function esd(b: Battle, e: EffectInstance, n: 1 | 2 | 3, fallback: number): number {
+  const v = n === 1 ? e.scriptData1 : n === 2 ? e.scriptData2 : undefined;
+  if (typeof v === 'number' && v > 0) return v;
+  const c = b.db.get(e.cardId)?.tags?.[`TAG_SCRIPT_DATA_NUM_${n}`];
+  return typeof c === 'number' ? c : fallback;
+}
 
 const isBeast = tribeFilter('BEAST');
 const isDragon = tribeFilter('DRAGON');
@@ -400,19 +418,169 @@ export function registerTrinkets(): void {
     },
   });
 
+  // --- group-2 audit additions -------------------------------------------------------------
+
+  // Ship in a Bottle: Start of Combat: Summon and get a random Pirate. It attacks immediately.
+  registerEffect('BG30_MagicItem_407', {
+    startOfCombat: (b, e) => {
+      const card = randomPoolMinion(b, 'pirate', (c) => c.tribes.includes('PIRATE'));
+      if (!card) return;
+      cardsAddedToHand(b, e.side, 1);
+      const m = minionFromCard(b, e.side, card.id);
+      if (summon(b, e.side, m, endAnchor(e.side))) attackImmediately(b, m);
+    },
+  });
+  // Tiger Carving: Whenever a friendly minion takes damage, give another friendly minion +3/+1
+  // (greater: +6/+2) permanently.
+  registerEffect(['BG30_MagicItem_427', 'BG30_MagicItem_427t'], {
+    onFriendlyDamaged: (b, e, damaged) => {
+      const t = randomFriendly(b, e.side, undefined, damaged);
+      if (t) buff(b, t, esd(b, e, 1, 3), esd(b, e, 2, 1));
+    },
+  });
+  // Comfy Coffin: Whenever you cast a Tavern spell, your Undead have +1 (greater: +2) Attack this game.
+  registerEffect('BG30_MagicItem_547', { onSpellCast: (b, e) => improveUndeadAttack(b, e.side, 1) });
+  registerEffect('BG30_MagicItem_547t', { onSpellCast: (b, e) => improveUndeadAttack(b, e.side, 2) });
+  // Lorewalker Scroll: Whenever you cast a spell on a minion, give it +4/+4 (greater: +10/+10).
+  registerEffect(['BG30_MagicItem_422', 'BG30_MagicItem_422t'], {
+    onSpellCast: (b, e, _spell, target) => {
+      if (target && target.side === e.side) buff(b, target, esd(b, e, 1, 4), esd(b, e, 2, 4));
+    },
+  });
+  // Fishy Sticker (greater): Start of Combat: Summon a Golden Fish of N'Zoth.
+  registerEffect('BG30_MagicItem_821t2', {
+    startOfCombat: (b, e) => {
+      summon(b, e.side, minionFromCard(b, e.side, 'TB_BaconShop_HP_105t', { golden: true }), endAnchor(e.side));
+    },
+  });
+  // Gilnean Thorned Rose: Avenge (3): Give your minions +4/+X permanently and deal 1 damage to them.
+  registerEffect('BG30_MagicItem_864', {
+    avenge: 3,
+    onAvenge: (b, e) => {
+      const a = esd(b, e, 2, 4);
+      const h = esd(b, e, 3, 5);
+      for (const m of aliveMinions(e.side)) buff(b, m, a, h);
+      for (const m of aliveMinions(e.side)) dealDamage(b, null, m, 1);
+    },
+  });
+  // Reinforced Shield: Whenever you summon a minion, give it Divine Shield (5 times per combat).
+  registerEffect('BG30_MagicItem_886', {
+    onFriendlySummon: (b, e, m) => {
+      if (perCombat(e, 'shield', 5)) shield(b, m);
+    },
+  });
+  // Mechagon Adapter: After a friendly Mech loses Divine Shield, give it Divine Shield (3 times per combat).
+  registerEffect('BG30_MagicItem_910', {
+    onFriendlyDivineShieldLost: (b, e, m) => {
+      if (!m.removed && m.health > 0 && hasTribe(m, 'MECHANICAL') && perCombat(e, 'shield', 3)) shield(b, m);
+    },
+  });
+  // Wizard's Pipe: Whenever you cast a Tavern spell, give your minions with no type +4/+4.
+  registerEffect('BG32_MagicItem_281', { onSpellCast: (b, e) => buffEach(b, e.side, 4, 4, hasNoTribe) });
+  // Bluegill Flippers: Whenever you cast a Tavern spell, give the left-most minion in your hand and
+  // warband +3/+3 (the hand part does not matter in combat).
+  registerEffect('BG32_MagicItem_893', {
+    onSpellCast: (b, e) => {
+      const m = leftMost(e.side);
+      if (m) buff(b, m, esd(b, e, 1, 3), esd(b, e, 2, 3));
+    },
+  });
+  // Yu'lon Sticker: Start of Combat: Make your highest-Tier Dragon Golden.
+  registerEffect('BG32_MagicItem_419', {
+    startOfCombat: (b, e) => {
+      const dragons = aliveMinions(e.side).filter((m) => isDragon(m) && !m.golden);
+      const top = Math.max(...dragons.map((m) => m.tier));
+      const m = b.rng.pick(dragons.filter((d) => d.tier === top));
+      if (m) makeGolden(b, m);
+    },
+  });
+  // Vash'jir Anemone: Start of Combat: Give your Naga +1 Health (improves with spells; script data 2).
+  registerEffect('BG32_MagicItem_932', {
+    startOfCombat: (b, e) => buffEach(b, e.side, 0, esd(b, e, 2, 1), isNaga),
+  });
+  // Scrapsmith Portrait: After a friendly minion with Taunt dies, play a permanent Blood Gem on your
+  // Scrapsmiths.
+  registerEffect('BG35_MagicItem_430', {
+    onFriendlyDeath: (b, e, dead) => {
+      if (!dead.taunt) return;
+      for (const m of aliveMinions(e.side)) if (m.cardId.startsWith('BG24_707')) playBloodGem(b, m, 1);
+    },
+  });
+  // Blood Amulet: After you trigger a Deathrattle, this plays a permanent Blood Gem on 3 random
+  // friendly minions.
+  registerEffect('BG35_MagicItem_432', {
+    onDeathrattleTriggered: (b, e) => {
+      for (const m of randomFriendlies(b, e.side, esd(b, e, 1, 3))) playBloodGem(b, m, 1);
+    },
+  });
+  // Cloud Serpent Horn: Avenge (3): Give the Attack of your right-most minion to another friendly Dragon.
+  registerEffect('BG35_MagicItem_849', {
+    avenge: 3,
+    onAvenge: (b, e) => {
+      const r = rightMost(e.side);
+      const t = r && randomFriendly(b, e.side, isDragon, r);
+      if (r && t) buff(b, t, r.attack, 0);
+    },
+  });
+  // Mama Bear Sticker: Whenever you summon a Beast, give it +7/+7.
+  registerEffect('BG35_MagicItem_871', {
+    onFriendlySummon: (b, e, m) => {
+      if (isBeast(m)) buff(b, m, esd(b, e, 1, 7), esd(b, e, 2, 7));
+    },
+  });
+  // Bewitched Ribbon: Whenever you cast a spell, give your minions +1/+1 permanently (+X/+X while in
+  // combat; X = the card's script data 3).
+  registerEffect('BG35_MagicItem_923', {
+    onSpellCast: (b, e) => {
+      const x = esd(b, e, 3, 2);
+      buffEach(b, e.side, x, x);
+    },
+  });
+  // Summoning Sphere (Duos): Start of Combat: Summon a copy of your teammate's highest-Health minion.
+  registerEffect('BGDUO_MagicItem_003', {
+    startOfCombat: (b, e) => {
+      const t = teammateHighest(b, e.side, (s) => s.health);
+      if (t) summon(b, e.side, fromSnapshot(b, e.side, { ...t, entityId: b.nextEntityId++ }), endAnchor(e.side));
+    },
+  });
+
+  // Wicked Tome: Avenge (3): Your Tavern spells give an extra +1 Attack this game (greater: Avenge (4),
+  // +1/+X). Matters for Tavern spells cast later in the same combat.
+  registerEffect('BG32_MagicItem_270', { avenge: 3, onAvenge: (_b, e) => void (e.side.spellAttackBonus += 1) });
+  registerEffect('BG32_MagicItem_270t', {
+    avenge: 4,
+    onAvenge: (b, e) => {
+      e.side.spellAttackBonus += esd(b, e, 2, 1);
+      e.side.spellHealthBonus += esd(b, e, 3, 1);
+    },
+  });
+  // Quilligraphy Set: Avenge (3): Your Blood Gems give an extra +1 Health this game (greater:
+  // Avenge (4): +1/+1). Affects Blood Gems played later in the same combat.
+  registerEffect('BG30_MagicItem_410', { avenge: 3, onAvenge: (_b, e) => void (e.side.bloodGemHealth += 1) });
+  registerEffect('BG30_MagicItem_410t2', {
+    avenge: 4,
+    onAvenge: (_b, e) => {
+      e.side.bloodGemAttack += 1;
+      e.side.bloodGemHealth += 1;
+    },
+  });
+  // Cards gained in combat (only the hand count matters, for The Shadow of Doubt).
+  // Fridge Magnet: Avenge (3): Get a random Magnetic minion.
+  registerEffect('BG30_MagicItem_545', { avenge: 3, onAvenge: (b, e) => void cardsAddedToHand(b, e.side, 1) });
+  // Funeral Wreath: After a friendly minion is Reborn, get a plain copy of it (3 times per combat).
+  registerEffect('BG36_MagicItem_217', {
+    onFriendlyReborn: (b, e) => {
+      if (perCombat(e, 'copies', 3)) cardsAddedToHand(b, e.side, 1);
+    },
+  });
+
   // Trinkets without combat effects that mention combat words.
   registerEffect(
     [
       'BG30_MagicItem_411', // Hoggy Bank (deathrattle: get Blood Gems)
       'BG30_MagicItem_917', // Rusty Trident (deathrattle: get a spell)
       'BG30_MagicItem_981', // The Eye of Dalaran (get a spell)
-      'BG30_MagicItem_545', // Fridge Magnet (get a card)
-      'BG32_MagicItem_270', // Wicked Tome
-      'BG32_MagicItem_270t',
-      'BG30_MagicItem_410', // Quilligraphy Set (Blood Gem health this game)
-      'BG30_MagicItem_410t2',
       'BG36_MagicItem_200', // Herding Horn (free Refresh)
-      'BG36_MagicItem_217', // Funeral Wreath (plain copy to hand)
       'BG36_MagicItem_212', // Wolfhead Flail (end of turn)
       'BG36_MagicItem_208', // Floating Candle Set (spellcraft)
       'BG35_MagicItem_872', // Ophidian Staff (spellcraft)

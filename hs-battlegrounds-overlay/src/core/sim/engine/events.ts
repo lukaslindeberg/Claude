@@ -42,6 +42,12 @@ export function emitFriendlyDeath(b: Battle, dead: Minion): void {
   for (const m of listeners(opp)) {
     if (m.handler?.onEnemyDeath && isAlive(m)) m.handler.onEnemyDeath(b, m, dead);
   }
+  for (const e of opp.effects.slice()) e.handler.onEnemyDeath?.(b, e, dead);
+}
+
+/** A friendly minion took damage: side-level listeners (Tiger Carving). */
+export function emitFriendlyDamaged(b: Battle, damaged: Minion, amount: number): void {
+  for (const e of damaged.side.effects.slice()) e.handler.onFriendlyDamaged?.(b, e, damaged, amount);
 }
 
 export function emitSummon(b: Battle, summoned: Minion): void {
@@ -81,6 +87,7 @@ export function emitDivineShieldLost(b: Battle, lost: Minion): void {
       m.handler.onFriendlyDivineShieldLost(b, m, lost);
     }
   }
+  for (const e of lost.side.effects.slice()) e.handler.onFriendlyDivineShieldLost?.(b, e, lost);
 }
 
 export function emitDamageDealt(b: Battle, dealer: Minion, target: Minion, amount: number): void {
@@ -96,6 +103,7 @@ export function emitSpellCast(b: Battle, side: SideState, spellId: string, targe
   for (const m of listeners(side)) {
     if (m.handler?.onSpellCast && isAlive(m)) m.handler.onSpellCast(b, m, spellId, target);
   }
+  for (const e of side.effects.slice()) e.handler.onSpellCast?.(b, e, spellId, target);
 }
 
 export function emitBoardEmpty(b: Battle, side: SideState): void {
