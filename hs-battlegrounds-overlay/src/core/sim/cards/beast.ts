@@ -1,7 +1,6 @@
 /** Beast handlers. */
 import { registerMinion } from './registry';
 import {
-  aliveMinions,
   buff,
   buffAll,
   counter,
@@ -10,17 +9,14 @@ import {
   improveBeetles,
   isRallyMinion,
   leftMost,
-  minionFromCard,
   randomFriendly,
   randomPoolMinion,
   rightOfAnchor,
   sd,
   setCounter,
-  summon,
   summonBeetles,
   summonForDeath,
   summonRightOf,
-  summonTokens,
   triggerDeathrattlesArtificially,
   tribeFilter,
 } from './helpers';
@@ -235,9 +231,4 @@ export function registerBeasts(): void {
     ],
     { noCombatEffect: true },
   );
-
-  void aliveMinions;
-  void minionFromCard;
-  void summon;
-  void summonTokens;
 }

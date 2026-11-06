@@ -1,7 +1,6 @@
 /** Murloc handlers (several interact with the hand). */
 import { registerMinion } from './registry';
 import {
-  aliveMinions,
   buff,
   buffAll,
   endAnchor,
@@ -133,6 +132,4 @@ export function registerMurlocs(): void {
     ],
     { noCombatEffect: true },
   );
-
-  void aliveMinions;
 }

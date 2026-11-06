@@ -11,10 +11,8 @@ import {
   giveDivineShield,
   giveReborn,
   giveTaunt,
-  handMinions,
   hasNoTribe,
   hasTribe,
-  highestBy,
   highestInHand,
   isRallyMinion,
   leftMost,
@@ -26,7 +24,6 @@ import {
   randomFriendly,
   rightMost,
   rightOfAnchor,
-  setStats,
   summon,
   summonBeetles,
   summonForDeath,
@@ -426,8 +423,4 @@ export function registerTrinkets(): void {
     ],
     { noCombatEffect: true },
   );
-
-  void handMinions;
-  void setStats;
-  void highestBy;
 }
