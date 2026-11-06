@@ -60,6 +60,8 @@ interface TemplateGroup {
 
 interface CombatCtx {
   turn: number;
+  /** Highest entity id when the combat started: opponent combat entities are always created after. */
+  maxIdAtStart: number;
   /** Local NEXT_OPPONENT_PLAYER_ID when the combat started. */
   oppPid: number;
   /** Our side snapshot at combat start (before duos swaps). */
@@ -686,8 +688,11 @@ export class BgTracker {
     const lp = s.localPlayer;
     const oppPid = lp ? s.tag(lp.entityId, T.NEXT_OPPONENT_PLAYER_ID) || s.tag(g.localHeroId, T.NEXT_OPPONENT_PLAYER_ID) : 0;
     const localSide = this.buildLiveSide(g, 'local', this.localPid(g));
+    let maxId = 0;
+    for (const id of s.entities.keys()) if (id > maxId) maxId = id;
     g.combat = {
       turn: this.bgTurn(),
+      maxIdAtStart: maxId,
       oppPid,
       localSideAtStart: localSide,
       localBoardAtStart: localSide?.minions ?? [],
@@ -910,16 +915,20 @@ export class BgTracker {
     const trinkets: Entity[] = [];
     const rewards: Entity[] = [];
     const heroPowers: Entity[] = [];
+    // The opponent's combat entities are copies created for this combat; anything older that is
+    // still dummy-controlled is shop leftovers (stripped replays never remove them).
+    const minId = side === 'opp' && g.combat ? g.combat.maxIdAtStart : 0;
     for (const e of s.entities.values()) {
       if (e.tags.get(T.CONTROLLER) !== ctl) continue;
       const z = e.tags.get(T.ZONE);
       const ct = e.tags.get(T.CARDTYPE);
       if (z === Zone.PLAY) {
-        if (ct === CardType.MINION) minions.push(e);
-        else if (ct === CardType.BATTLEGROUND_TRINKET) trinkets.push(e);
+        if (ct === CardType.MINION) {
+          if (e.id > minId) minions.push(e);
+        } else if (ct === CardType.BATTLEGROUND_TRINKET) trinkets.push(e);
         else if (ct === CardType.BATTLEGROUND_QUEST_REWARD) rewards.push(e);
         else if (ct === CardType.HERO_POWER) heroPowers.push(e);
-      } else if (z === Zone.HAND && side === 'local') {
+      } else if (z === Zone.HAND && (side === 'local' || e.id > minId)) {
         if (ct === CardType.MINION || ct === CardType.SPELL || ct === CardType.BATTLEGROUND_SPELL) hand.push(e);
       }
     }
@@ -984,13 +993,22 @@ export class BgTracker {
   private buildTemplateSide(t: TemplateGroup): Omit<SimSide, 'teammate'> {
     const s = this.store;
     const hero = s.get(t.heroId)!;
-    const members = t.members.map((id) => s.get(id)).filter((e): e is Entity => !!e);
+    const lctl = this.localController;
+    const memberSet = new Set(t.members);
+    const members = t.members
+      .map((id) => s.get(id))
+      .filter((e): e is Entity => {
+        if (!e) return false;
+        // Backups of the local board (created right after the last template) are not part of it.
+        const src = s.get(e.tags.get(T.COPIED_FROM_ENTITY_ID));
+        return !(src && src.id !== e.id && !memberSet.has(src.id) && src.cardId === e.cardId && src.tags.get(T.CONTROLLER) === lctl);
+      });
     const byType = (ct: number) => members.filter((e) => e.tags.get(T.CARDTYPE) === ct);
     const side = this.makeSide(
       hero,
       t.playerId,
-      byType(CardType.MINION),
-      [],
+      byType(CardType.MINION).filter((e) => e.tags.get(T.ZONE) !== Zone.HAND),
+      members.filter((e) => e.tags.get(T.ZONE) === Zone.HAND),
       byType(CardType.BATTLEGROUND_TRINKET),
       byType(CardType.BATTLEGROUND_QUEST_REWARD),
       byType(CardType.HERO_POWER),
