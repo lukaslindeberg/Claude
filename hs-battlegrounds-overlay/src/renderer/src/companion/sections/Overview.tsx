@@ -261,13 +261,15 @@ function RecentGames() {
             <div key={m.id} className="tl-recent__row">
               <PlacementBadge place={m.placement} size="sm" duos={m.mode === 'duos'} />
               <HeroPortrait cardId={m.heroCardId} size={28} />
-              <span className="tl-recent__hero">{m.heroName}</span>
+              <span className="tl-recent__hero">
+                <span className="tl-recent__name">{m.heroName}</span>
+                <span className="tl-muted tl-small tl-nowrap">{formatDate(m.startedAt)}</span>
+              </span>
               <span className="tl-recent__board">
                 {m.finalBoard.slice(0, 7).map((x) => (
                   <MinionToken key={x.entityId} minion={x} size="xs" tooltip={false} />
                 ))}
               </span>
-              <span className="tl-muted tl-small tl-nowrap">{formatDate(m.startedAt)}</span>
             </div>
           ))}
         </div>

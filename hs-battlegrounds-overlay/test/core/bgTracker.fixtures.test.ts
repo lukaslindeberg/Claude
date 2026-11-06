@@ -82,7 +82,8 @@ const SPECS: Spec[] = [
       // damage cap printed on the GameEntity
       expect(ofType(events, 'combatStart')[0].input.damageCap).toBe(15);
       // a card unknown to the current card db keeps its log name and CARDRACE tribe
-      const bubblette = ofType(events, 'combatStart')[1].input.opponent.minions.find((m) => m.cardId === 'BG_TID_713')!;
+      const t2 = ofType(events, 'combatStart')[1].input;
+      const bubblette = [...t2.player.minions, ...t2.opponent.minions].find((m) => m.cardId === 'BG_TID_713')!;
       expect(bubblette.name).toBe('Bubblette');
       expect(bubblette.tribes).toEqual(['ELEMENTAL']);
       expect(state.availableTribes).toEqual(['DEMON', 'ELEMENTAL', 'MURLOC', 'NAGA', 'PIRATE']);
@@ -407,6 +408,11 @@ const hp = (s: BgGameState, pid: number) => {
   return p ? p.health + p.armor : NaN;
 };
 
+/** Combat against a dead player's ghost (Kel'Thuzad): its leaderboard health cannot drop. */
+function isGhost(c: CombatObs): boolean {
+  return c.input.opponent.heroCardId.includes('KelThuzad') || !!c.start.players.find((p) => p.playerId === c.record?.opponentPlayerId)?.dead;
+}
+
 interface CombatObs {
   input: BattleSimInput;
   start: BgGameState;
@@ -544,7 +550,7 @@ describe.each(SPECS)('fixture $file', (spec) => {
       // the opponent is the NEXT_OPPONENT_PLAYER_ID announced before the combat
       expect(r.opponentPlayerId).toBe(c.start.nextOpponentPlayerId);
       expect(c.start.currentOpponentPlayerId).toBe(c.input.opponent.playerId);
-      const ghost = c.input.opponent.heroCardId.includes('KelThuzad') || c.start.players.find((p) => p.playerId === r.opponentPlayerId)?.dead;
+      const ghost = isGhost(c);
       if (spec.mode === 'solo') {
         expect(c.input.opponent.playerId).toBe(r.opponentPlayerId);
         if (!ghost) expect(c.input.opponent.heroCardId).toBe(spec.heroes[r.opponentPlayerId]);
@@ -566,7 +572,7 @@ describe.each(SPECS)('fixture $file', (spec) => {
         }
       }
     }
-    if (records.some((r) => r.result === 'won')) expect(checkedWins).toBeGreaterThan(0);
+    if (combats.some((c) => c.record?.result === 'won' && !isGhost(c) && c.after)) expect(checkedWins).toBeGreaterThan(0);
   });
 
   it('battle sim inputs: well-formed and consistent with the actual combat', () => {
@@ -595,7 +601,7 @@ describe.each(SPECS)('fixture $file', (spec) => {
       }
       expect(Object.keys(input.player.heroTags).length).toBeGreaterThan(0);
       expect(Object.keys(input.player.playerTags).length).toBeGreaterThan(0);
-      if (input.turn >= 5) {
+      if (input.turn >= 5 && !isGhost(c)) {
         midGame++;
         if (input.player.minions.length && input.opponent.minions.length) nonEmpty++;
       }

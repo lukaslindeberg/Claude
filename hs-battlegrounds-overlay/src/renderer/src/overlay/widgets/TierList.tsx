@@ -110,7 +110,7 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
   const tribes = allTribes ? null : lobbyTribes;
   const shopIds = useMemo(() => new Set((game?.shop ?? []).map((s) => db.normalOf(s.cardId))), [game?.shop, db]);
   const kwMechanics = KEYWORD_FILTERS.find((k) => k.key === kwFilter)?.mechanics;
-  const crossTier = allTiers && !!kwMechanics;
+  const crossTier = allTiers;
 
   const minions = useMemo(() => {
     const pool = db.poolMinions().filter((c) => !c.duosOnly || game?.mode === 'duos').filter((c) => !c.soloOnly || game?.mode !== 'duos');
@@ -147,7 +147,7 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
         {TIERS.map((t) => (
           <button
             key={t}
-            className={clsx('tl-tierpanel__tier', t === tier && !crossTier && 'is-on')}
+            className={clsx('tl-tierpanel__tier', t === tier && !allTiers && 'is-on')}
             onClick={() => {
               setAllTiers(false);
               onTier(t);
@@ -156,6 +156,9 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
             {t}
           </button>
         ))}
+        <button className={clsx('tl-tierpanel__tier is-all', allTiers && 'is-on')} onClick={() => setAllTiers(true)} title="Every tier">
+          All
+        </button>
       </div>
       <div className="tl-tierpanel__filters">
         {chipTribes.map((t) => (
@@ -180,24 +183,16 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
             </button>
           );
         })}
-        <button
-          className={clsx('tl-chipbtn', crossTier && 'is-on')}
-          onClick={() => setAllTiers(!allTiers)}
-          disabled={!kwFilter}
-          title="With a keyword selected, list matching minions from every tier"
-        >
-          Every tier
-        </button>
         {kwFilter || tribeFilter.size ? (
           <button
-            className="tl-chipbtn"
+            className="tl-kwbtn is-clear"
             onClick={() => {
               setKwFilter(null);
               setTribeFilter(new Set());
-              setAllTiers(false);
             }}
+            title="Clear filters"
           >
-            Clear
+            <CloseIcon size={10} />
           </button>
         ) : null}
       </div>

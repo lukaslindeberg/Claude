@@ -28,7 +28,7 @@ const shots = [
   ['overlay-tier-list', '/overlay.html?scene=recruit&tierList=4', overlay],
   ['overlay-tier-list-filtered', '/overlay.html?scene=recruit&tierList=3', overlay, async (p) => {
     await p.locator('.tl-kwbtn').nth(2).click();
-    await p.getByText('Every tier').click();
+    await p.locator('.tl-tierpanel__tier.is-all').click();
   }],
   ['overlay-opponent-expanded', '/overlay.html?scene=recruit', overlay, async (p) => {
     await p.locator('.tl-opp__row').nth(2).click();

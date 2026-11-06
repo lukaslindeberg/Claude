@@ -417,6 +417,11 @@ body.tl-body--companion #root {
 .tl-recent__hero {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.tl-recent__name {
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
