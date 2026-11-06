@@ -16,8 +16,26 @@ import {
   summonFromHand,
   tribeFilter,
 } from './helpers';
+import type { Battle, HandMinion, SideState } from '../engine/types';
 
 const isMurloc = tribeFilter('MURLOC');
+
+/**
+ * Buff a card in hand during combat. The snapshot is replaced too (never mutated: it belongs to
+ * the input), so hand minions summoned later this combat (Diremuck Forager, Bassgill, Flighty
+ * Scout) carry the bonus.
+ */
+function buffHandCard(h: HandMinion, attack: number, health: number): void {
+  h.attack += attack;
+  h.health += health;
+  h.snapshot = { ...h.snapshot, attack: h.attack, health: h.health, maxHealth: h.health };
+}
+
+/** "Give a minion in your hand +X/+Y": a random minion card in hand. */
+function buffRandomHandMinion(b: Battle, side: SideState, attack: number, health: number): void {
+  const h = b.rng.pick(handMinions(b, side));
+  if (h) buffHandCard(h, attack, health);
+}
 
 export function registerMurlocs(): void {
   // Flighty Scout (T1): Start of Combat: If this minion is in your hand, summon a copy of it
@@ -90,12 +108,28 @@ export function registerMurlocs(): void {
       const a = sd(b, self, 1, 3 * self.mult);
       const h = sd(b, self, 2, 4 * self.mult);
       buffAll(b, self.side, a, h, isMurloc);
-      for (const c of self.side.hand) {
-        if (hasTribe(c, 'MURLOC')) {
-          c.attack += a;
-          c.health += h;
-        }
-      }
+      for (const c of handMinions(b, self.side)) if (hasTribe(c, 'MURLOC')) buffHandCard(c, a, h);
+    },
+  });
+
+  // Murcules (T2): Whenever this kills a minion, give a minion in your hand +3/+3 (golden +6/+6).
+  registerMinion('BG27_023', {
+    onKill: (b, self) => buffRandomHandMinion(b, self.side, sd(b, self, 1, 3 * self.mult), sd(b, self, 2, 3 * self.mult)),
+  });
+
+  // Very Hungry Winterfinner (T2): Taunt. Whenever this takes damage, give a minion in your hand
+  // +2/+1 (golden +4/+2).
+  registerMinion('BG29_300', {
+    onDamaged: (b, self) => buffRandomHandMinion(b, self.side, 2 * self.mult, self.mult),
+  });
+
+  // Twilight Tidehunter (T4): Whenever you cast a spell on this, give the left-most minion in your
+  // hand +9/+9 (golden +18/+18).
+  registerMinion('BG36_703', {
+    onSpellCast: (b, self, _spell, target) => {
+      if (target !== self) return;
+      const h = handMinions(b, self.side)[0];
+      if (h) buffHandCard(h, sd(b, self, 1, 9 * self.mult), sd(b, self, 2, 9 * self.mult));
     },
   });
 
@@ -112,14 +146,11 @@ export function registerMurlocs(): void {
   registerMinion(
     [
       'BG31_149', // Bubble Gunner
-      'BG27_023', // Murcules (buffs the hand)
       'BG22_202', // Tad
-      'BG29_300', // Very Hungry Winterfinner (buffs the hand)
       'BG32_860', // Shoalfin Mystic
       'BG26_137', // Bream Counter
       'BG36_701', // Kelp Keeper
       'BG32_336', // Gormling Gourmet (deathrattle: get a card)
-      'BG36_703', // Twilight Tidehunter (buffs the hand)
       'BG36_764', // Gearfin
       'BG31_148', // Hackerfin
       'BGS_020', // Primalfin Lookout

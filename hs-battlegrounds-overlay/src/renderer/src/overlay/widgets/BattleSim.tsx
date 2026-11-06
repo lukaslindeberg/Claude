@@ -53,7 +53,14 @@ function BattleSimPanel({ handle }: { handle: Parameters<typeof DragHandle>[0]['
   const error = run?.error ?? battle.error;
   const opp = game.players.find((p) => p.playerId === (game.currentOpponentPlayerId ?? battle.input?.opponent.playerId));
   const oppHero = opp?.heroCardId ?? battle.input?.opponent.heroCardId;
-  const unsupported = result?.unsupported?.length ? [...new Set(result.unsupported.map((id) => db.name(db.normalOf(id))))] : [];
+  // Names come from card data; cards missing from it (older patches) fall back to the name in the log.
+  const logNames = new Map<string, string>();
+  for (const side of [battle.input?.player, battle.input?.opponent]) {
+    for (const m of [...(side?.minions ?? []), ...(side?.hand ?? [])]) if (m.name) logNames.set(m.cardId, m.name);
+  }
+  const unsupported = result?.unsupported?.length
+    ? [...new Set(result.unsupported.map((id) => db.name(db.normalOf(id), logNames.get(id))))]
+    : [];
   const actual = battle.actual;
   const predicted = result ? predictedOutcome(result) : undefined;
   const matched = actual && predicted ? actual.result === predicted : undefined;

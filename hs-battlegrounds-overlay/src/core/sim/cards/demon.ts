@@ -47,7 +47,6 @@ export function registerDemons(): void {
       'BG28_633', // Felboar
       'BG21_004', // Insatiable Ur'zul
       'BG26_523', // Tichondrius (hero damage happens outside combat)
-      'BG32_821', // Felfire Conjurer
       'BG36_733', // Eredar Escapist
       'BG35_155', // Twisted Wrathguard
       'BG27_016', // Champion of Sargeras (deathrattle affects the Tavern)

@@ -77,10 +77,13 @@ export function registerBeasts(): void {
     deathrattle: beetleDeathrattle,
   });
 
-  // Flittering Bat (T1): Rally: Summon a 1/1 Beast.
+  // Flittering Bat (T1): Rally: Summon a 1/1 Beast (golden: two). Token stats from script data.
   registerMinion('BG36_200', {
     rally: (b, self) => {
-      summonRightOf(b, self, 'BG36_200t', self.mult);
+      summonRightOf(b, self, 'BG36_200t', self.mult, {
+        attack: Math.max(1, sd(b, self, 1, 1)),
+        health: Math.max(1, sd(b, self, 2, 1)),
+      });
     },
   });
 

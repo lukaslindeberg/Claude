@@ -8,7 +8,8 @@ import { DragHandle, FloatingWidget } from '../Widget';
 export function LobbyInfoWidget() {
   const game = useApp((s) => s.game);
   const db = useApp((s) => s.cardDb);
-  if (!game || !game.active || game.phase === 'idle' || game.phase === 'gameOver') return null;
+  // Hidden during combat: the battle simulation owns the top of the screen then.
+  if (!game || !game.active || game.phase === 'idle' || game.phase === 'gameOver' || game.phase === 'combat') return null;
   const anomaly = db.get(game.anomalyCardId);
   const inferred = game.tribesSource === 'inferred';
   return (

@@ -138,6 +138,8 @@ export function registerDragons(): void {
       'BGDUO_107', // Doting Dracthyr
       'BGDUO31_205', // Selfless Sightseer
       'BG22_HERO_305_Buddy', // Many Whelps (permanent stats)
+      'BG32_821', // Felfire Conjurer (end of turn)
+      'BGS_034', // Bronze Warden (keywords only: Divine Shield, Reborn)
     ],
     { noCombatEffect: true },
   );

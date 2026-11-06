@@ -10,6 +10,30 @@ import {
   sd,
   summonForDeath,
 } from './helpers';
+import type { Battle, CardHandler, Minion } from '../engine/types';
+
+/** Mech handlers may react to a Magnetization made in combat (Glambot's Satellites). */
+interface MagnetHandler extends CardHandler {
+  onMagnetize?(b: Battle, self: Minion, host: Minion): void;
+}
+
+const BEATBOXER = 'BG26_149';
+
+/**
+ * Magnetize a Mech with `attack`/`health` to `host` during combat: the host gains the stats,
+ * then "whenever you Magnetize" triggers run (Mechagnome Interpreter), then Polarizing
+ * Beatboxer copies the Magnetization to itself (golden: twice). Echoes do not echo again.
+ */
+function magnetize(b: Battle, host: Minion, attack: number, health: number, echo = true): void {
+  if (host.removed) return;
+  buff(b, host, attack, health);
+  for (const m of aliveMinions(host.side)) (m.handler as MagnetHandler | undefined)?.onMagnetize?.(b, m, host);
+  if (!echo) return;
+  for (const m of aliveMinions(host.side)) {
+    if (m === host || b.db.normalOf(m.cardId) !== BEATBOXER) continue;
+    for (let i = 0; i < m.mult; i++) magnetize(b, m, attack, health, false);
+  }
+}
 
 export function registerMechs(): void {
   // Cord Puller (T1): Divine Shield. Deathrattle: Summon a 1/1 Microbot (golden: a 2/2 Microbot).
@@ -35,7 +59,34 @@ export function registerMechs(): void {
   registerMinion('BG36_853', {
     onSpellCast: (b, self, _spell, target) => {
       if (!target || !hasTribe(target, 'MECHANICAL')) return;
-      for (let i = 0; i < self.mult; i++) buff(b, target, sd(b, self, 1, 5), sd(b, self, 2, 5));
+      for (let i = 0; i < self.mult; i++) magnetize(b, target, sd(b, self, 1, 5), sd(b, self, 2, 5));
+    },
+  });
+
+  // Mechagnome Interpreter (T2): Whenever you play or Magnetize a Mech, give it +3/+1 (golden +6/+2).
+  // In combat only Magnetizations happen (Glambot); the magnetized Mech's stats go to the host.
+  const interpreter: MagnetHandler = {
+    onMagnetize: (b, self, host) => buff(b, host, sd(b, self, 1, 3 * self.mult), sd(b, self, 2, self.mult)),
+  };
+  registerMinion('BG31_177', interpreter);
+
+  // Polarizing Beatboxer (T7): Whenever you Magnetize to a different minion, it also Magnetizes to
+  // this (golden: twice). Implemented inside `magnetize`.
+  const beatboxer: MagnetHandler = {};
+  registerMinion(BEATBOXER, beatboxer);
+
+  // Enchanted Sentinel (T4): Magnetic. Your Tavern spells give an extra +1/+X (golden +2/+X).
+  // The aura is part of the player's TAVERN_SPELL_*_INCREASE tags while it is on the board: remove it
+  // when it dies, add it when one is summoned in combat. (Magnetized copies are not tracked.)
+  registerMinion('BG35_341', {
+    onSummoned: (b, self) => {
+      self.side.spellAttackBonus += sd(b, self, 2, self.mult);
+      self.side.spellHealthBonus += sd(b, self, 3, self.mult);
+    },
+    onSelfDeath: (b, self) => {
+      const s = self.side;
+      s.spellAttackBonus = Math.max(0, s.spellAttackBonus - sd(b, self, 2, self.mult));
+      s.spellHealthBonus = Math.max(0, s.spellHealthBonus - sd(b, self, 3, self.mult));
     },
   });
 
@@ -89,7 +140,6 @@ export function registerMechs(): void {
       'BG34_170t2', // Blue Volumizer
       'BG34_170t3', // Green Volumizer
       'BG34_170t', // Red Volumizer
-      'BG31_177', // Mechagnome Interpreter
       'BG26_147', // Accord-o-Tron
       'BG_BOT_911', // Annoy-o-Module (keywords)
       'BG34_170', // Auto Accelerator
@@ -97,13 +147,11 @@ export function registerMechs(): void {
       'BG_DEEP_015', // Prosthetic Hand (keywords)
       'BG34_171', // Conveyor Construct (deathrattle: get a card)
       'BG36_506', // Drone Duplicator
-      'BG35_341', // Enchanted Sentinel
       'BG36_851', // Spark Snapper
       'BG36_366', // Resourceful Robot
       'BGDUO_109', // Support System
       'BG36_367', // Auto Reveille
       'BG26_152', // Utility Drone
-      'BG26_149', // Polarizing Beatboxer
       'BGDUO31_211', // Transport Reactor
       'BG31_171t', // Satellite
       'BG34_Giant_610t', // Satellite

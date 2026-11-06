@@ -538,6 +538,8 @@ export interface Settings {
   simIterations: number;
   /** Leaderboard hover calibration (fractions of game-window height, relative to centre). */
   leaderboardCalibration: { left: number; top: number; width: number; slotHeight: number; gap: number };
+  /** Outline the leaderboard hover zones on the overlay so they can be lined up with the game. */
+  leaderboardCalibrationMode?: boolean;
   /** Show card images from art.hearthstonejson.com (else text-only). */
   cardImages: boolean;
   /** Fetch community hero stats. */

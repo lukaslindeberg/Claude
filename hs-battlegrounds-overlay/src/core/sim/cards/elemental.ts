@@ -56,6 +56,7 @@ export function registerElementals(): void {
       'BG26_175', // Elemental of Surprise
       'BG36_352', // Unbound Tempest
       'BG34_950', // Stone Age Slab
+      'BGS_119', // Crackling Cyclone (keywords only: Divine Shield, Windfury)
     ],
     { noCombatEffect: true },
   );
