@@ -4,6 +4,7 @@ import { useApp } from '../../store/appStore';
 import { useViewport } from '../../hooks/useViewport';
 import { HeroPortrait } from '../../components/HeroPortrait';
 import { HeroTierBadge } from '../../components/Bits';
+import { ShieldIcon } from '../../components/Icons';
 import { compact, num, pct } from '../../lib/format';
 import { findHeroStat, summarize, tierFromAvg } from '../../lib/stats';
 import { heroPickCenters } from '../layout';
@@ -47,13 +48,14 @@ function HeroStatCard({ option, index }: { option: HeroOption; index: number }) 
   return (
     <div className="tl-panel tl-herocard" style={{ animationDelay: `${index * 60}ms` }}>
       <div className="tl-herocard__top">
-        <HeroPortrait cardId={option.cardId} name={name} size={50} ring={tier ? undefined : undefined} />
+        <HeroPortrait cardId={option.cardId} name={name} size={50} />
         <div className="tl-herocard__title">
           <span className="tl-herocard__name">{name}</span>
-          <span className="tl-herocard__sub">
-            {armor ? `${armor} armor` : 'Hero'}
-            {found ? <span className={`tl-source is-${found.bundle.source}`}>{found.bundle.source === 'community' ? 'Community' : 'Personal'}</span> : null}
-          </span>
+          {armor ? (
+            <span className="tl-herocard__sub">
+              <ShieldIcon size={10} /> {armor} armor
+            </span>
+          ) : null}
         </div>
         <HeroTierBadge tier={tier} size="lg" />
       </div>
@@ -88,7 +90,12 @@ function HeroStatCard({ option, index }: { option: HeroOption; index: number }) 
           <span className="tl-muted">No games with this hero yet</span>
         )}
       </div>
-      {found ? <div className="tl-herocard__source">{found.bundle.label}</div> : null}
+      {found ? (
+        <div className="tl-herocard__source">
+          <span className={`tl-source is-${found.bundle.source}`}>{found.bundle.source === 'community' ? 'Community' : 'Personal'}</span>
+          <span>{found.bundle.label.replace(/^Community\s*·\s*/, '')}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

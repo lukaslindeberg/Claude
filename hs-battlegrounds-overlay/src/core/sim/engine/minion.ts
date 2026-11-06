@@ -170,7 +170,7 @@ export function copyMinion(b: Battle, src: Minion, side: SideState = src.side): 
     tribes: src.tribes,
     extraDeathrattles: src.extraDeathrattles.slice(),
     enchantments: src.enchantments.slice(),
-    counters: null,
+    counters: src.counters ? { ...src.counters } : null,
     destroyed: false,
     removed: false,
     killedBy: null,
@@ -184,7 +184,7 @@ export function copyMinion(b: Battle, src: Minion, side: SideState = src.side): 
   m.attack = Math.max(0, src.attack - src.auraAttack);
   m.maxHealth = Math.max(1, src.maxHealth - src.auraHealth);
   m.health = Math.max(1, Math.min(src.health, m.maxHealth));
-  m.handler?.init?.(b, m);
+  // No handler `init`: the copy already carries the source's flags and "this game" bonuses.
   return m;
 }
 

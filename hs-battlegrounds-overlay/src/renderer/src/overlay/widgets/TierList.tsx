@@ -59,7 +59,7 @@ export function TierListWidget() {
     if (t >= 1 && t <= 7) setOpen(t);
   }, [demo]);
 
-  if (!game || !game.active || game.phase === 'gameOver' || game.phase === 'idle') return null;
+  if (!game || !game.active || game.phase === 'gameOver' || game.phase === 'idle' || game.phase === 'heroSelection') return null;
   return (
     <FloatingWidget id="tierList" defaultPosition={() => ({ left: 10, top: 10 })} zIndex={30}>
       {(handle) => (

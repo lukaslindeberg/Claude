@@ -12,7 +12,12 @@ export function LobbyInfoWidget() {
   const anomaly = db.get(game.anomalyCardId);
   const inferred = game.tribesSource === 'inferred';
   return (
-    <FloatingWidget id="lobbyInfo" defaultPosition={() => ({ left: 10, top: 52 })} zIndex={20}>
+    <FloatingWidget
+      id="lobbyInfo"
+      // During the hero pick the top row belongs to the hero stat cards.
+      defaultPosition={(vp, size) => (game.phase === 'heroSelection' ? { left: 10, top: vp.height - size.height - 62 } : { left: 10, top: 52 })}
+      zIndex={20}
+    >
       {(handle) => (
         <div className="tl-panel tl-lobby">
           <DragHandle handle={handle} />
