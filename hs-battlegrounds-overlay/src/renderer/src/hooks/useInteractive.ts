@@ -123,31 +123,40 @@ export function useInteractive(enabled = true, onHover?: (inside: boolean) => vo
     return () => releaseInteractive(k);
   }, [enabled]);
 
-  // Mounted (or re-enabled) under a stationary cursor: Chromium sends no pointerenter
+  // Appeared (or re-enabled) under a stationary cursor: Chromium sends no pointerenter
   // until the mouse moves, so the first click would fall through to the game. Hold the
   // window now, and until a real pointerenter takes over, release as soon as a move
-  // lands outside the element (a missed enter also means a missed leave).
+  // lands outside the element (a missed enter also means a missed leave). Runs after
+  // every render because the element may appear later than the hook (conditional UI).
+  const seenEl = useRef<Element | null>(null);
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      seenEl.current = null;
+      return;
+    }
     const el = document.querySelector(`[data-tl-hold="${id.current}"]`);
+    if (el === seenEl.current) return;
+    seenEl.current = el;
     if (!el || inside.current || !pointerInside(el)) return;
     setInside(true, el);
     acquireInteractive(key.current);
+    const k = key.current;
+    const stop = () => {
+      window.removeEventListener('mousemove', onMove, true);
+      if (untrack.current === stop) untrack.current = null;
+    };
     const onMove = (e: MouseEvent) => {
       const r = el.getBoundingClientRect();
       if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
       stop();
       setInside(false, null);
-      releaseInteractive(key.current);
+      releaseInteractive(k);
     };
-    const stop = () => {
-      window.removeEventListener('mousemove', onMove, true);
-      untrack.current = null;
-    };
+    untrack.current?.();
     window.addEventListener('mousemove', onMove, true);
     untrack.current = stop;
-    return stop;
-  }, [enabled, setInside]);
+  });
+  useEffect(() => () => untrack.current?.(), []);
 
   // A hovered element that is removed from the DOM never gets a pointerleave (e.g. a
   // component that keeps this hook but renders null once its panel is dismissed or
