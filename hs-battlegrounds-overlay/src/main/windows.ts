@@ -4,6 +4,7 @@
  */
 import { BrowserWindow, shell } from 'electron';
 import type { Rectangle } from 'electron';
+import { rendererLogs } from './diagnostics/rendererLog';
 import { iconPath, isAppUrl, loadPage, preloadPath } from './env';
 import { createLogger } from './logger';
 
@@ -23,10 +24,18 @@ function harden(win: BrowserWindow, label: string): void {
       if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
     }
   });
-  wc.on('render-process-gone', (_e, details) => log.error(`${label} renderer gone: ${details.reason}`));
+  const id = wc.id;
+  wc.on('render-process-gone', (_e, details) => log.error(`${label} renderer gone: ${details.reason} (exit code ${details.exitCode})`));
+  wc.on('unresponsive', () => log.warn(`${label} renderer is unresponsive`));
+  wc.on('responsive', () => log.info(`${label} renderer is responsive again`));
   wc.on('console-message', (e) => {
-    if (e.level === 'error') log.warn(`[${label} console] ${e.message} (${e.sourceId}:${e.lineNumber})`);
+    if (e.level !== 'error') return;
+    // Once the page forwards its own errors (with stacks) these are duplicates.
+    const text = `[${label} console] ${e.message} (${e.sourceId}:${e.lineNumber})`;
+    if (rendererLogs.isForwarding(id)) log.debug(text);
+    else log.warn(text);
   });
+  wc.on('destroyed', () => rendererLogs.forget(id));
   wc.on('did-fail-load', (_e, code, desc, url) => log.error(`${label} failed to load ${url}: ${code} ${desc}`));
 }
 
