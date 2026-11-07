@@ -1415,12 +1415,8 @@ export class BgTracker {
       battles: g.battles,
       startedAt: g.startedAt,
     };
-    if (followPlayback && phase === 'combat') {
-      // Don't reveal the outcome of the combat that is still being animated.
-      const hide = (b: BattleState): BattleState => (b.turn >= turn && b.actual ? { ...b, actual: undefined } : b);
-      state.battle = hide(g.battle);
-      state.battles = g.battles.map(hide);
-    }
+    // The outcome (battle.actual) is shown as soon as the log knows it, usually within a
+    // second of the combat starting, while the fight is still being animated.
     if (g.buildNumber) state.buildNumber = g.buildNumber;
     if (localPid) state.localPlayerId = localPid;
     if (lp?.name) state.localPlayerName = lp.name;

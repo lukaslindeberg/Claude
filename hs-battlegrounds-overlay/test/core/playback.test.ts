@@ -106,11 +106,11 @@ describe('animation-paced playback (PowerTaskList)', () => {
     expect(gsOnly.filter((x) => x.phase !== x.gsPhase).length).toBeLessThan(gsOnly.length * 0.02);
   });
 
-  it("doesn't reveal the result of the combat being animated", () => {
-    // Until a combat's boards are captured, the previous combat's result may still show.
-    const spoilers = woven.samples.filter((x) => x.phase === 'combat' && x.actual && x.battleTurn >= x.turn);
-    expect(spoilers).toEqual([]);
-    expect(woven.samples.some((x) => x.phase === 'recruit' && x.actual)).toBe(true);
+  it('reveals the result of the combat being animated as soon as the log knows it', () => {
+    // GameState resolves the combat right away; the result is shown while the playback
+    // (and so the overlay's phase) is still in that combat.
+    const early = woven.samples.filter((x) => x.phase === 'combat' && x.actual && x.battleTurn >= x.turn);
+    expect(early.length).toBeGreaterThan(0);
   });
 
   it('shows game over only after the final combat has been played back', () => {

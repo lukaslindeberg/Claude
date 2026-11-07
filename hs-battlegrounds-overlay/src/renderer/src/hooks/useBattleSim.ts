@@ -56,6 +56,9 @@ export function simulate(input: BattleSimInput, options: BattleSimOptions, timeo
   });
 }
 
+/** Iterations of the quick first pass. */
+const QUICK_ITERATIONS = 500;
+
 /** Stable key for one combat's simulation input. */
 export function simKey(game: BgGameState | null): string | undefined {
   const input = game?.battle?.input;
@@ -87,12 +90,26 @@ export function useBattleSimRunner() {
     const startedAt = Date.now();
     const base: SimRun = { key, turn, status: 'running', startedAt };
     setSim(base);
-    simulate(input, { iterations: iterations || 4000, maxDurationMs: 2500 })
+    const full = iterations || 4000;
+    let finished = false;
+    // A quick first pass shows odds within ~0.1 s; the full run then refines them.
+    if (full > QUICK_ITERATIONS * 2) {
+      simulate(input, { iterations: QUICK_ITERATIONS, maxDurationMs: 150 })
+        .then((quick) => {
+          if (!finished && useApp.getState().sims[key]?.status === 'running') setSim({ ...base, result: quick });
+        })
+        .catch(() => undefined);
+    }
+    simulate(input, { iterations: full, maxDurationMs: 2500 })
       .then((result) => {
+        finished = true;
         setSim({ ...base, status: 'done', result });
         void bridge?.reportSimResult(turn, result).catch(() => undefined);
       })
-      .catch((err: Error) => setSim({ ...base, status: 'error', error: err.message }));
+      .catch((err: Error) => {
+        finished = true;
+        setSim({ ...base, status: 'error', error: err.message });
+      });
   }, [key, enabled, iterations]);
 }
 
