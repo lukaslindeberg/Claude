@@ -119,7 +119,7 @@ function CollapsedRow({ game, p }: { game: BgGameState; p: PlayerState }) {
         size={34}
         dead={p.dead}
         shape="rounded"
-        glow={fighting ? 'fighting' : p.isNextOpponent ? 'next' : p.isLocal ? 'local' : undefined}
+        glow={fighting ? 'fighting' : p.isNextOpponent ? 'next' : p.isLocal || p.isTeammate ? 'local' : undefined}
       >
         <span className="tl-opp__mini-place">{p.leaderboardPlace}</span>
       </HeroPortrait>
@@ -153,7 +153,7 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
           dead={p.dead}
           shape="rounded"
           tier={p.tavernTier}
-          glow={fighting ? 'fighting' : p.isNextOpponent ? 'next' : p.isLocal ? 'local' : undefined}
+          glow={fighting ? 'fighting' : p.isNextOpponent ? 'next' : p.isLocal || p.isTeammate ? 'local' : undefined}
         />
         <div className="tl-opp__info">
           <div className="tl-opp__line">

@@ -4,8 +4,8 @@ import { Tooltip } from '../../components/Tooltip';
 import { cleanCardText } from '../../lib/format';
 import { useViewport } from '../../hooks/useViewport';
 import { DragHandle, FloatingWidget } from '../Widget';
-import { bottomLeftMaxWidth, effectiveScale } from '../layout';
-import { SESSION_HEIGHT } from './SessionWidget';
+import { bottomLeftMaxWidth } from '../layout';
+import { useSessionDock } from './SessionWidget';
 
 /**
  * Small badge: mode, turn, lobby tribes and anomaly. Docked bottom-left, just above the
@@ -15,23 +15,21 @@ import { SESSION_HEIGHT } from './SessionWidget';
 export function LobbyInfoWidget() {
   const game = useApp((s) => s.game);
   const db = useApp((s) => s.cardDb);
-  const settingsScale = useApp((s) => s.settings.scale);
-  const sessionShown = useApp(
-    (s) => s.history.length > 0 && s.settings.widgets.sessionStats !== false && !s.hidden.sessionStats,
-  );
+  // Docked above the session plaque (its measured height; 0 when it isn't shown).
+  const sessionHeight = useSessionDock((s) => s.height);
   const vp = useViewport();
   if (!game || !game.active || game.phase === 'idle' || game.phase === 'gameOver') return null;
   const anomaly = db.get(game.anomalyCardId);
   const inferred = game.tribesSource === 'inferred';
-  const scale = effectiveScale(settingsScale, vp);
   return (
     <FloatingWidget
       id="lobbyInfo"
-      defaultPosition={(vp, size) => ({ left: 10, top: vp.height - size.height - 10 - (sessionShown ? Math.round(SESSION_HEIGHT * scale) + 6 : 0) })}
+      defaultPosition={(vp, size) => ({ left: 10, top: vp.height - size.height - 10 - (sessionHeight ? sessionHeight + 6 : 0) })}
       zIndex={20}
+      maxWidth={bottomLeftMaxWidth(vp)}
     >
       {(handle) => (
-        <div className="tl-plaque tl-lobby" style={{ maxWidth: `calc(${Math.round(bottomLeftMaxWidth(vp))}px / var(--tl-scale))` }}>
+        <div className="tl-plaque tl-lobby">
           <DragHandle handle={handle} />
           <span className="tl-lobby__mode">{game.mode === 'duos' ? 'Duos' : 'Solo'}</span>
           <span className="tl-lobby__turn">{game.phase === 'heroSelection' ? 'Hero pick' : `Turn ${game.turn}`}</span>

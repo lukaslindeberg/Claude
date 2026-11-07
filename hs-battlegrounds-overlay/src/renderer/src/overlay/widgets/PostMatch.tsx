@@ -10,6 +10,7 @@ import { CheckIcon, CloseIcon, CrossIcon } from '../../components/Icons';
 import { duration, num, ordinal, placementColor } from '../../lib/format';
 import { outcomeLetter, predictedOutcome, sortByDate, summarize, todays } from '../../lib/stats';
 import { DragHandle, FloatingWidget } from '../Widget';
+import { bottomReserve } from '../layout';
 
 /** The summary closes itself after this long unless the pointer rests on it. */
 export const POST_MATCH_AUTO_DISMISS_MS = 40_000;
@@ -110,7 +111,7 @@ function PostMatchBody({ handle, hovered }: { handle: Parameters<typeof DragHand
         </button>
       </div>
 
-      <div className="tl-pm__scroll tl-parchment tl-scroll" style={{ maxHeight: `calc(${Math.round(vp.height * 0.8)}px / var(--tl-scale))` }}>
+      <div className="tl-pm__scroll tl-parchment tl-scroll" style={{ maxHeight: `calc(${Math.round(vp.height * 0.93 - bottomReserve(vp))}px / var(--tl-scale) - 66px)` }}>
         <div className="tl-pm__hero">
           <DragHandle handle={handle} className="tl-pm__grip" />
           <HeroPortrait cardId={heroId} size={46} />

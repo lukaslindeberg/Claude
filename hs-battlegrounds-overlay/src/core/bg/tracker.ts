@@ -39,6 +39,36 @@ export interface BgTrackerOptions {
   now?: () => number;
 }
 
+/** A packet whose handling threw (the tracker skipped it and carried on). */
+export interface PacketErrorInfo {
+  /** The log line that completed the packet (for multi-line packets: the line after it). */
+  line: string;
+  packetType: string;
+  /** Compact JSON of the packet (truncated). */
+  packet: string;
+  ts: string;
+}
+
+/** Counters and timing for diagnostics. Counters are cumulative since construction. */
+export interface TrackerDiagnostics {
+  lines: number;
+  packets: number;
+  /** Lines that looked like a packet but did not parse. */
+  unparsed: number;
+  lastUnparsed?: string;
+  /** Packets whose handling threw. */
+  packetErrors: number;
+  /** Log timestamp (`HH:MM:SS.fffffff`, local time) of the latest packet. */
+  logTs: string;
+  /** Whether the state follows the animated (PowerTaskList) playback. */
+  followsPlayback: boolean;
+  /** GameEntity TURN in the GameState stream / in the animated playback. */
+  gsTurn: number;
+  playbackTurn: number;
+  /** How far (log time) the animated playback trails the GameState stream, when known. */
+  playbackLagMs?: number;
+}
+
 interface PlayerTrack {
   playerId: number;
   heroEntityId: number;
@@ -197,6 +227,12 @@ export class BgTracker {
   private idle?: { ts: string; at: number };
   /** Whether the last built state followed the playback. */
   private followed = false;
+  private stats = { lines: 0, packets: 0, packetErrors: 0 };
+  /**
+   * Called when handling a packet throws. The packet is skipped and processing goes on,
+   * so one bad packet (or a tracker bug) never stops the tracking of a game.
+   */
+  onPacketError?: (err: unknown, info: PacketErrorInfo) => void;
 
   constructor(opts: BgTrackerOptions = {}) {
     this.cardDb = opts.cardDb ?? CardDb.bundled();
@@ -242,14 +278,70 @@ export class BgTracker {
   }
 
   feedLine(line: string): BgEvent[] {
+    this.stats.lines++;
     if (line.indexOf('Spectat') >= 0) this.spectatorLine(line);
     const pk = this.packets;
     pk.length = 0;
     this.parser.feedLine(line, pk);
     if (pk.length === 0) return [];
     this.events = [];
-    for (let i = 0; i < pk.length; i++) this.handle(pk[i]);
+    for (let i = 0; i < pk.length; i++) this.safeHandle(pk[i], line);
     return this.events;
+  }
+
+  private safeHandle(pk: Packet, line: string): void {
+    this.stats.packets++;
+    try {
+      this.handle(pk);
+    } catch (err) {
+      this.stats.packetErrors++;
+      this.cache = undefined;
+      this._version++;
+      if (!this.onPacketError) return;
+      let packet: string;
+      try {
+        packet = JSON.stringify(pk);
+      } catch {
+        packet = pk.type;
+      }
+      if (packet.length > 600) packet = `${packet.slice(0, 600)}…`;
+      try {
+        this.onPacketError(err, { line: line.length > 600 ? `${line.slice(0, 600)}…` : line, packetType: pk.type, packet, ts: pk.ts });
+      } catch {
+        /* the reporter must not break tracking */
+      }
+    }
+  }
+
+  /** Counters and playback timing for the diagnostics log. */
+  diagnostics(): TrackerDiagnostics {
+    const g = this.g;
+    const gsTurn = this.store.tag(this.store.gameEntityId, T.TURN);
+    const out: TrackerDiagnostics = {
+      lines: this.stats.lines,
+      packets: this.stats.packets,
+      unparsed: this.parser.unparsed,
+      packetErrors: this.stats.packetErrors,
+      logTs: this.logTs,
+      followsPlayback: false,
+      gsTurn,
+      playbackTurn: g?.playback.turn ?? 0,
+    };
+    if (this.parser.lastUnparsed) out.lastUnparsed = this.parser.lastUnparsed;
+    if (!g?.isBg) return out;
+    out.followsPlayback = this.followsPlayback(g);
+    const pb = g.playback;
+    if (pb.seen && pb.turn > 0 && pb.turn <= gsTurn) {
+      let since: string | undefined;
+      for (let t = pb.turn + 1; t <= gsTurn && since === undefined; t++) since = g.turnTs.get(t);
+      if (since === undefined && g.ended && !pb.complete) since = g.endedTs;
+      if (since === undefined) out.playbackLagMs = 0;
+      else {
+        const lag = logTimeDiff(this.logTs, since);
+        if (!Number.isNaN(lag)) out.playbackLagMs = lag;
+      }
+    }
+    return out;
   }
 
   /**
@@ -260,7 +352,7 @@ export class BgTracker {
     const pk: Packet[] = [];
     this.parser.flush(pk);
     this.events = [];
-    for (const p of pk) this.handle(p);
+    for (const p of pk) this.safeHandle(p, '(end of log)');
     const g = this.g;
     if (g && g.isBg && g.ended && !g.matchRecord) this.finishGame(g);
     if (g && g.ended && g.playback.seen && !g.playback.complete) {
@@ -326,10 +418,14 @@ export class BgTracker {
         return;
       }
       case 'BlockStart': {
-        s.apply(pk);
-        const g = this.g;
-        if (g?.isBg) this.onBlockStart(g, pk);
-        this.depth++;
+        try {
+          s.apply(pk);
+          const g = this.g;
+          if (g?.isBg) this.onBlockStart(g, pk);
+        } finally {
+          // Even if handling threw: BLOCK_END will decrement it.
+          this.depth++;
+        }
         return;
       }
       case 'Playback': {

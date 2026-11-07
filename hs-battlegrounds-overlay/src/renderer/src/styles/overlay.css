@@ -110,11 +110,13 @@ body.tl-body--overlay {
   right: 0;
   height: 0;
 }
+/* Read-only cards over the hero picker: they never take the mouse (no hold), so they
+   stay pointer-transparent like the rest of the click-through overlay. */
 .tl-heropick__slot {
   position: absolute;
   top: 0;
   transform: translateX(-50%);
-  pointer-events: auto;
+  pointer-events: none;
 }
 .tl-herocard {
   width: 252px;
@@ -790,7 +792,7 @@ body.tl-body--overlay {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 132px;
 }
 .tl-sim__status {
   margin-left: auto;
@@ -1418,9 +1420,9 @@ body.tl-body--overlay {
 /* ------------------------------------------------------------------ lobby info */
 .tl-lobby {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  gap: 8px;
+  white-space: nowrap;
   padding: 3px 10px 3px 10px;
   min-height: 34px;
 }
@@ -1441,7 +1443,6 @@ body.tl-body--overlay {
 }
 .tl-lobby__tribes {
   display: inline-flex;
-  flex-wrap: wrap;
   gap: 3px;
   align-items: center;
 }
@@ -1467,8 +1468,7 @@ body.tl-body--overlay {
   color: #e4d2ff;
   text-shadow: 0 1px 0 #000;
   white-space: nowrap;
-  min-width: 0;
-  max-width: 100%;
+  max-width: 170px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1480,10 +1480,10 @@ body.tl-body--overlay {
 /* ------------------------------------------------------------------ session */
 .tl-session {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 13px;
-  padding: 4px 12px 4px 10px;
+  gap: 10px;
+  white-space: nowrap;
+  padding: 4px 11px 4px 9px;
 }
 .tl-session__block {
   display: flex;
@@ -1514,7 +1514,7 @@ body.tl-body--overlay {
   flex-direction: column;
   gap: 3px;
   align-items: flex-start;
-  padding-left: 12px;
+  padding-left: 10px;
   border-left: 1px solid rgba(0, 0, 0, 0.5);
   box-shadow: inset 1px 0 0 rgba(255, 220, 160, 0.1);
 }
@@ -1537,6 +1537,9 @@ body.tl-body--overlay {
 }
 .tl-pm__banner > * {
   pointer-events: auto;
+}
+.tl-pm__banner > .tl-pm__medal {
+  pointer-events: none;
 }
 .tl-pm__medal {
   position: absolute;

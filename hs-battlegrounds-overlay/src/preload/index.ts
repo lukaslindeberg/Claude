@@ -13,7 +13,10 @@ import type {
   BgCardData,
   BgEvent,
   BgGameState,
+  DiagnosticsExportOptions,
+  DiagnosticsExportResult,
   HeroStatsBundle,
+  LogLevel,
   MatchRecord,
   Settings,
   WidgetId,
@@ -58,11 +61,23 @@ const bridge: TavernLensBridge = {
   stopDemo: () => ipcRenderer.invoke(IPC.stopDemo) as Promise<void>,
   pickHearthstonePath: () => ipcRenderer.invoke(IPC.pickHearthstonePath) as Promise<string | undefined>,
   fixLogConfig: () => ipcRenderer.invoke(IPC.fixLogConfig) as Promise<AppStatus['logConfig']>,
+  exportDiagnostics: (opts?: DiagnosticsExportOptions) =>
+    ipcRenderer.invoke(IPC.exportDiagnostics, opts ?? {}) as Promise<DiagnosticsExportResult>,
+  openLogsFolder: () => ipcRenderer.invoke(IPC.openLogsFolder) as Promise<void>,
 
   setInteractive: (interactive: boolean) => ipcRenderer.send(IPC.setInteractive, !!interactive),
   openSettings: () => ipcRenderer.send(IPC.openSettings),
   openExternal: (url: string) => ipcRenderer.send(IPC.openExternal, url),
   quit: () => ipcRenderer.send(IPC.quit),
+  logEvent: (level: LogLevel, scope: string, message: string, data?: unknown) => {
+    try {
+      ipcRenderer.send(IPC.logEvent, level, scope, message, data);
+    } catch {
+      // Not structured-cloneable: send a string rendering instead.
+      ipcRenderer.send(IPC.logEvent, level, scope, message, data === undefined ? undefined : String(data));
+    }
+  },
+  showItemInFolder: (path: string) => ipcRenderer.send(IPC.showItemInFolder, path),
 };
 
 contextBridge.exposeInMainWorld('tavernLens', bridge);

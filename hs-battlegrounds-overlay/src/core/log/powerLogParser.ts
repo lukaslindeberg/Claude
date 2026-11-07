@@ -369,6 +369,13 @@ export class PowerLogParser {
   private readonly forcedSource: LogSource | undefined;
   /** Number of lines seen. */
   lineCount = 0;
+  /**
+   * Lines that start like a known packet but do not match its format (a log format
+   * change?). Never reset: diagnostics compare it over time.
+   */
+  unparsed = 0;
+  /** The latest such line (truncated). */
+  lastUnparsed: string | undefined;
 
   constructor(opts: ParserOptions = {}) {
     this.forcedSource = opts.source;
@@ -385,6 +392,11 @@ export class PowerLogParser {
     this.activeSource = this.forcedSource;
     this.locked = !!this.forcedSource;
     this.lineCount = 0;
+  }
+
+  private miss(line: string): void {
+    this.unparsed++;
+    this.lastUnparsed = line.length > 400 ? `${line.slice(0, 400)}…` : line;
   }
 
   /** Emit any buffered multi-line packet. */
@@ -575,6 +587,7 @@ export class PowerLogParser {
           pend.packet.tags.push([t, tagValue(t, m[2])]);
           return out;
         }
+        if (p.startsWith('tag=')) this.miss(line);
       } else if (c === 73 /* I */ && pend.kind === 'meta') {
         const m = INFO_RE.exec(p);
         if (m) {
@@ -610,7 +623,7 @@ export class PowerLogParser {
             const pk: TagChangePacket = { type: 'TagChange', ts, entity: parseEntityRef(m[1]), tag: t, value: tagValue(t, m[3]) };
             if (m[4]) pk.def = true;
             out.push(pk);
-          }
+          } else this.miss(line);
         }
         return out;
       }
@@ -633,7 +646,7 @@ export class PowerLogParser {
               subOption: m[6] ? parseInt(m[6], 10) : -1,
               triggerKeyword: m[7],
             });
-          }
+          } else this.miss(line);
         }
         return out;
       }
@@ -643,7 +656,7 @@ export class PowerLogParser {
           if (m) {
             const id = m[1] ? parseInt(m[1], 10) : (parseEntityRef(m[2]).id ?? 0);
             this.pending = { kind: 'entity', packet: { type: 'FullEntity', ts, id, cardId: m[3], tags: [] } };
-          }
+          } else this.miss(line);
         }
         return out;
       }
@@ -651,6 +664,7 @@ export class PowerLogParser {
         if (p.startsWith('SHOW_ENTITY')) {
           const m = SHOW_ENTITY_RE.exec(p);
           if (m) this.pending = { kind: 'entity', packet: { type: 'ShowEntity', ts, entity: parseEntityRef(m[1]), cardId: m[2], tags: [] } };
+          else this.miss(line);
         } else if (p.startsWith('SUB_SPELL_START')) {
           const m = SUB_SPELL_START_RE.exec(p);
           if (m) {
@@ -668,7 +682,7 @@ export class PowerLogParser {
           if (m) {
             const t = tagId(m[2]);
             out.push({ type: 'HideEntity', ts, entity: parseEntityRef(m[1]), zone: tagValue(t, m[3]) });
-          }
+          } else this.miss(line);
         }
         return out;
       }
@@ -676,6 +690,7 @@ export class PowerLogParser {
         if (p.startsWith('CHANGE_ENTITY')) {
           const m = CHANGE_ENTITY_RE.exec(p);
           if (m) this.pending = { kind: 'entity', packet: { type: 'ChangeEntity', ts, entity: parseEntityRef(m[1]), cardId: m[2], tags: [] } };
+          else this.miss(line);
         } else if (p.startsWith('CREATE_GAME')) {
           out.push({ type: 'CreateGame', ts, source });
         }
@@ -689,7 +704,7 @@ export class PowerLogParser {
               kind: 'meta',
               packet: { type: 'MetaData', ts, meta: enumValue(MetaDataType, m[1]), data: parseInt(m[2], 10), info: [] },
             };
-          }
+          } else this.miss(line);
         }
         return out;
       }
@@ -697,6 +712,7 @@ export class PowerLogParser {
         if (p.startsWith('GameEntity')) {
           const m = GAME_ENTITY_RE.exec(p);
           if (m) this.pending = { kind: 'entity', packet: { type: 'GameEntity', ts, id: parseInt(m[1], 10), tags: [] } };
+          else this.miss(line);
         }
         return out;
       }
@@ -716,7 +732,7 @@ export class PowerLogParser {
                 tags: [],
               },
             };
-          }
+          } else this.miss(line);
         }
         return out;
       }

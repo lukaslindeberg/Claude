@@ -6,7 +6,7 @@ import { useCurrentSim } from '../../hooks/useBattleSim';
 import { HeroPortrait } from '../../components/HeroPortrait';
 import { Gem, OddsBar } from '../../components/Bits';
 import { CheckIcon, ChevronIcon, CrossIcon, SwordsIcon, WarningIcon } from '../../components/Icons';
-import { num, pct } from '../../lib/format';
+import { compact, num, pct } from '../../lib/format';
 import { predictedOutcome } from '../../lib/stats';
 import { useViewport } from '../../hooks/useViewport';
 import { DragHandle, FloatingWidget, type HandleProps } from '../Widget';
@@ -123,12 +123,13 @@ function useBattleInfo(game: BgGameState): BattleInfo {
 
 function statusText({ status, result, preliminary, error }: BattleInfo): { text: string; title?: string } {
   if (result && preliminary) {
+    const quick = `Quick ${result.iterations.toLocaleString()}-combat estimate`;
     return status === 'error'
-      ? { text: `Quick estimate · ${result.iterations.toLocaleString()} sims`, title: `The full simulation failed: ${error ?? 'unknown error'}` }
-      : { text: `Preliminary · ${result.iterations.toLocaleString()} sims`, title: 'Quick first pass; the full simulation is still running' };
+      ? { text: 'Quick estimate', title: `${quick}; the full simulation failed: ${error ?? 'unknown error'}` }
+      : { text: 'Preliminary', title: `${quick}; the full simulation is still running` };
   }
   if (status === 'running') return { text: 'Simulating…' };
-  if (status === 'done' && result) return { text: `${result.iterations.toLocaleString()} sims · ${(result.durationMs / 1000).toFixed(1)}s` };
+  if (status === 'done' && result) return { text: `${compact(result.iterations)} sims · ${(result.durationMs / 1000).toFixed(1)}s`, title: `${result.iterations.toLocaleString()} simulated combats` };
   if (status === 'error') return { text: 'Simulator error', title: error };
   return { text: 'Waiting for boards' };
 }

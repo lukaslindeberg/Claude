@@ -9,6 +9,8 @@ import type {
   BattleSimResult,
   BgCardData,
   BgGameState,
+  DiagnosticsExportOptions,
+  DiagnosticsExportResult,
   HeroStatsBundle,
   MatchRecord,
   Settings,
@@ -35,6 +37,10 @@ export interface IpcBackend {
   openSettings(): void;
   openExternal(url: string): void;
   quit(): void;
+  exportDiagnostics(opts: DiagnosticsExportOptions): Promise<DiagnosticsExportResult>;
+  openLogsFolder(): Promise<void>;
+  showItemInFolder(path: string): void;
+  logEvent(sender: WebContents, level: unknown, scope: unknown, message: unknown, data: unknown): void;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -82,6 +88,10 @@ export function registerIpcHandlers(b: IpcBackend): void {
   handle(IPC.stopDemo, () => b.stopDemo());
   handle(IPC.pickHearthstonePath, (e) => b.pickHearthstonePath(e.sender));
   handle(IPC.fixLogConfig, () => b.fixLogConfig());
+  handle(IPC.exportDiagnostics, (_e, opts) =>
+    b.exportDiagnostics({ includeGameLogs: !(isObject(opts) && opts.includeGameLogs === false) }),
+  );
+  handle(IPC.openLogsFolder, () => b.openLogsFolder());
 
   on(IPC.setInteractive, (e, interactive) => b.setInteractive(e.sender, !!interactive));
   on(IPC.openSettings, () => b.openSettings());
@@ -89,4 +99,8 @@ export function registerIpcHandlers(b: IpcBackend): void {
     if (typeof url === 'string' && /^https?:\/\//i.test(url)) b.openExternal(url);
   });
   on(IPC.quit, () => b.quit());
+  on(IPC.logEvent, (e, level, scope, message, data) => b.logEvent(e.sender, level, scope, message, data));
+  on(IPC.showItemInFolder, (_e, path) => {
+    if (typeof path === 'string' && path) b.showItemInFolder(path);
+  });
 }

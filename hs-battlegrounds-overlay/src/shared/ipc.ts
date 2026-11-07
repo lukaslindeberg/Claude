@@ -12,7 +12,10 @@ import type {
   BgCardData,
   BgEvent,
   BgGameState,
+  DiagnosticsExportOptions,
+  DiagnosticsExportResult,
   HeroStatsBundle,
+  LogLevel,
   MatchRecord,
   Settings,
   WidgetId,
@@ -40,11 +43,15 @@ export const IPC = {
   stopDemo: 'tl:stop-demo',
   pickHearthstonePath: 'tl:pick-hs-path',
   fixLogConfig: 'tl:fix-log-config',
+  exportDiagnostics: 'tl:export-diagnostics',
+  openLogsFolder: 'tl:open-logs-folder',
   // renderer -> main (send)
   setInteractive: 'tl:set-interactive',
   openSettings: 'tl:open-settings',
   openExternal: 'tl:open-external',
   quit: 'tl:quit',
+  logEvent: 'tl:log-event',
+  showItemInFolder: 'tl:show-item-in-folder',
 } as const;
 
 export type Unsubscribe = () => void;
@@ -77,12 +84,23 @@ export interface TavernLensBridge {
   stopDemo(): Promise<void>;
   pickHearthstonePath(): Promise<string | undefined>;
   fixLogConfig(): Promise<AppStatus['logConfig']>;
+  /** Writes `TavernLens-diagnostics-*.zip` (Desktop, else Downloads) and reveals it. */
+  exportDiagnostics(opts?: DiagnosticsExportOptions): Promise<DiagnosticsExportResult>;
+  /** Opens the folder with the app's log files. */
+  openLogsFolder(): Promise<void>;
 
   /** Overlay only: make the window capture the mouse (true) or be click-through (false). */
   setInteractive(interactive: boolean): void;
   openSettings(): void;
   openExternal(url: string): void;
   quit(): void;
+  /**
+   * Writes an entry to the main-process diagnostics log (renderer errors, simulator
+   * worker failures). Rate-limited by the main process (~50 per minute per window).
+   */
+  logEvent(level: LogLevel, scope: string, message: string, data?: unknown): void;
+  /** Reveals a file this app exported (a diagnostics zip) in Explorer / Finder. */
+  showItemInFolder(path: string): void;
 }
 
 declare global {

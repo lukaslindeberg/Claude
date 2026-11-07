@@ -98,7 +98,7 @@ export function overlaps(a: Rect, b: Rect): boolean {
 }
 
 /** Unscaled widths (CSS px at scale 1) of the widgets the battle plaque is placed around. */
-export const WIDGET_WIDTH = { tierBar: 290, oppPanel: 302, sim: 414, simCompact: 336, simFolded: 156 };
+export const WIDGET_WIDTH = { tierBar: 290, oppPanel: 302, sim: 414, simCompact: 336, simFolded: 205 };
 const EDGE = 10;
 
 /** Right edge of the widgets docked in the top-left corner (the tier bar). */

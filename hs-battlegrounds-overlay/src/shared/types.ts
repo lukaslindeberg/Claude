@@ -502,6 +502,37 @@ export interface AppStatus {
   demo: { running: boolean; progress?: number; speed?: number };
   cardData: { build: number; patch?: string; source: string; cards: number };
   errors: string[];
+  /** Diagnostics log state (main process). */
+  diagnostics?: DiagnosticsStatus;
+}
+
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+
+export interface DiagnosticsStatus {
+  /** Folder with tavern-lens*.log and sim-cases.jsonl. */
+  logsDir: string;
+  logFile?: string;
+  verbose: boolean;
+  /** Errors / warnings logged since the app started. */
+  errorCount: number;
+  warnCount: number;
+  /** The last few errors (oldest first). */
+  recentErrors: { at: number; scope: string; message: string }[];
+}
+
+export interface DiagnosticsExportOptions {
+  /** Include Hearthstone's own Power.log (default true). */
+  includeGameLogs?: boolean;
+}
+
+export interface DiagnosticsExportResult {
+  ok: boolean;
+  /** The zip that was written. */
+  path?: string;
+  bytes?: number;
+  files?: { name: string; size: number }[];
+  notes?: string[];
+  error?: string;
 }
 
 export type WidgetId =
@@ -551,6 +582,10 @@ export interface Settings {
   /** Last known rating for the session tracker (manual entry). */
   manualRating?: number;
   locale: string;
+  /** Write debug-level detail to the diagnostics log. */
+  verboseLogging?: boolean;
+  /** "Export diagnostics": include Hearthstone's Power.log. */
+  exportIncludeGameLogs?: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -580,4 +615,6 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   launchOnStartup: false,
   locale: 'enUS',
+  verboseLogging: false,
+  exportIncludeGameLogs: true,
 };

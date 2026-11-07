@@ -16,12 +16,22 @@ export interface OverlayVisibilityInput {
 }
 
 export function shouldShowOverlay(p: OverlayVisibilityInput): boolean {
-  if (!p.overlayEnabled) return false;
-  if (p.demoRunning) return true;
-  if (!p.trackerSupported) return p.gameActive;
-  if (!p.window.found || p.window.minimized) return false;
-  if (p.hideWhenUnfocused && !p.window.focused) return false;
-  return true;
+  return overlayVisibility(p).visible;
+}
+
+/** The visibility decision with a short reason (for the diagnostics log). */
+export function overlayVisibility(p: OverlayVisibilityInput): { visible: boolean; reason: string } {
+  if (!p.overlayEnabled) return { visible: false, reason: 'overlay disabled' };
+  if (p.demoRunning) return { visible: true, reason: 'demo running' };
+  if (!p.trackerSupported) {
+    return p.gameActive
+      ? { visible: true, reason: 'game active (window tracking unsupported on this platform)' }
+      : { visible: false, reason: 'no game active (window tracking unsupported on this platform)' };
+  }
+  if (!p.window.found) return { visible: false, reason: 'Hearthstone window not found' };
+  if (p.window.minimized) return { visible: false, reason: 'Hearthstone minimized' };
+  if (p.hideWhenUnfocused && !p.window.focused) return { visible: false, reason: 'Hearthstone not focused (hide when unfocused)' };
+  return { visible: true, reason: p.window.focused ? 'Hearthstone focused' : 'Hearthstone visible (shown while unfocused)' };
 }
 
 export function overlayBounds(p: { demoRunning: boolean; window: GameWindowInfo; fallback: Rect }): Rect {

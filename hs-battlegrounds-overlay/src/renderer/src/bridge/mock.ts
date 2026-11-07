@@ -120,8 +120,11 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
     const { runReplay, parseUntil } = await import('../dev/replay');
     status = { ...status, demo: { running: true, progress: 0, speed: speed ?? 40 } };
     statusE.emit(status);
+    // `?log=bg_duos_trinkets_206605` replays another fixture from test/fixtures/logs.
+    const log = params.get('log');
     stopReplay = runReplay({
       cardDb: CardDb.bundled(),
+      url: log && /^[\w.-]+$/.test(log) ? `/__fixtures/logs/${log}.power.log.gz` : undefined,
       speed: speed ?? opts.speed ?? 40,
       until: parseUntil(params.get('until')),
       onState: (s) => setState(s),
