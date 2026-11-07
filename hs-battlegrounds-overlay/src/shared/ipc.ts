@@ -15,6 +15,7 @@ import type {
   DiagnosticsExportOptions,
   DiagnosticsExportResult,
   HeroStatsBundle,
+  TrinketStatsBundle,
   LogLevel,
   MatchRecord,
   Settings,
@@ -38,6 +39,7 @@ export const IPC = {
   clearHistory: 'tl:clear-history',
   getCardData: 'tl:get-card-data',
   getHeroStats: 'tl:get-hero-stats',
+  getTrinketStats: 'tl:get-trinket-stats',
   reportSimResult: 'tl:report-sim-result',
   startDemo: 'tl:start-demo',
   stopDemo: 'tl:stop-demo',
@@ -78,6 +80,8 @@ export interface TavernLensBridge {
   getCardData(): Promise<BgCardData>;
   /** Personal + (optional) community hero stats. */
   getHeroStats(): Promise<HeroStatsBundle[]>;
+  /** Personal + (optional) community trinket stats. */
+  getTrinketStats(): Promise<TrinketStatsBundle[]>;
   /** The overlay runs the simulator in a worker and reports results so they are saved with the match. */
   reportSimResult(turn: number, result: BattleSimResult): Promise<void>;
   startDemo(speed?: number): Promise<void>;

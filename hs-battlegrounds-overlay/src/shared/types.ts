@@ -111,6 +111,11 @@ export interface BgCard {
   tags?: Record<string, number>;
   /** Card mechanics that change Battlegrounds combat or shop, e.g. Timewarped (BACON_TIMEWARPED). */
   timewarped?: boolean;
+  /**
+   * Tribes the card's text refers to (e.g. a trinket that buffs Beasts). Used to flag
+   * heroes/trinkets that need tribes missing from the lobby.
+   */
+  relatedTribes?: Tribe[];
   /** Duos-only card. */
   duosOnly?: boolean;
   /** Solo-only card. */
@@ -251,6 +256,14 @@ export interface PlayerState {
   mainTribes?: Tribe[];
 }
 
+export interface TrinketOption {
+  entityId: number;
+  cardId: string;
+  name: string;
+  /** Gold cost shown on the trinket, if any. */
+  cost?: number;
+}
+
 export interface HeroOption {
   entityId: number;
   cardId: string;
@@ -301,6 +314,8 @@ export interface BgGameState {
   localPlayerId?: number;
   localPlayerName?: string;
   heroOptions: HeroOption[];
+  /** Trinkets currently offered to the local player (lesser/greater trinket picks). */
+  trinketOptions?: TrinketOption[];
   /** Card id of the hero the local player picked (once known). */
   chosenHeroCardId?: string;
   players: PlayerState[];
@@ -440,6 +455,10 @@ export interface MatchRecord {
   combats: CombatRecord[];
   /** Health+armor after each turn. */
   healthHistory: { turn: number; value: number }[];
+  /** Trinkets the local player picked (card ids). */
+  trinkets?: string[];
+  /** Quest rewards the local player earned (card ids). */
+  questRewards?: string[];
   /** Players in the lobby (hero ids + final places). */
   lobby: { playerId: number; heroCardId: string; place: number; name?: string }[];
   /** Optional rating info if the user entered/imported it. */
@@ -461,6 +480,64 @@ export interface HeroStat {
   placementDistribution?: number[];
   /** Optional tier label computed by the provider: S/A/B/C/D. */
   tier?: 'S' | 'A' | 'B' | 'C' | 'D';
+  /** How the hero does depending on which tribes are in the lobby. */
+  tribeStats?: TribeSynergy[];
+}
+
+/**
+ * Placement of a hero (or trinket) in lobbies with a tribe.
+ * `impact` < 0 means the tribe helps (lower placement is better).
+ */
+export interface TribeSynergy {
+  tribe: Tribe;
+  /** Games with this tribe in the lobby. */
+  games: number;
+  /** Average placement in lobbies WITH this tribe. */
+  avgPlacement: number;
+  /** Average placement in lobbies WITHOUT this tribe (if known). */
+  avgPlacementWithout?: number;
+  /** avgPlacement(with) - overall average placement. Negative = better with this tribe. */
+  impact: number;
+}
+
+/**
+ * Expected placement for a specific lobby: the overall average plus the summed impact of
+ * the lobby's tribes (additive approximation; the community data has one tribe at a time).
+ */
+export interface LobbyEstimate {
+  avgPlacement: number;
+  /** Tribes used for the estimate (those with data). */
+  tribes: Tribe[];
+  /** Per-tribe contributions, best (most negative) first. */
+  contributions: { tribe: Tribe; impact: number }[];
+}
+
+export interface TrinketStat {
+  trinketCardId: string;
+  avgPlacement: number;
+  games: number;
+  /** 0..1 share of offers where it was picked (community only). */
+  pickRate?: number;
+  /** Personal stats only: placement by tribe when you picked it. */
+  tribeStats?: TribeSynergy[];
+}
+
+export interface TrinketStatsBundle {
+  source: 'personal' | 'community';
+  label: string;
+  updatedAt: string;
+  mode?: GameMode;
+  stats: TrinketStat[];
+}
+
+/** A short play tip for a hero or trinket that needs a specific approach. */
+export interface PlayTip {
+  /** Base card id (hero or trinket). */
+  cardId: string;
+  /** One or two short sentences. */
+  tip: string;
+  /** Tribes the card wants in the lobby. */
+  wantsTribes?: Tribe[];
 }
 
 export interface HeroStatsBundle {
