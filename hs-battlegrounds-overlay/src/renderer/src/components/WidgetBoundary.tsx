@@ -1,0 +1,28 @@
+import type { ReactNode } from 'react';
+import type { WidgetId } from '@shared/types';
+import { useApp } from '../store/appStore';
+import { ErrorBoundary } from './ErrorBoundary';
+
+const LABELS: Record<WidgetId, string> = {
+  heroSelection: 'Hero selection',
+  opponentsPanel: 'Opponents panel',
+  leaderboardHover: 'Leaderboard hover',
+  battleSim: 'Battle simulation',
+  tierList: 'Minions by tier',
+  sessionStats: 'Session tracker',
+  lobbyInfo: 'Lobby info',
+  postMatch: 'Post-match summary',
+};
+
+/**
+ * Error boundary for one overlay widget: a crash is logged (with the component stack)
+ * and replaced by a small chip; the widget gets another chance when a new game starts.
+ */
+export function WidgetBoundary({ id, children }: { id: WidgetId; children: ReactNode }) {
+  const gameId = useApp((s) => s.game?.gameId ?? '');
+  return (
+    <ErrorBoundary name={id} label={LABELS[id] ?? id} fallback="chip" resetKey={gameId}>
+      {children}
+    </ErrorBoundary>
+  );
+}

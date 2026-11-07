@@ -77,7 +77,17 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
   const toggleE = new Emitter<WidgetId>();
 
   let state = sceneState(opts.scene);
-  let status = samples.sampleStatus();
+  let status: AppStatus = {
+    ...samples.sampleStatus(),
+    diagnostics: {
+      logsDir: 'C:\\Users\\you\\AppData\\Roaming\\Tavern Lens\\logs',
+      logFile: 'C:\\Users\\you\\AppData\\Roaming\\Tavern Lens\\logs\\tavern-lens.log',
+      verbose: false,
+      errorCount: 0,
+      warnCount: 0,
+      recentErrors: [],
+    },
+  };
   let settings = loadSettings();
   // Demo URL overrides (handy for screenshots).
   if (params.get('images') === '0') settings.cardImages = false;
@@ -208,6 +218,27 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
     },
     quit() {
       console.info('[mock bridge] quit');
+    },
+    async exportDiagnostics(o) {
+      await new Promise((r) => setTimeout(r, 1200));
+      const path = `C:\\Users\\you\\Desktop\\TavernLens-diagnostics-demo${o?.includeGameLogs === false ? '-nologs' : ''}.zip`;
+      return { ok: true, path, bytes: 1_234_567, files: [{ name: 'README.txt', size: 2000 }] };
+    },
+    async openLogsFolder() {
+      console.info('[mock bridge] open logs folder');
+    },
+    logEvent(level, scope, message, data) {
+      // console.info, not console.error: the renderer forwards console.error here.
+      console.info(`[mock bridge] log ${level} [${scope}] ${message}`, data ?? '');
+      if (level === 'error' && status.diagnostics) {
+        const d = status.diagnostics;
+        const recentErrors = [...d.recentErrors, { at: Date.now(), scope: `renderer/${scope}`, message }].slice(-5);
+        status = { ...status, diagnostics: { ...d, errorCount: d.errorCount + 1, recentErrors } };
+        statusE.emit(status);
+      }
+    },
+    showItemInFolder(path) {
+      console.info('[mock bridge] show in folder', path);
     },
   };
 

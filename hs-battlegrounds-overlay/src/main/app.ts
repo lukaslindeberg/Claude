@@ -3,7 +3,7 @@
  * discovery, log tailing, demo replay, persistence and IPC.
  */
 import { basename, dirname, join } from 'node:path';
-import { BrowserWindow, app, dialog, net, screen, shell } from 'electron';
+import { BrowserWindow, app, dialog, net, powerMonitor, screen, shell } from 'electron';
 import type { WebContents } from 'electron';
 import { IPC } from '@shared/ipc';
 import type {
@@ -11,6 +11,9 @@ import type {
   BattleSimResult,
   BgEvent,
   BgGameState,
+  DiagnosticsExportOptions,
+  DiagnosticsExportResult,
+  DiagnosticsStatus,
   GameWindowInfo,
   HeroStatsBundle,
   Settings,
@@ -27,9 +30,14 @@ import { findHearthstoneInstall, logsDirFor, looksLikeHearthstoneInstall, resolv
 import { GameWindowTracker } from './hearthstone/windowTracker';
 import { CommunityHeroStatsProvider, personalBundles } from './heroStats';
 import { registerHotkeys, unregisterHotkeys, type HotkeyAction } from './hotkeys';
+import { describeSim, describeVerdict, describeWindow, diffSettings } from './diagnostics/describe';
+import { writeDiagnosticsZip, pickExportDir } from './diagnostics/export';
+import { rendererLogs } from './diagnostics/rendererLog';
+import { SIM_CASES_FILE, SimCaseLog, type SimCase } from './diagnostics/simCases';
+import { sessionHeader, systemInfo } from './diagnostics/system';
 import { registerIpcHandlers } from './ipcHandlers';
-import { createLogger } from './logger';
-import { overlayBounds, shouldShowOverlay } from './overlayPolicy';
+import { createLogger, getLogStats, isDebugLogging, logFilePath, onLogEntry, setDebugLogging } from './logger';
+import { overlayBounds, overlayVisibility, shouldShowOverlay } from './overlayPolicy';
 import { StatusStore } from './status';
 import { Store, mergeSimPredictions } from './store';
 import { createTracker } from './trackerFactory';
@@ -37,6 +45,8 @@ import { AppTray } from './tray';
 import { createOverlayWindow, createSettingsWindow } from './windows';
 
 const log = createLogger('app');
+const simLog = createLogger('sim');
+const diagLog = createLogger('diagnostics');
 
 const DEMO_LINGER_MS = 12000;
 const DISCOVERY_RETRY_MS = 30000;
@@ -72,11 +82,44 @@ export class TavernLensApp {
   private pendingCardDb: CardDb | undefined;
   private hotkeyErrors: string[] = [];
   private hotkeysActive = false;
+  // diagnostics
+  private appLogsDir = '';
+  private simCases: SimCaseLog | undefined;
+  private liveGameId = '';
+  private demoGameId = '';
+  private headerWritten = false;
+  private hsNotFoundLogged = false;
+  private overlayState: { visible: boolean; reason: string } | undefined;
+  private loggedWindow: GameWindowInfo | undefined;
+  private windowLogTimer: ReturnType<typeof setTimeout> | undefined;
+  private interactive = false;
+  private interactiveToggles = 0;
+  private diagStatusTimer: ReturnType<typeof setTimeout> | undefined;
+  private exporting = false;
+  private readonly exportedPaths = new Set<string>();
+  private readonly verdictsLogged = new Set<string>();
 
   async init(opts: AppLaunchOptions): Promise<void> {
     const userData = app.getPath('userData');
     this.store = new Store(userData);
     const settings = this.store.getSettings();
+    setDebugLogging(!!settings.verboseLogging || !!process.env.TL_DEBUG);
+    this.appLogsDir = join(userData, 'logs');
+    this.simCases = new SimCaseLog({
+      file: join(this.appLogsDir, SIM_CASES_FILE),
+      meta: () => ({
+        appVersion: app.getVersion(),
+        cardBuild: this.cardData?.current.build ?? 0,
+        cardSource: this.status?.get().cardData.source,
+      }),
+      onError: (err) => simLog.warn('could not write sim-cases.jsonl', err),
+    });
+    try {
+      const t = this.simCases.trim();
+      if (t.before !== t.after) simLog.info(`sim-cases.jsonl trimmed from ${t.before} to ${t.after} combats`);
+    } catch (err) {
+      simLog.warn('could not trim sim-cases.jsonl', err);
+    }
 
     const bundled = CardDb.bundled();
     this.status = new StatusStore(
@@ -87,6 +130,10 @@ export class TavernLensApp {
       },
       (s) => this.onStatusChanged(s),
     );
+    this.status.update({ diagnostics: this.diagStatus() });
+    onLogEntry((e) => {
+      if (e.level === 'error' || e.level === 'warn') this.scheduleDiagStatus();
+    });
 
     const fetchImpl: typeof fetch = (input, init) => net.fetch(input as string, init as RequestInit);
     this.cardData = new CardDataService({
@@ -101,11 +148,14 @@ export class TavernLensApp {
       normalize: (id) => this.cardData.current.baseHeroId(id),
     });
 
-    const logTransitions = isDev() || !!process.env.TL_DEBUG;
+    const logTransitions = !!process.env.TL_DEBUG;
+    const cardName = (id: string) => this.cardData?.current.get(id)?.name;
     this.live = new GameFeed({
       label: 'live',
       tracker: createTracker(bundled),
       logTransitions,
+      measureLag: true,
+      cardName,
       onState: (s) => this.onLiveState(s),
       onEvents: (e) => this.onLiveEvents(e),
     });
@@ -141,6 +191,11 @@ export class TavernLensApp {
       openSettings: () => this.showSettings(),
       openExternal: (url) => void shell.openExternal(url),
       quit: () => app.quit(),
+      exportDiagnostics: (o) => this.exportDiagnostics(o),
+      openLogsFolder: () => this.openLogsFolder(),
+      showItemInFolder: (path) => this.showItemInFolder(path),
+      logEvent: (sender, level, scope, message, data) =>
+        rendererLogs.handle(sender.id, this.windowName(sender), level, scope, message, data),
     });
 
     // Windows
@@ -171,8 +226,14 @@ export class TavernLensApp {
     screen.on('display-removed', () => this.updateOverlay());
 
     // Hearthstone logs
-    this.status.update({ logConfig: ensureLogConfigFile(logConfigPath()) });
-    void this.discover();
+    const logConfig = ensureLogConfigFile(logConfigPath());
+    this.status.update({ logConfig });
+    if (logConfig !== 'ok') log.info(`log.config: ${logConfig} (${logConfigPath() ?? 'no known location on this platform'})`);
+    // The session header waits for the first discovery (install and Power.log paths).
+    void this.discover().finally(() => this.writeSessionHeader());
+    setTimeout(() => this.writeSessionHeader(), 8000);
+    powerMonitor.on('suspend', () => log.info('system suspending'));
+    powerMonitor.on('resume', () => log.info('system resumed'));
 
     // Background data
     this.cardData.start();
@@ -186,6 +247,27 @@ export class TavernLensApp {
     if (isDev() && process.env.TL_AUTODEMO) {
       const speed = Number(process.env.TL_DEMO_SPEED) || DEFAULT_DEMO_SPEED;
       setTimeout(() => void this.startDemo(speed), 1500);
+    }
+    if (isDev() && process.env.TL_SMOKE_RENDERER_ERRORS) {
+      // Smoke test: errors in both windows must reach the main log via bridge.logEvent.
+      setTimeout(() => {
+        for (const w of [this.overlay, this.settingsWin]) {
+          if (!w || w.isDestroyed()) continue;
+          const js = `setTimeout(() => { throw new Error('smoke: uncaught error'); }); Promise.reject(new Error('smoke: unhandled rejection')); console.error('smoke: console.error', { detail: 1 }); 0`;
+          void w.webContents.executeJavaScript(js).catch(() => undefined);
+        }
+      }, 10000);
+    }
+    if (isDev() && process.env.TL_SMOKE_EXPORT) {
+      // Smoke test: export shortly before TL_SMOKE_QUIT_MS quits (or after 20 s).
+      const quitAfter = Number(process.env.TL_SMOKE_QUIT_MS) || 0;
+      setTimeout(
+        () =>
+          void this.exportDiagnostics({ includeGameLogs: true }, false).then((r) =>
+            diagLog.info(`TL_SMOKE_EXPORT: ${r.ok ? `${r.path} (${r.bytes} bytes)` : `failed: ${r.error}`}`),
+          ),
+        quitAfter > 15000 ? quitAfter - 7000 : 20000,
+      );
     }
     log.info(`Tavern Lens ${app.getVersion()} started (${process.platform}, ${isDev() ? 'dev' : 'packaged'})`);
   }
@@ -235,7 +317,8 @@ export class TavernLensApp {
       trackerSupported: this.windowTracker?.supported ?? false,
       gameActive: this.liveActive,
     };
-    const visible = shouldShowOverlay(policy);
+    const decision = overlayVisibility(policy);
+    const visible = decision.visible;
     // Hotkeys are held while the overlay could show (the game is in front, or the demo
     // runs), so toggleOverlay still works when the overlay is disabled.
     this.setHotkeysActive(shouldShowOverlay({ ...policy, overlayEnabled: true }));
@@ -247,12 +330,17 @@ export class TavernLensApp {
     if (visible && !win.isVisible()) {
       win.showInactive();
       win.setAlwaysOnTop(true, 'screen-saver');
-      log.debug('overlay shown', bounds);
     } else if (!visible && win.isVisible()) {
       win.setIgnoreMouseEvents(true, { forward: true });
+      this.interactive = false;
       win.hide();
-      log.debug('overlay hidden');
     }
+    const prev = this.overlayState;
+    if (!prev || prev.visible !== visible || (!visible && prev.reason !== decision.reason)) {
+      const b = `${bounds.width}x${bounds.height} at ${bounds.x},${bounds.y}`;
+      log.info(`overlay ${visible ? 'shown' : 'hidden'}: ${decision.reason}${visible ? ` · bounds ${b}` : ''}`);
+    }
+    this.overlayState = decision;
   }
 
   private setInteractive(sender: WebContents, interactive: boolean): void {
@@ -260,8 +348,16 @@ export class TavernLensApp {
     if (!win || win.isDestroyed() || sender !== win.webContents) return;
     // A hidden overlay stays click-through (it is reset on hide), so it can't come back
     // capturing the mouse from a request that raced the hide.
-    if (interactive && !win.isVisible()) return;
+    if (interactive && !win.isVisible()) {
+      log.debug('setInteractive(true) ignored: overlay hidden');
+      return;
+    }
     win.setIgnoreMouseEvents(!interactive, { forward: true });
+    if (interactive !== this.interactive) {
+      this.interactive = interactive;
+      this.interactiveToggles++;
+      log.debug(`overlay ${interactive ? 'interactive (captures the mouse)' : 'click-through'}`);
+    }
   }
 
   /**
@@ -273,6 +369,7 @@ export class TavernLensApp {
     const wc = win.webContents;
     const clickThrough = () => {
       if (!win.isDestroyed()) win.setIgnoreMouseEvents(true, { forward: true });
+      this.interactive = false;
     };
     let lastCrashReload = 0;
     wc.on('did-start-loading', clickThrough);
@@ -320,6 +417,12 @@ export class TavernLensApp {
   private setSettings(patch: Partial<Settings>): Settings {
     const prev = this.store.getSettings();
     const next = this.store.updateSettings(patch);
+    const changes = diffSettings(prev, next);
+    if (changes.length) log.info(`settings changed: ${changes.join('; ')}`);
+    if (!!prev.verboseLogging !== !!next.verboseLogging) {
+      setDebugLogging(!!next.verboseLogging || !!process.env.TL_DEBUG);
+      this.scheduleDiagStatus(true);
+    }
     if (JSON.stringify(prev.hotkeys) !== JSON.stringify(next.hotkeys)) this.applyHotkeys(next);
     if (prev.launchOnStartup !== next.launchOnStartup) this.applyLoginItem(next);
     if ((prev.hearthstonePath ?? '') !== (next.hearthstonePath ?? '')) void this.discover();
@@ -348,7 +451,7 @@ export class TavernLensApp {
   }
 
   private onHotkey(action: HotkeyAction): void {
-    log.debug(`hotkey ${action}`);
+    log.info(`hotkey ${action}`);
     if (action === 'toggleOverlay') {
       this.setSettings({ overlayEnabled: !this.store.getSettings().overlayEnabled });
       return;
@@ -385,8 +488,13 @@ export class TavernLensApp {
     this.status.update({ hearthstoneInstallPath: install, logsPath: this.logsDir });
     if (install) {
       this.status.clearError((e) => e === HS_NOT_FOUND);
-      log.info(`Hearthstone found at ${install}`);
+      log.info(`Hearthstone found at ${install}${override ? ' (folder set in settings)' : ''}`);
+      this.hsNotFoundLogged = false;
     } else {
+      if (!this.hsNotFoundLogged) {
+        log.info(`Hearthstone installation not found${override ? ` (settings folder ${override} is not one)` : ''}; retrying every ${DISCOVERY_RETRY_MS / 1000} s`);
+        this.hsNotFoundLogged = true;
+      }
       if (this.windowTracker.supported) this.status.addError(HS_NOT_FOUND);
       this.discoveryTimer = setTimeout(() => void this.discover(), DISCOVERY_RETRY_MS);
     }
@@ -394,7 +502,8 @@ export class TavernLensApp {
       this.tailer = new LogTailer({
         resolvePath: () => (this.logsDir ? resolvePowerLog(this.logsDir)?.path : undefined),
         onLines: (lines) => this.live.feed(lines),
-        onFileChange: ({ path, reason }) => {
+        onFileChange: ({ path, reason, startOffset }) => {
+          log.info(`Power.log ${reason === 'initial' ? 'selected' : reason}: ${path ?? '(none)'} from byte ${startOffset}`);
           this.status.update({ powerLogPath: path, watching: !!path });
           // A new client session (or a truncated log): finish a game whose end was already
           // seen, and keep one in progress so a reconnect after a client restart continues it.
@@ -409,6 +518,7 @@ export class TavernLensApp {
 
   private fixLogConfig(): AppStatus['logConfig'] {
     const result = ensureLogConfigFile(logConfigPath());
+    log.info(`log.config fix requested: ${result} (${logConfigPath() ?? 'no known location'})`);
     this.status.update({ logConfig: result });
     return result;
   }
@@ -436,8 +546,32 @@ export class TavernLensApp {
   }
 
   private onGameWindow(info: GameWindowInfo): void {
+    this.logGameWindow(info);
     this.status.update({ gameWindow: info });
     this.updateOverlay();
+  }
+
+  /** Found / focused / minimized changes are logged at once; moves and resizes once they settle. */
+  private logGameWindow(info: GameWindowInfo): void {
+    const prev = this.loggedWindow;
+    const flags = (w: GameWindowInfo) => `${w.found}/${w.focused}/${w.minimized}`;
+    const rect = (w: GameWindowInfo | undefined) => JSON.stringify(w?.bounds ?? null);
+    if (!prev || flags(prev) !== flags(info)) {
+      if (this.windowLogTimer) clearTimeout(this.windowLogTimer);
+      this.windowLogTimer = undefined;
+      this.loggedWindow = info;
+      log.info(`game window: ${describeWindow(info)}`);
+      return;
+    }
+    if (rect(prev) === rect(info)) return;
+    if (this.windowLogTimer) clearTimeout(this.windowLogTimer);
+    this.windowLogTimer = setTimeout(() => {
+      this.windowLogTimer = undefined;
+      const cur = this.windowTracker.info;
+      if (rect(this.loggedWindow) === rect(cur)) return;
+      this.loggedWindow = cur;
+      log.info(`game window moved/resized: ${describeWindow(cur)}`);
+    }, 1000);
   }
 
   private housekeeping(): void {
@@ -450,6 +584,7 @@ export class TavernLensApp {
     });
     this.tray.update(this.trayState());
     this.maybeSwapTracker();
+    rendererLogs.drain((id) => this.windowNameById(id));
     this.live.tick();
     this.demoFeed?.tick();
   }
@@ -469,6 +604,7 @@ export class TavernLensApp {
   }
 
   private onLiveEvents(events: BgEvent[]): void {
+    this.recordSimCases('live', events);
     for (const e of events) {
       if (e.type === 'gameStart') {
         this.predictions.clear();
@@ -489,8 +625,195 @@ export class TavernLensApp {
   }
 
   private reportSimResult(turn: number, result: BattleSimResult): void {
-    if (this.demoActive) return; // demo games are never saved
+    const liveId = this.liveGameId || this.live.getState().gameId;
+    const demoId = this.demoGameId || this.demoFeed?.getState().gameId || '';
+    // Results come by turn only. A run started for one feed can finish just after the demo
+    // started or stopped: give it to the feed that has an open combat on that turn.
+    const open = (id: string) => {
+      const c = id ? this.simCases?.peek(id, turn) : undefined;
+      return !!c?.input && !c.result;
+    };
+    let source: 'live' | 'demo' = this.demoActive ? 'demo' : 'live';
+    if (source === 'demo' && !open(demoId) && open(liveId)) source = 'live';
+    else if (source === 'live' && !open(liveId) && open(demoId)) source = 'demo';
+    simLog.info(`sim t${turn} (${source}): ${describeSim(result)}`);
+    const gameId = source === 'demo' ? demoId : liveId;
+    if (gameId && this.simCases) this.logVerdict(this.simCases.simResult(gameId, turn, result, source));
+    if (source === 'demo') return; // demo games are never saved
     this.predictions.set(turn, result);
+  }
+
+  // ------------------------------------------------------------- diagnostics
+
+  /** Feeds combats into the simulator case log and counts overlay interactivity per game. */
+  private recordSimCases(source: 'live' | 'demo', events: BgEvent[]): void {
+    const cases = this.simCases;
+    for (const e of events) {
+      try {
+        if (e.type === 'gameStart') {
+          if (source === 'live') this.liveGameId = e.gameId;
+          else this.demoGameId = e.gameId;
+          this.interactiveToggles = 0;
+          continue;
+        }
+        const feed = source === 'live' ? this.live : this.demoFeed;
+        const gameId = (source === 'live' ? this.liveGameId : this.demoGameId) || feed?.getState().gameId || '';
+        if (e.type === 'combatStart') {
+          if (gameId) cases?.combatStart(gameId, e.turn, e.input, source);
+        } else if (e.type === 'combatEnd') {
+          const actual = { result: e.record.result, damage: e.record.damage, opponentHeroCardId: e.record.opponentHeroCardId };
+          if (gameId && cases) this.logVerdict(cases.combatEnd(gameId, e.turn, actual, source));
+        } else if (e.type === 'gameEnd') {
+          log.info(`overlay interactivity this game: ${this.interactiveToggles} switches between click-through and interactive`);
+          if (gameId) cases?.endGame(gameId);
+        }
+      } catch (err) {
+        simLog.warn('sim case bookkeeping failed', err);
+      }
+    }
+  }
+
+  private logVerdict(c: SimCase): void {
+    if (!c.verdict || !c.actual || this.verdictsLogged.has(c.key)) return;
+    this.verdictsLogged.add(c.key);
+    if (this.verdictsLogged.size > 500) this.verdictsLogged.delete(this.verdictsLogged.values().next().value!);
+    const a = c.actual;
+    const line = `sim t${c.turn} (${c.source}) vs actual ${a.result}${a.result === 'tied' ? '' : ` ${a.damage}`}: ${describeVerdict(c.verdict)}`;
+    if (c.verdict.surprise) simLog.warn(`${line} · case ${c.key} in sim-cases.jsonl`);
+    else simLog.info(line);
+  }
+
+  private diagStatus(): DiagnosticsStatus {
+    const st = getLogStats();
+    return {
+      logsDir: this.appLogsDir,
+      logFile: logFilePath(),
+      verbose: isDebugLogging(),
+      errorCount: st.errors,
+      warnCount: st.warnings,
+      recentErrors: st.recentErrors.slice(-5),
+    };
+  }
+
+  private scheduleDiagStatus(now = false): void {
+    if (now) {
+      if (this.diagStatusTimer) clearTimeout(this.diagStatusTimer);
+      this.diagStatusTimer = undefined;
+      this.status?.update({ diagnostics: this.diagStatus() });
+      return;
+    }
+    if (this.diagStatusTimer) return;
+    this.diagStatusTimer = setTimeout(() => {
+      this.diagStatusTimer = undefined;
+      this.status?.update({ diagnostics: this.diagStatus() });
+    }, 1000);
+  }
+
+  private writeSessionHeader(): void {
+    if (this.headerWritten) return;
+    this.headerWritten = true;
+    try {
+      const st = this.status.get();
+      const s = this.store.getSettings();
+      const { positions: _p, ...settings } = s;
+      void _p;
+      const cd = st.cardData;
+      const header = sessionHeader(systemInfo(), {
+        hearthstoneInstall: st.hearthstoneInstallPath,
+        logsDir: this.logsDir,
+        powerLog: st.powerLogPath ?? (this.logsDir ? resolvePowerLog(this.logsDir)?.path : undefined),
+        logConfig: st.logConfig,
+        logConfigPath: logConfigPath(),
+        cardData: `build ${cd.build}${cd.patch ? ` (patch ${cd.patch})` : ''} · ${cd.source} · ${cd.cards} cards`,
+        settings: { ...settings, positions: Object.keys(s.positions ?? {}) },
+        logFile: logFilePath(),
+        verbose: isDebugLogging(),
+      });
+      createLogger('session').info(header);
+    } catch (err) {
+      diagLog.warn('could not write the session header', err);
+    }
+  }
+
+  private windowName(wc: WebContents): string {
+    return this.windowNameById(wc.id);
+  }
+
+  private windowNameById(id: number): string {
+    const isWin = (w: BrowserWindow | undefined) => !!w && !w.isDestroyed() && !w.webContents.isDestroyed() && w.webContents.id === id;
+    return isWin(this.overlay) ? 'overlay' : isWin(this.settingsWin) ? 'companion' : `window${id}`;
+  }
+
+  private exportCandidates(): Array<string | undefined> {
+    const path = (name: 'desktop' | 'downloads' | 'userData') => {
+      try {
+        return app.getPath(name);
+      } catch {
+        return undefined;
+      }
+    };
+    const devDir = isDev() ? process.env.TL_EXPORT_DIR : undefined;
+    return [devDir, path('desktop'), path('downloads'), path('userData')];
+  }
+
+  async exportDiagnostics(opts: DiagnosticsExportOptions, reveal = true): Promise<DiagnosticsExportResult> {
+    if (this.exporting) return { ok: false, error: 'An export is already running.' };
+    this.exporting = true;
+    try {
+      const includeGameLogs = opts.includeGameLogs !== false;
+      if ((this.store.getSettings().exportIncludeGameLogs !== false) !== includeGameLogs) {
+        this.setSettings({ exportIncludeGameLogs: includeGameLogs });
+      }
+      const outDir = pickExportDir(this.exportCandidates());
+      if (!outDir) throw new Error('No writable folder for the export (Desktop, Downloads or the app folder).');
+      diagLog.info(`exporting diagnostics to ${outDir} (Hearthstone game logs ${includeGameLogs ? 'included' : 'not included'})`);
+      const status: AppStatus = { ...this.status.get(), diagnostics: this.diagStatus() };
+      let system: unknown;
+      try {
+        system = { ...systemInfo(), paths: { userData: app.getPath('userData'), logs: this.appLogsDir, exe: app.getPath('exe') } };
+      } catch (err) {
+        system = { error: String(err) };
+      }
+      const res = await writeDiagnosticsZip({
+        outDir,
+        now: new Date(),
+        appVersion: app.getVersion(),
+        appLogsDir: this.appLogsDir,
+        simCases: this.simCases?.snapshot() ?? '',
+        settings: this.store.getSettings(),
+        history: this.store.getHistory(),
+        status,
+        system,
+        includeGameLogs,
+        game: { logsDir: this.logsDir, logConfigPath: logConfigPath() },
+      });
+      this.exportedPaths.add(res.path);
+      diagLog.info(
+        `diagnostics exported: ${res.path} (${Math.round(res.bytes / 1024)} KB, ${res.files.length} files)` +
+          (res.notes.length ? `; notes: ${res.notes.join('; ')}` : ''),
+      );
+      if (reveal) shell.showItemInFolder(res.path);
+      return { ok: true, path: res.path, bytes: res.bytes, files: res.files, notes: res.notes };
+    } catch (err) {
+      diagLog.error('diagnostics export failed', err);
+      return { ok: false, error: (err as Error)?.message ?? String(err) };
+    } finally {
+      this.exporting = false;
+    }
+  }
+
+  private async openLogsFolder(): Promise<void> {
+    const err = await shell.openPath(this.appLogsDir);
+    if (err) diagLog.warn(`could not open the logs folder ${this.appLogsDir}: ${err}`);
+  }
+
+  private showItemInFolder(path: string): void {
+    // Only files this app exported (the renderer must not reveal arbitrary paths).
+    if (!this.exportedPaths.has(path)) {
+      diagLog.warn(`showItemInFolder refused for a path that was not exported: ${path}`);
+      return;
+    }
+    shell.showItemInFolder(path);
   }
 
   private onCardDataUpdated(db: CardDb): void {
@@ -536,14 +859,17 @@ export class TavernLensApp {
     this.demoFeed = new GameFeed({
       label: 'demo',
       tracker: createTracker(this.cardData.current),
-      logTransitions: isDev() || !!process.env.TL_DEBUG,
+      logTransitions: !!process.env.TL_DEBUG,
+      cardName: (id) => this.cardData.current.get(id)?.name,
       onState: (st) => {
         if (this.demoActive) this.broadcast(IPC.state, st);
       },
       onEvents: (events) => {
+        this.recordSimCases('demo', events);
         if (this.demoActive) for (const e of events) this.broadcast(IPC.event, e);
       },
     });
+    log.info(`demo started at ${s}x`);
     this.status.update({ demo: { running: true, progress: 0, speed: s } });
     this.updateOverlay();
     this.tray.update(this.trayState());
@@ -593,6 +919,9 @@ export class TavernLensApp {
       this.demo?.stop();
       if (this.discoveryTimer) clearTimeout(this.discoveryTimer);
       if (this.housekeepingTimer) clearInterval(this.housekeepingTimer);
+      if (this.windowLogTimer) clearTimeout(this.windowLogTimer);
+      this.simCases?.flushAll();
+      this.simCases?.dispose();
       this.store.settingsFile.writeSync(this.store.getSettings());
       this.store.historyFile.writeSync(this.store.getHistory());
       this.tray?.destroy();

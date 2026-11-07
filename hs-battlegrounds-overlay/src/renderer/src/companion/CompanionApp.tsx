@@ -2,6 +2,7 @@ import { useEffect, useState, type ComponentType } from 'react';
 import clsx from 'clsx';
 import { useApp } from '../store/appStore';
 import { NAV_ICONS } from '../components/Icons';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Overview } from './sections/Overview';
 import { History } from './sections/History';
 import { Stats } from './sections/Stats';
@@ -96,7 +97,9 @@ export default function CompanionApp() {
         </div>
       </aside>
       <main className="tl-main tl-scroll" key={section}>
-        <current.Component />
+        <ErrorBoundary name={`companion:${section}`} label={`The ${current.label} page`} fallback="panel">
+          <current.Component />
+        </ErrorBoundary>
       </main>
     </div>
   );

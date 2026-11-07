@@ -6,6 +6,8 @@ import '@fontsource-variable/fraunces/opsz.css';
 import '@fontsource-variable/archivo/wdth.css';
 import './styles/base.css';
 import { resolveBridge, type WindowKind } from './bridge';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { attachDiagnosticsBridge, installRendererDiagnostics, reportError, rendererLog, watchSimRuns } from './diagnostics';
 import { connectStore } from './store/appStore';
 
 type AppLoader = () => Promise<{ default: ComponentType }>;
@@ -16,16 +18,31 @@ type AppLoader = () => Promise<{ default: ComponentType }>;
  */
 export async function boot(defaultKind: WindowKind, loaders: Record<WindowKind, AppLoader>) {
   const el = document.getElementById('root')!;
+  // Errors from here on reach the main-process diagnostics log.
+  installRendererDiagnostics();
   try {
     const { bridge, demo, windowKind } = await resolveBridge(defaultKind);
+    attachDiagnosticsBridge(bridge, windowKind === 'overlay' ? 'overlay' : 'companion');
     document.body.classList.toggle('tl-body--demo', demo);
     document.body.classList.toggle('tl-body--overlay', windowKind === 'overlay');
     document.body.classList.toggle('tl-body--companion', windowKind === 'settings');
     await connectStore(bridge, demo);
+    if (windowKind === 'overlay') watchSimRuns();
     const { default: App } = await loaders[windowKind]();
-    createRoot(el).render(
+    createRoot(el, {
+      // Errors caught by an ErrorBoundary are reported by the boundary itself.
+      onCaughtError: (error) => console.warn('[tavern-lens] a component crashed (caught by an error boundary)', error),
+      onUncaughtError: (error, info) => reportError('react', error, { componentStack: info.componentStack?.trim().slice(0, 4000), uncaught: true }),
+      onRecoverableError: (error) => rendererLog('warn', 'react', `recoverable error: ${error instanceof Error ? error.message : String(error)}`),
+    }).render(
       <StrictMode>
-        <App />
+        <ErrorBoundary
+          name={windowKind === 'overlay' ? 'overlay' : 'companion'}
+          label={windowKind === 'overlay' ? 'Tavern Lens overlay' : 'Tavern Lens'}
+          fallback={windowKind === 'overlay' ? 'chip' : 'panel'}
+        >
+          <App />
+        </ErrorBoundary>
       </StrictMode>,
     );
   } catch (err) {

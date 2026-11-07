@@ -188,7 +188,9 @@ export class GameFeed {
       parts.push(
         d.followsPlayback
           ? `follows playback${d.playbackLagMs !== undefined ? ` ${formatDuration(d.playbackLagMs)} behind GameState` : ''}`
-          : `GameState stream (playback turn ${d.playbackTurn}, GameState turn ${d.gsTurn})`,
+          : d.playbackTurn
+            ? `GameState stream (playback at turn ${d.playbackTurn}, GameState at ${d.gsTurn})`
+            : 'GameState stream (no animated playback seen)',
       );
     }
     this.log.info(parts.join(' · '));

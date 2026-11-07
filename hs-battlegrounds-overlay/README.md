@@ -118,6 +118,15 @@ Power.log ──► log tailer ──► BgTracker (parser + entity store + BG r
 All match history stays on your machine (`%APPDATA%/Tavern Lens` on Windows,
 `~/Library/Application Support/Tavern Lens` on macOS).
 
+## Reporting a problem
+
+Tavern Lens keeps a rotating log of what it sees and does (`logs/tavern-lens.log`) and a record of every
+simulated combat with its actual outcome (`logs/sim-cases.jsonl`) in its data folder. After playing, open
+Tavern Lens → **About → Diagnostics → Export diagnostics**: it saves one `TavernLens-diagnostics-….zip` to
+your Desktop with the logs, settings, recent matches and (optionally) your latest Hearthstone `Power.log`.
+Attach that zip to a bug report. It contains your BattleTag and your opponents' names. Turn on
+**Verbose logging** there to capture more detail while reproducing a problem.
+
 ## Development
 
 ```bash

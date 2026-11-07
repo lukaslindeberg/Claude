@@ -1,5 +1,6 @@
 import { useApp } from '../../store/appStore';
 import { Card, SectionHeader } from '../ui';
+import { DiagnosticsCard } from './Diagnostics';
 
 const LINKS: [string, string][] = [
   ['HearthSim hsdata', 'https://github.com/HearthSim/hsdata'],
@@ -32,6 +33,7 @@ export function About() {
             <dd>{status?.logsPath ?? 'Not found yet'}</dd>
           </dl>
         </Card>
+        <DiagnosticsCard className="tl-about__diag" />
         <Card title="Credits">
           <ul className="tl-about__list">
             <li>Card definitions from HearthSim's hsdata; card art from HearthstoneJSON.</li>

@@ -35,7 +35,8 @@ export function formatDuration(ms: number): string {
   const s = Math.round(ms / 1000);
   if (s < 60) return `${(ms / 1000).toFixed(1)} s`;
   const m = Math.floor(s / 60);
-  return `${m}m${String(s % 60).padStart(2, '0')}s`;
+  if (m < 60) return `${m}m${String(s % 60).padStart(2, '0')}s`;
+  return `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}m`;
 }
 
 /** One line per tracker event. */
@@ -94,7 +95,7 @@ export const SURPRISE_BELOW_PCT = 5;
 
 export function simVerdict(r: Pick<BattleSimResult, 'win' | 'tie' | 'loss'>, actual: Outcome): SimVerdict {
   const predicted: Outcome = r.win >= r.loss && r.win >= r.tie ? 'won' : r.loss >= r.tie ? 'lost' : 'tied';
-  const actualChance = actual === 'won' ? r.win : actual === 'lost' ? r.loss : r.tie;
+  const actualChance = Math.round((actual === 'won' ? r.win : actual === 'lost' ? r.loss : r.tie) * 100) / 100;
   return { predicted, matched: predicted === actual, actualChance, surprise: actualChance < SURPRISE_BELOW_PCT };
 }
 

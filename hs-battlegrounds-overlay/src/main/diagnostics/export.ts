@@ -151,9 +151,9 @@ export async function readTail(path: string, maxBytes: number): Promise<{ data: 
 export const README = `Tavern Lens diagnostics
 =======================
 
-This archive was exported from Tavern Lens (Settings > About > Diagnostics) so the
-developer can see what happened while the overlay was used. Nothing in it was
-uploaded anywhere: whoever has this file can read it.
+This archive was exported from Tavern Lens (About > Diagnostics > Export
+diagnostics) so the developer can see what happened while the overlay was used.
+Nothing in it was uploaded anywhere: whoever has this file can read it.
 
 Privacy: the logs, history and Hearthstone game logs contain the player's BattleTag
 and the names of opponents, as Hearthstone writes them to its own log files.

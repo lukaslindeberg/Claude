@@ -3,6 +3,7 @@ import type { WidgetId } from '@shared/types';
 import { useApp } from '../store/appStore';
 import { useBattleSimRunner } from '../hooks/useBattleSim';
 import { useViewport } from '../hooks/useViewport';
+import { WidgetBoundary } from '../components/WidgetBoundary';
 import { effectiveScale } from './layout';
 import { DemoBackdrop } from './DemoBackdrop';
 import { HeroSelectionWidget } from './widgets/HeroSelection';
@@ -58,14 +59,15 @@ export default function OverlayApp() {
       {demo ? <DemoBackdrop /> : null}
       {settings.overlayEnabled ? (
         <>
-          {on('leaderboardHover') || settings.leaderboardCalibrationMode ? <LeaderboardHover /> : null}
-          {on('heroSelection') ? <HeroSelectionWidget /> : null}
-          {on('sessionStats') ? <SessionWidget /> : null}
-          {on('lobbyInfo') ? <LobbyInfoWidget /> : null}
-          {on('opponentsPanel') ? <OpponentsPanel /> : null}
-          {on('battleSim') ? <BattleSimWidget /> : null}
-          {on('tierList') ? <TierListWidget /> : null}
-          {on('postMatch') ? <PostMatchWidget /> : null}
+          {/* Each widget has its own error boundary: one crash never blanks the overlay. */}
+          {on('leaderboardHover') || settings.leaderboardCalibrationMode ? <WidgetBoundary id="leaderboardHover"><LeaderboardHover /></WidgetBoundary> : null}
+          {on('heroSelection') ? <WidgetBoundary id="heroSelection"><HeroSelectionWidget /></WidgetBoundary> : null}
+          {on('sessionStats') ? <WidgetBoundary id="sessionStats"><SessionWidget /></WidgetBoundary> : null}
+          {on('lobbyInfo') ? <WidgetBoundary id="lobbyInfo"><LobbyInfoWidget /></WidgetBoundary> : null}
+          {on('opponentsPanel') ? <WidgetBoundary id="opponentsPanel"><OpponentsPanel /></WidgetBoundary> : null}
+          {on('battleSim') ? <WidgetBoundary id="battleSim"><BattleSimWidget /></WidgetBoundary> : null}
+          {on('tierList') ? <WidgetBoundary id="tierList"><TierListWidget /></WidgetBoundary> : null}
+          {on('postMatch') ? <WidgetBoundary id="postMatch"><PostMatchWidget /></WidgetBoundary> : null}
         </>
       ) : null}
     </div>
