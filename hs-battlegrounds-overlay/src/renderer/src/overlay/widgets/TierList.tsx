@@ -5,8 +5,8 @@ import { useApp } from '../../store/appStore';
 import { useViewport } from '../../hooks/useViewport';
 import { CardTooltip } from '../../components/MinionToken';
 import { CardArt } from '../../components/CardArt';
-import { TribeChip } from '../../components/Bits';
-import { CloseIcon, CrownIcon, KEYWORD_BY_KEY, KeywordIcons, keywordsFromMechanics } from '../../components/Icons';
+import { StatGem, TribeChip, TribeEmblem } from '../../components/Bits';
+import { CloseIcon, KEYWORD_BY_KEY, KeywordIcons, keywordsFromMechanics } from '../../components/Icons';
 import { Tooltip } from '../../components/Tooltip';
 import { LOBBY_TRIBES, tribeColor } from '../../lib/tribes';
 import { DragHandle, FloatingWidget } from '../Widget';
@@ -66,15 +66,15 @@ export function TierListWidget() {
         <div className="tl-tiers">
           <div className="tl-panel tl-tiers__bar">
             <DragHandle handle={handle} />
-            <CrownIcon size={13} className="tl-gold" />
+            <span className="tl-tiers__label">Tavern</span>
             {TIERS.map((t) => (
               <button
                 key={t}
                 className={clsx('tl-tiers__btn', current === t && 'is-current', open === t && 'is-open')}
                 onClick={() => setOpen(open === t ? null : t)}
-                title={`Tier ${t} minions`}
+                title={`Tier ${t} minions${current === t ? ' (your tavern tier)' : ''}`}
               >
-                {t}
+                <span>{t}</span>
               </button>
             ))}
           </div>
@@ -134,8 +134,8 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
   return (
     <div className="tl-panel tl-tierpanel" style={{ maxHeight: `calc(${Math.round(vp.height * 0.82)}px / var(--tl-scale))` }}>
       <div className="tl-tierpanel__head">
-        <span className="tl-heading">{crossTier ? 'All tiers' : `Tier ${tier}`}</span>
-        <span className="tl-muted tl-small">
+        <span className="tl-tierpanel__title">{crossTier ? 'All tiers' : `Tier ${tier}`}</span>
+        <span className="tl-tierpanel__count">
           {minions.length} minion{minions.length === 1 ? '' : 's'}
           {tribes ? ' in this lobby' : ' · all tribes'}
         </span>
@@ -152,8 +152,9 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
               setAllTiers(false);
               onTier(t);
             }}
+            title={`Tier ${t}`}
           >
-            {t}
+            <span>{t}</span>
           </button>
         ))}
         <button className={clsx('tl-tierpanel__tier is-all', allTiers && 'is-on')} onClick={() => setAllTiers(true)} title="Every tier">
@@ -200,7 +201,8 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
         {groups.map((g) => (
           <section key={g.tribe} className="tl-tiergroup" style={{ '--c': tribeColor(g.tribe) } as React.CSSProperties}>
             <header className="tl-tiergroup__head">
-              <TribeChip tribe={g.tribe} />
+              <TribeEmblem tribe={g.tribe} size={17} />
+              <span className="tl-tiergroup__name">{g.tribe === 'NEUTRAL' ? 'Neutral' : g.tribe === 'ALL' ? 'All types' : g.tribe.charAt(0) + g.tribe.slice(1).toLowerCase()}</span>
               <span className="tl-tiergroup__count">{g.cards.length}</span>
             </header>
             {g.cards.map((c) => (
@@ -212,13 +214,14 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
         {spells.length ? (
           <section className="tl-tiergroup is-spells">
             <header className="tl-tiergroup__head">
-              <span className="tl-heading">Tavern spells</span>
+              <span className="tl-tiergroup__spellmark" />
+              <span className="tl-tiergroup__name">Tavern spells</span>
               <span className="tl-tiergroup__count">{spells.length}</span>
             </header>
             {spells.map((c) => (
-              <Tooltip key={c.id} as="div" placement="right" content={() => <CardTooltip cardId={c.id} />}>
+              <Tooltip key={c.id} as="div" placement="right" content={() => <CardTooltip cardId={c.id} />} tipClassName="tl-tooltip--card">
                 <div className={clsx('tl-tierrow is-spell', shopIds.has(c.id) && 'is-shop')}>
-                  <span className="tl-tierrow__cost">{c.cost ?? '?'}</span>
+                  <StatGem kind="atk" value={c.cost ?? '?'} size={20} className="tl-tierrow__cost" title="Cost" />
                   <span className="tl-tierrow__name">{c.name}</span>
                   {shopIds.has(c.id) ? <span className="tl-tag is-shop">Shop</span> : null}
                 </div>
@@ -234,7 +237,7 @@ function TierPanel({ tier, onClose, onTier }: { tier: number; onClose: () => voi
 function MinionRow({ card, inShop, showTier }: { card: BgCard; inShop: boolean; showTier: boolean }) {
   const kw = keywordsFromMechanics(card.mechanics);
   return (
-    <Tooltip as="div" placement="right" content={() => <CardTooltip cardId={card.id} />}>
+    <Tooltip as="div" placement="right" content={() => <CardTooltip cardId={card.id} />} tipClassName="tl-tooltip--card">
       <div className={clsx('tl-tierrow', inShop && 'is-shop')}>
         <span className="tl-tierrow__art">
           <CardArt cardId={card.id} name={card.name} tribes={card.tribes} initialsSize={9} />
@@ -251,9 +254,8 @@ function MinionRow({ card, inShop, showTier }: { card: BgCard; inShop: boolean; 
         <KeywordIcons keywords={kw} size={11} max={3} />
         {showTier ? <span className="tl-tierrow__tier">T{card.tier}</span> : null}
         <span className="tl-tierrow__stats">
-          <b className="atk">{card.attack}</b>
-          <span>/</span>
-          <b className="hp">{card.health}</b>
+          <StatGem kind="atk" value={card.attack ?? 0} size={19} />
+          <StatGem kind="hp" value={card.health ?? 0} size={19} />
         </span>
       </div>
     </Tooltip>

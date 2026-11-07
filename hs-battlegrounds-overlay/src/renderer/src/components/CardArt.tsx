@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { cardArt } from '@core/cards/cardDb';
 import type { Tribe } from '@shared/types';
@@ -55,7 +55,7 @@ export function CardArt({ cardId, artId, name, tribes, className, initialsSize, 
   const [error, setError] = useState(() => failed.has(url) || hostDown());
   const showImg = images && !error;
   return (
-    <span className={clsx('tl-art', className)} style={{ background: fallbackBackground(cardId, tribes, hue) }}>
+    <span className={clsx('tl-art', !(showImg && loaded) && 'is-fallback', className)} style={{ background: fallbackBackground(cardId, tribes, hue) }}>
       {showInitials && !(showImg && loaded) ? (
         <span className="tl-art__initials" style={initialsSize ? { fontSize: initialsSize } : undefined}>
           {initials(name)}
@@ -84,28 +84,51 @@ export function CardArt({ cardId, artId, name, tribes, className, initialsSize, 
   );
 }
 
-/** Full card render image (tooltips) — null when images disabled or failed. */
-export function CardRender({ cardId, className }: { cardId: string; className?: string }) {
+/** True when a large (512x) render is worth fetching: high-DPI screens or a scaled-up overlay. */
+export function wantLargeRender(): boolean {
+  const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tl-scale')) || 1;
+  return (window.devicePixelRatio || 1) * scale > 1.35;
+}
+
+/**
+ * Full Battlegrounds card render (tooltips). Shows `fallback` when images are disabled,
+ * the image failed, or it is still loading after a moment; without a fallback it
+ * renders nothing in those cases.
+ */
+export function CardRender({ cardId, className, fallback, large }: { cardId: string; className?: string; fallback?: ReactNode; large?: boolean }) {
   const images = useImagesEnabled();
-  const url = cardArt.bgsRender(cardId);
+  const url = cardArt.bgsRender(cardId, 'enUS', large ? 512 : 256);
   const [error, setError] = useState(() => failed.has(url) || hostDown());
   const [loaded, setLoaded] = useState(false);
-  if (!images || error) return null;
+  const [slow, setSlow] = useState(false);
+  const showImg = images && !error;
+  useEffect(() => {
+    if (!showImg || loaded) return;
+    const t = setTimeout(() => setSlow(true), 350);
+    return () => clearTimeout(t);
+  }, [showImg, loaded]);
+  if (!showImg && !fallback) return null;
   return (
-    <img
-      className={clsx('tl-card-render', loaded && 'is-loaded', className)}
-      src={url}
-      alt=""
-      draggable={false}
-      referrerPolicy="no-referrer"
-      onLoad={() => {
-        loadedCount++;
-        setLoaded(true);
-      }}
-      onError={() => {
-        failed.add(url);
-        setError(true);
-      }}
-    />
+    <span className={clsx('tl-card-render', loaded && 'is-loaded', className)}>
+      {fallback && (!showImg || (slow && !loaded)) ? fallback : null}
+      {showImg ? (
+        <img
+          className="tl-card-render__img"
+          src={url}
+          alt=""
+          draggable={false}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onLoad={() => {
+            loadedCount++;
+            setLoaded(true);
+          }}
+          onError={() => {
+            failed.add(url);
+            setError(true);
+          }}
+        />
+      ) : null}
+    </span>
   );
 }

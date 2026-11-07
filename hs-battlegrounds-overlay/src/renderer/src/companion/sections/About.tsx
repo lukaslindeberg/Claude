@@ -35,7 +35,7 @@ export function About() {
         <Card title="Credits">
           <ul className="tl-about__list">
             <li>Card definitions from HearthSim's hsdata; card art from HearthstoneJSON.</li>
-            <li>Heading typeface Cinzel and body typeface Inter (SIL Open Font License).</li>
+            <li>Display typeface Fraunces and UI typeface Archivo (SIL Open Font License). Frames, gems and icons are original artwork.</li>
             <li>Replay fixtures from HSReplay test data (see the license in the repository).</li>
           </ul>
           <div className="tl-about__links">

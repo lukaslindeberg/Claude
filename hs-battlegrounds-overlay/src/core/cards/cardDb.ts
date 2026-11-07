@@ -122,9 +122,9 @@ export const cardArt = {
   /** Full card render. */
   render: (cardId: string, locale = 'enUS') =>
     `https://art.hearthstonejson.com/v1/render/latest/${locale}/256x/${cardId}.png`,
-  /** Battlegrounds-style render (tier pip, no mana cost). */
-  bgsRender: (cardId: string, locale = 'enUS') =>
-    `https://art.hearthstonejson.com/v1/bgs/latest/${locale}/256x/${cardId}.png`,
+  /** Battlegrounds-style render (tier pip, no mana cost); 512x for large or high-DPI tooltips. */
+  bgsRender: (cardId: string, locale = 'enUS', size: 256 | 512 = 256) =>
+    `https://art.hearthstonejson.com/v1/bgs/latest/${locale}/${size}x/${cardId}.png`,
   /** Deck-tracker style tile. */
   tile: (cardId: string) => `https://art.hearthstonejson.com/v1/tiles/${cardId}.png`,
 };

@@ -128,15 +128,19 @@ export function useInteractive(enabled = true, onHover?: (inside: boolean) => vo
   // window now, and until a real pointerenter takes over, release as soon as a move
   // lands outside the element (a missed enter also means a missed leave). Runs after
   // every render because the element may appear later than the hook (conditional UI).
-  const seenEl = useRef<Element | null>(null);
+  const seen = useRef('');
   useEffect(() => {
     if (!enabled) {
-      seenEl.current = null;
+      seen.current = '';
       return;
     }
     const el = document.querySelector(`[data-tl-hold="${id.current}"]`);
-    if (el === seenEl.current) return;
-    seenEl.current = el;
+    // Floating widgets settle their position a render after mounting (they measure
+    // themselves first), so re-check whenever the element or its box changes.
+    const r = el?.getBoundingClientRect();
+    const sig = r ? `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}` : '';
+    if (sig === seen.current) return;
+    seen.current = sig;
     if (!el || inside.current || !pointerInside(el)) return;
     setInside(true, el);
     acquireInteractive(key.current);

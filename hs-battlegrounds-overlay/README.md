@@ -14,10 +14,10 @@ injection — and draws a transparent, click-through layer on top of the game.
 | **Hero selection** | A stat card above each offered hero: average placement, top-4 rate, tier (S–D) and your own record with that hero. |
 | **Opponents panel** | Every player by leaderboard place: hero, health + armor, tavern tier, triples, last board seen (with golden / keyword markers), how long ago, last result against you, next-opponent highlight. |
 | **Leaderboard hover** | Hover a hero on the in-game leaderboard to see that player's last board, tier and last result. Calibratable. |
-| **Battle simulation** | Before each combat: win / tie / loss odds, average damage, lethal chance. Flags results as approximate when the board has effects the simulator doesn't model; shows the actual outcome afterwards. |
+| **Battle simulation** | Before each combat: win / tie / loss odds, average damage, lethal chance. Flags results as approximate when the board has effects the simulator doesn't model; shows the actual outcome afterwards, and stays through the next shop as a compact (foldable) "Last battle" plaque. |
 | **Minions by tier** | Current-pool minions and tavern spells for each tier, filtered to the lobby's tribes, with card text and highlighting of what's in the shop. |
 | **Lobby info** | Mode, turn, tribes in the lobby, anomaly. |
-| **Post-match summary** | Placement, final board, tier timings, combat timeline with predicted vs. actual results. |
+| **Post-match summary** | Placement, final board, tier timings, combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
 | **Session tracker** | Games today, average placement, last 10 placements. |
 
 The **companion window** (tray icon → *Open Tavern Lens*) has setup checks, match history, personal stats,
@@ -32,7 +32,7 @@ minions show their initials instead of art.
 
 | | |
 | --- | --- |
-| ![Recruit phase](docs/screenshots/overlay-recruit.jpg) Recruit phase: tier bar, lobby info, opponents panel, session widget | ![Battle simulation](docs/screenshots/overlay-combat-result.jpg) Battle simulation with the actual result |
+| ![Recruit phase](docs/screenshots/overlay-recruit.jpg) Recruit phase: tier bar, lobby info, last battle, leaderboard panel, session widget | ![Battle simulation](docs/screenshots/overlay-combat-result.jpg) Battle simulation with the actual result |
 | ![Leaderboard hover](docs/screenshots/overlay-leaderboard-hover.jpg) Leaderboard hover | ![Minions by tier](docs/screenshots/overlay-tier-list.jpg) Minions by tier |
 | ![Hero selection](docs/screenshots/overlay-hero-selection.jpg) Hero selection | ![Post-match summary](docs/screenshots/overlay-game-over.jpg) Post-match summary |
 | ![Companion overview](docs/screenshots/companion-overview.jpg) Companion: overview and setup checks | ![Match history](docs/screenshots/companion-history-detail.jpg) Companion: match history |

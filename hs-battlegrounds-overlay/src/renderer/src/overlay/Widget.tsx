@@ -16,12 +16,14 @@ export interface FloatingWidgetProps {
   className?: string;
   children: (handle: HandleProps) => ReactNode;
   zIndex?: number;
+  /** Told when the pointer enters or leaves the widget (interactive widgets only). */
+  onHoverChange?: (inside: boolean) => void;
 }
 
 /** Absolutely positioned, scale-aware overlay widget. */
-export function FloatingWidget({ id, defaultPosition, draggable = true, interactive = true, className, children, zIndex }: FloatingWidgetProps) {
+export function FloatingWidget({ id, defaultPosition, draggable = true, interactive = true, className, children, zIndex, onHoverChange }: FloatingWidgetProps) {
   const { ref, pos, handleProps, dragging } = useDraggable(id, defaultPosition, draggable);
-  const inter = useInteractive(interactive);
+  const inter = useInteractive(interactive, onHoverChange);
   return (
     <div
       ref={ref}
@@ -39,7 +41,7 @@ export function DragHandle({ handle, className }: { handle: HandleProps; classNa
   if (!('onPointerDown' in handle)) return null;
   return (
     <span className={clsx('tl-grip', className)} {...handle}>
-      <GripIcon size={12} />
+      <GripIcon size={13} />
     </span>
   );
 }

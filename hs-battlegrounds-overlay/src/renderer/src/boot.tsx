@@ -1,13 +1,9 @@
 import { StrictMode, type ComponentType } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/500.css';
-import '@fontsource/inter/600.css';
-import '@fontsource/inter/700.css';
-import '@fontsource/inter/800.css';
-import '@fontsource/cinzel/600.css';
-import '@fontsource/cinzel/700.css';
-import '@fontsource/cinzel/800.css';
+// Fraunces (OFL): flared display serif for titles, big numbers and outlined stats.
+// Archivo (OFL): Franklin-style grotesque with a width axis for UI text. Bundled locally.
+import '@fontsource-variable/fraunces/opsz.css';
+import '@fontsource-variable/archivo/wdth.css';
 import './styles/base.css';
 import { resolveBridge, type WindowKind } from './bridge';
 import { connectStore } from './store/appStore';

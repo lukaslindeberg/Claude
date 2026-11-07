@@ -6,7 +6,7 @@ import { useInteractive } from '../../hooks/useInteractive';
 import { useViewport } from '../../hooks/useViewport';
 import { HeroPortrait } from '../../components/HeroPortrait';
 import { MinionToken } from '../../components/MinionToken';
-import { HealthBar, ResultChip, Sparkline, TierBadge, TierTimeline, TriplesBadge } from '../../components/Bits';
+import { HealthBar, ResultChip, Sparkline, StatGem, TierTimeline, TriplesBadge } from '../../components/Bits';
 import { ChevronIcon, KeywordIcons } from '../../components/Icons';
 import { ordinal } from '../../lib/format';
 
@@ -69,7 +69,7 @@ export function OpponentsPanel() {
           <div className="tl-opp__header">
             {collapsed ? null : (
               <>
-                <span className="tl-heading">Lobby</span>
+                <span className="tl-opp__title">Leaderboard</span>
                 <span className="tl-opp__meta">
                   Turn {game.turn} · {alive} alive
                 </span>
@@ -104,10 +104,17 @@ function CollapsedRow({ game, p }: { game: BgGameState; p: PlayerState }) {
   const fighting = game.phase === 'combat' && game.currentOpponentPlayerId === p.playerId;
   return (
     <div className={clsx('tl-opp__mini', p.dead && 'is-dead', p.isNextOpponent && !fighting && 'is-next', fighting && 'is-fighting', p.isLocal && 'is-local')} title={`${p.heroName} · ${p.health + p.armor} hp`}>
-      <HeroPortrait cardId={p.heroCardId} name={p.heroName} size={34} dead={p.dead}>
+      <HeroPortrait
+        cardId={p.heroCardId}
+        name={p.heroName}
+        size={34}
+        dead={p.dead}
+        shape="rounded"
+        glow={fighting ? 'fighting' : p.isNextOpponent ? 'next' : p.isLocal ? 'local' : undefined}
+      >
         <span className="tl-opp__mini-place">{p.leaderboardPlace}</span>
       </HeroPortrait>
-      <span className="tl-opp__mini-hp">{p.dead ? '✕' : p.health + p.armor}</span>
+      {p.dead ? <span className="tl-opp__mini-dead">Out</span> : <StatGem kind="hp" value={p.health + p.armor} size={19} className="tl-opp__mini-hp" />}
     </div>
   );
 }
@@ -129,9 +136,15 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
     >
       <div className="tl-opp__main">
         <span className={clsx('tl-opp__place', p.leaderboardPlace === 1 && 'is-first')}>{p.leaderboardPlace}</span>
-        <HeroPortrait cardId={p.heroCardId} name={p.heroName} size={36} dead={p.dead} ring={p.isNextOpponent ? '#f2c14e' : fighting ? '#e0564f' : undefined}>
-          {!p.dead ? <TierBadge tier={p.tavernTier} size={16} className="tl-opp__tier" /> : null}
-        </HeroPortrait>
+        <HeroPortrait
+          cardId={p.heroCardId}
+          name={p.heroName}
+          size={36}
+          dead={p.dead}
+          shape="rounded"
+          tier={p.tavernTier}
+          glow={fighting ? 'fighting' : p.isNextOpponent ? 'next' : p.isLocal ? 'local' : undefined}
+        />
         <div className="tl-opp__info">
           <div className="tl-opp__line">
             <span className="tl-opp__hero">{p.isLocal ? 'You' : p.heroName}</span>

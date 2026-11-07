@@ -64,7 +64,7 @@ export default function CompanionApp() {
                   <stop offset="1" stopColor="#c8922f" />
                 </linearGradient>
               </defs>
-              <path d="M16 2 28 9v14l-12 7L4 23V9l12-7Z" fill="#17142a" stroke="url(#tl-brand-g)" strokeWidth="2" />
+              <path d="M16 2 28 9v14l-12 7L4 23V9l12-7Z" fill="#2a1a0e" stroke="url(#tl-brand-g)" strokeWidth="2" />
               <circle cx="16" cy="16" r="6.2" fill="none" stroke="url(#tl-brand-g)" strokeWidth="2" />
               <circle cx="16" cy="16" r="2.2" fill="#ffe08a" />
             </svg>

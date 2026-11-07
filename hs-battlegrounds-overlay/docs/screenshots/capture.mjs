@@ -30,6 +30,10 @@ const shots = [
     await p.locator('.tl-kwbtn').nth(2).click();
     await p.locator('.tl-tierpanel__tier.is-all').click();
   }],
+  ['overlay-card-tooltip', '/overlay.html?scene=recruit', overlay, async (p) => {
+    await p.hover('.tl-opp__row:nth-child(3) .tl-opp__board .tl-tip-anchor:nth-child(2)');
+  }, 1500],
+  ['overlay-images-off', '/overlay.html?scene=recruit&hover=2&images=0', overlay],
   ['overlay-opponent-expanded', '/overlay.html?scene=recruit', overlay, async (p) => {
     await p.locator('.tl-opp__row').nth(2).click();
   }],

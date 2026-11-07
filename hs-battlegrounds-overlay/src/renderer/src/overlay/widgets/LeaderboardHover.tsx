@@ -72,7 +72,14 @@ export function LeaderboardHover() {
       <ClampedPanel left={slot.left + slot.width + 14} centerY={slot.top + slot.height / 2} viewportHeight={vp.height}>
           <div className={clsx('tl-panel tl-lbhover__panel', p.dead && 'is-dead')}>
             <div className="tl-lbhover__head">
-              <HeroPortrait cardId={p.heroCardId} name={p.heroName} size={46} dead={p.dead} />
+              <HeroPortrait
+                cardId={p.heroCardId}
+                name={p.heroName}
+                size={52}
+                dead={p.dead}
+                shape="rounded"
+                glow={p.isNextOpponent ? 'next' : p.isLocal ? 'local' : undefined}
+              />
               <div className="tl-lbhover__title">
                 <div className="tl-lbhover__name">
                   {p.isLocal ? `${p.heroName} (you)` : p.heroName}
@@ -91,7 +98,7 @@ export function LeaderboardHover() {
               </div>
               <div className="tl-lbhover__badges">
                 <span className="tl-lbhover__badge">
-                  <TierBadge tier={p.tavernTier} size={20} />
+                  <TierBadge tier={p.tavernTier} size={20} gold />
                   <span>Tier</span>
                 </span>
                 <span className="tl-lbhover__badge">

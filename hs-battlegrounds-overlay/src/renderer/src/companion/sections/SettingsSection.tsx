@@ -253,7 +253,7 @@ function CalibrationCard() {
         </div>
         <div className="tl-cal__preview">
           <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}>
-            <rect x="0.5" y="0.5" width={W - 1} height={H - 1} rx="6" fill="#141729" stroke="rgba(255,255,255,0.12)" />
+            <rect x="0.5" y="0.5" width={W - 1} height={H - 1} rx="6" fill="#16110c" stroke="rgba(220,170,80,0.35)" />
             <rect x={(W - H * 1.5) / 2} y="0.5" width={H * 1.5} height={H - 1} fill="rgba(120,92,60,0.15)" />
             {Array.from({ length: 8 }, (_, i) => (
               <rect

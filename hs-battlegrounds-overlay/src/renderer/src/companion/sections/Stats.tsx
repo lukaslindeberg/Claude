@@ -178,7 +178,7 @@ function Form({ placements }: { placements: number[] }) {
       ))}
       <path d={avg.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')} fill="none" stroke="#f2c14e" strokeWidth="2" strokeLinejoin="round" opacity="0.85" />
       {placements.map((p, i) => (
-        <circle key={i} cx={x(i)} cy={y(p)} r="4" fill={placementColor(p)} stroke="#0d1020" strokeWidth="1.5">
+        <circle key={i} cx={x(i)} cy={y(p)} r="4" fill={placementColor(p)} stroke="#1a120a" strokeWidth="1.5">
           <title>{ordinal(p)}</title>
         </circle>
       ))}

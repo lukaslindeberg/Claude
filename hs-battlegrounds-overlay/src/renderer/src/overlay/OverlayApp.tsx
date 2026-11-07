@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { WidgetId } from '@shared/types';
 import { useApp } from '../store/appStore';
 import { useBattleSimRunner } from '../hooks/useBattleSim';
@@ -27,12 +27,30 @@ function useThemeVars() {
   }, [scale, opacity, vp]);
 }
 
+/**
+ * Hotkeys dismiss the post-match summary: toggling the overlay (settings.overlayEnabled)
+ * or any widget hotkey while it is showing. The summary must never be stuck on screen.
+ */
+function useHotkeyDismissPostMatch() {
+  const overlayEnabled = useApp((s) => s.settings.overlayEnabled);
+  const pulses = useApp((s) => s.togglePulse);
+  const prev = useRef({ overlayEnabled, pulses });
+  useEffect(() => {
+    const p = prev.current;
+    prev.current = { overlayEnabled, pulses };
+    if (p.overlayEnabled === overlayEnabled && p.pulses === pulses) return;
+    const { game, dismissedPostMatch, dismissPostMatch } = useApp.getState();
+    if (game?.phase === 'gameOver' && dismissedPostMatch !== game.gameId) dismissPostMatch(game.gameId);
+  }, [overlayEnabled, pulses]);
+}
+
 export default function OverlayApp() {
   const demo = useApp((s) => s.demo);
   const settings = useApp((s) => s.settings);
   const hidden = useApp((s) => s.hidden);
   useThemeVars();
   useBattleSimRunner();
+  useHotkeyDismissPostMatch();
 
   const on = (id: WidgetId) => settings.widgets[id] !== false && !hidden[id];
   return (

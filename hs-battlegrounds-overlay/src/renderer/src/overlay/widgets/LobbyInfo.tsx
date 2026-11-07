@@ -3,11 +3,13 @@ import { TribeChip } from '../../components/Bits';
 import { Tooltip } from '../../components/Tooltip';
 import { cleanCardText } from '../../lib/format';
 import { DragHandle, FloatingWidget } from '../Widget';
+import { effectiveScale } from '../layout';
 
 /** Small badge: mode, turn, lobby tribes and anomaly. */
 export function LobbyInfoWidget() {
   const game = useApp((s) => s.game);
   const db = useApp((s) => s.cardDb);
+  const settingsScale = useApp((s) => s.settings.scale);
   // Hidden during combat: the battle simulation owns the top of the screen then.
   if (!game || !game.active || game.phase === 'idle' || game.phase === 'gameOver' || game.phase === 'combat') return null;
   const anomaly = db.get(game.anomalyCardId);
@@ -16,11 +18,16 @@ export function LobbyInfoWidget() {
     <FloatingWidget
       id="lobbyInfo"
       // During the hero pick the top row belongs to the hero stat cards.
-      defaultPosition={(vp, size) => (game.phase === 'heroSelection' ? { left: 10, top: vp.height - size.height - 62 } : { left: 10, top: 52 })}
+      // Otherwise just under the tier bar (about 43px tall at scale 1).
+      defaultPosition={(vp, size) =>
+        game.phase === 'heroSelection'
+          ? { left: 10, top: vp.height - size.height - Math.round(18 + 48 * effectiveScale(settingsScale, vp)) }
+          : { left: 10, top: Math.round(15 + 43 * effectiveScale(settingsScale, vp)) }
+      }
       zIndex={20}
     >
       {(handle) => (
-        <div className="tl-panel tl-lobby">
+        <div className="tl-plaque tl-lobby">
           <DragHandle handle={handle} />
           <span className="tl-lobby__mode">{game.mode === 'duos' ? 'Duos' : 'Solo'}</span>
           <span className="tl-lobby__turn">{game.phase === 'heroSelection' ? 'Hero pick' : `Turn ${game.turn}`}</span>

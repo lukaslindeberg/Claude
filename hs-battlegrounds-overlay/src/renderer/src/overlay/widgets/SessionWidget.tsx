@@ -18,7 +18,7 @@ export function SessionWidget() {
   return (
     <FloatingWidget id="sessionStats" defaultPosition={(vp, size) => ({ left: 10, top: vp.height - size.height - 10 })} zIndex={10}>
       {(handle) => (
-        <div className="tl-panel tl-session">
+        <div className="tl-plaque tl-session">
           <DragHandle handle={handle} />
           <div className="tl-session__block">
             <span className="tl-session__value">{today.games}</span>

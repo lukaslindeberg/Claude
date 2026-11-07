@@ -4,8 +4,7 @@ import type { HeroOption } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { useViewport } from '../../hooks/useViewport';
 import { HeroPortrait } from '../../components/HeroPortrait';
-import { HeroTierBadge } from '../../components/Bits';
-import { ShieldIcon } from '../../components/Icons';
+import { HeroTierBadge, StatGem } from '../../components/Bits';
 import { compact, num, pct } from '../../lib/format';
 import { findHeroStat, summarize, tierFromAvg } from '../../lib/stats';
 import { heroPickCenters } from '../layout';
@@ -49,12 +48,12 @@ function HeroStatCard({ option, index }: { option: HeroOption; index: number }) 
   return (
     <div className="tl-panel tl-herocard" style={{ animationDelay: `${index * 60}ms` }}>
       <div className="tl-herocard__top">
-        <HeroPortrait cardId={option.cardId} name={name} size={50} />
+        <HeroPortrait cardId={option.cardId} name={name} size={54} shape="rounded" />
         <div className="tl-herocard__title">
           <span className={clsx('tl-herocard__name', (name.length > 16 || name.split(/\s+/).some((w) => w.length > 9)) && 'is-long')}>{name}</span>
           {armor ? (
             <span className="tl-herocard__sub">
-              <ShieldIcon size={10} /> {armor} armor
+              <StatGem kind="armor" value={armor} size={18} /> armor
             </span>
           ) : null}
         </div>
