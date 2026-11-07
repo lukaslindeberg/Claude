@@ -92,11 +92,13 @@ export function useBattleSimRunner() {
     setSim(base);
     const full = iterations || 4000;
     let finished = false;
+    let quick: BattleSimResult | undefined;
     // A quick first pass shows odds within ~0.1 s; the full run then refines them.
     if (full > QUICK_ITERATIONS * 2) {
       simulate(input, { iterations: QUICK_ITERATIONS, maxDurationMs: 150 })
-        .then((quick) => {
-          if (!finished && useApp.getState().sims[key]?.status === 'running') setSim({ ...base, result: quick });
+        .then((r) => {
+          quick = r;
+          if (!finished && useApp.getState().sims[key]?.status === 'running') setSim({ ...base, result: r });
         })
         .catch(() => undefined);
     }
@@ -108,7 +110,9 @@ export function useBattleSimRunner() {
       })
       .catch((err: Error) => {
         finished = true;
-        setSim({ ...base, status: 'error', error: err.message });
+        // Keep the quick estimate on screen (labelled) and saved rather than dropping it.
+        setSim({ ...base, status: 'error', error: err.message, result: quick });
+        if (quick) void bridge?.reportSimResult(turn, quick).catch(() => undefined);
       });
   }, [key, enabled, iterations]);
 }

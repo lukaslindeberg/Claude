@@ -8,17 +8,35 @@ import { Gem, OddsBar } from '../../components/Bits';
 import { CheckIcon, ChevronIcon, CrossIcon, SwordsIcon, WarningIcon } from '../../components/Icons';
 import { num, pct } from '../../lib/format';
 import { predictedOutcome } from '../../lib/stats';
+import { useViewport } from '../../hooks/useViewport';
 import { DragHandle, FloatingWidget, type HandleProps } from '../Widget';
-import { effectiveScale } from '../layout';
+import { battleSimPlacement, effectiveScale } from '../layout';
 
-const FOLD_KEY = 'tl-battlesim-folded';
+/** Fold choice per view (session only). Unset = automatic (folded only when it doesn't fit). */
+const FOLD_KEYS = { combat: 'tl-battlesim-folded-combat', last: 'tl-battlesim-folded' } as const;
 
-function readFolded(): boolean {
+function readFold(view: 'combat' | 'last'): boolean | undefined {
   try {
-    return sessionStorage.getItem(FOLD_KEY) === '1';
+    const v = sessionStorage.getItem(FOLD_KEYS[view]);
+    return v === '1' ? true : v === '0' ? false : undefined;
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+/** The user's fold choice for this view, falling back to `auto`. */
+function useFold(view: 'combat' | 'last', auto: boolean): [boolean, (v: boolean) => void] {
+  const [choice, setChoice] = useState<boolean | undefined>(() => readFold(view));
+  useEffect(() => setChoice(readFold(view)), [view]);
+  const set = (v: boolean) => {
+    setChoice(v);
+    try {
+      sessionStorage.setItem(FOLD_KEYS[view], v ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  };
+  return [choice ?? auto, set];
 }
 
 /**
@@ -37,20 +55,32 @@ function useBattleView(): 'combat' | 'last' | null {
 export function BattleSimWidget() {
   const view = useBattleView();
   const settingsScale = useApp((s) => s.settings.scale);
+  const saved = useApp((s) => !!s.settings.positions?.battleSim);
+  const tierBar = useApp((s) => s.settings.widgets.tierList !== false && !s.hidden.tierList && !s.settings.positions?.tierList);
+  const oppPanel = useApp((s) => s.settings.widgets.opponentsPanel !== false && !s.hidden.opponentsPanel);
+  const vp = useViewport();
+  const scale = effectiveScale(settingsScale, vp);
+  const place = battleSimPlacement(view ?? 'combat', vp, scale, { tierBar, oppPanel });
+  // A plaque the user placed keeps the overlay scale and stays unfolded unless folded by hand.
+  const autoFold = !saved && place.fold;
+  const [folded, setFolded] = useFold(view ?? 'combat', autoFold);
   if (!view) return null;
+  const zoom = saved ? scale : folded ? place.foldedScale : place.scale;
   return (
     <FloatingWidget
       id="battleSim"
-      defaultPosition={(vp, size) =>
-        view === 'combat'
-          ? // Top centre, just left of the opponent's hero portrait so it never covers it.
-            { left: vp.width / 2 - size.width - vp.height * 0.085, top: Math.round(vp.height * 0.012) }
-          : // Shop: Bob's tier-up / refresh / freeze buttons own the top centre, so sit in the
-            // free top-right corner, left of the leaderboard panel (302px wide at scale 1).
-            { left: vp.width - size.width - (302 * effectiveScale(settingsScale, vp) + 22), top: Math.round(vp.height * 0.012) }
-      }
+      scale={zoom === scale ? undefined : zoom}
+      defaultPosition={(_vp, size) => ({ left: place.right - size.width, top: place.top })}
     >
-      {(handle) => (view === 'combat' ? <BattleSimPanel handle={handle} /> : <LastBattle handle={handle} />)}
+      {(handle) =>
+        folded ? (
+          <FoldedBattle handle={handle} view={view} onUnfold={() => setFolded(false)} />
+        ) : view === 'combat' ? (
+          <BattleSimPanel handle={handle} onFold={() => setFolded(true)} />
+        ) : (
+          <LastBattle handle={handle} onFold={() => setFolded(true)} />
+        )
+      }
     </FloatingWidget>
   );
 }
@@ -59,6 +89,8 @@ interface BattleInfo {
   battle: BattleState;
   result?: BattleSimResult;
   status: 'running' | 'done' | 'error' | 'waiting';
+  /** The result is the quick first pass (the full run is still going, or failed). */
+  preliminary: boolean;
   error?: string;
   oppHero?: string;
   oppName?: string;
@@ -81,6 +113,7 @@ function useBattleInfo(game: BgGameState): BattleInfo {
     battle,
     result,
     status,
+    preliminary: !!result && !!run && run.status !== 'done' && !battle.result,
     error: run?.error ?? battle.error,
     oppHero,
     oppName: opp?.heroName ?? (oppHero ? db.name(oppHero) : undefined),
@@ -88,10 +121,23 @@ function useBattleInfo(game: BgGameState): BattleInfo {
   };
 }
 
-function BattleSimPanel({ handle }: { handle: HandleProps }) {
+function statusText({ status, result, preliminary, error }: BattleInfo): { text: string; title?: string } {
+  if (result && preliminary) {
+    return status === 'error'
+      ? { text: `Quick estimate · ${result.iterations.toLocaleString()} sims`, title: `The full simulation failed: ${error ?? 'unknown error'}` }
+      : { text: `Preliminary · ${result.iterations.toLocaleString()} sims`, title: 'Quick first pass; the full simulation is still running' };
+  }
+  if (status === 'running') return { text: 'Simulating…' };
+  if (status === 'done' && result) return { text: `${result.iterations.toLocaleString()} sims · ${(result.durationMs / 1000).toFixed(1)}s` };
+  if (status === 'error') return { text: 'Simulator error', title: error };
+  return { text: 'Waiting for boards' };
+}
+
+function BattleSimPanel({ handle, onFold }: { handle: HandleProps; onFold: () => void }) {
   const game = useApp((s) => s.game)!;
   const db = useApp((s) => s.cardDb);
-  const { battle, result, status, error, oppHero, oppName, matched } = useBattleInfo(game);
+  const info = useBattleInfo(game);
+  const { battle, result, status, preliminary, error, oppHero, oppName, matched } = info;
   // Names come from card data; cards missing from it (older patches) fall back to the name in the log.
   const logNames = new Map<string, string>();
   for (const side of [battle.input?.player, battle.input?.opponent]) {
@@ -101,9 +147,10 @@ function BattleSimPanel({ handle }: { handle: HandleProps }) {
     ? [...new Set(result.unsupported.map((id) => db.name(db.normalOf(id), logNames.get(id))))]
     : [];
   const actual = battle.actual;
+  const st = statusText(info);
 
   return (
-    <div className={clsx('tl-panel tl-sim', status === 'running' && 'is-running')}>
+    <div className={clsx('tl-panel tl-sim', status === 'running' && 'is-running', preliminary && 'is-prelim')}>
       <div className="tl-sim__head">
         <DragHandle handle={handle} />
         <span className="tl-sim__crest">
@@ -116,69 +163,78 @@ function BattleSimPanel({ handle }: { handle: HandleProps }) {
           <span className="tl-sim__vs">
             <span className="tl-sim__vsword">vs</span>
             <HeroPortrait cardId={oppHero} size={24} />
-            <span className="tl-sim__opp">{oppName}</span>
+            <span className="tl-sim__opp" title={oppName}>
+              {oppName}
+            </span>
           </span>
         ) : null}
-        <span className="tl-sim__status">
-          {status === 'running' ? 'Simulating…' : status === 'done' && result ? `${result.iterations.toLocaleString()} sims · ${(result.durationMs / 1000).toFixed(1)}s` : status === 'error' ? 'Simulator error' : 'Waiting for boards'}
+        <span className="tl-sim__status" title={st.title}>
+          {preliminary ? <i className="tl-sim__pulse" /> : null}
+          {st.text}
         </span>
+        <button className="tl-sim__fold" onClick={onFold} title="Fold to a small badge">
+          <ChevronIcon size={12} dir="up" />
+        </button>
       </div>
 
-      {result ? (
-        <>
-          <div className="tl-sim__cols">
-            <div className="tl-sim__col is-win">
-              <span className="tl-sim__gemrow">
-                <Gem tone="win" size={13} />
-                <span className="tl-sim__big">{pct(result.win)}</span>
-              </span>
-              <span className="tl-sim__label">Win</span>
-              <span className="tl-sim__sub">
-                dmg <b>{num(result.avgDamageDealt)}</b>
-                {result.lethalWin > 0 ? (
-                  <>
-                    {' '}
-                    · lethal <b>{pct(result.lethalWin)}</b>
-                  </>
-                ) : null}
-              </span>
+      {/* The odds block keeps one height through waiting → preliminary → full result. */}
+      <div className="tl-sim__odds">
+        {result ? (
+          <>
+            <div className="tl-sim__cols">
+              <div className="tl-sim__col is-win">
+                <span className="tl-sim__gemrow">
+                  <Gem tone="win" size={13} />
+                  <span className="tl-sim__big">{pct(result.win)}</span>
+                </span>
+                <span className="tl-sim__label">Win</span>
+                <span className="tl-sim__sub">
+                  dmg <b>{num(result.avgDamageDealt)}</b>
+                  {result.lethalWin > 0 ? (
+                    <>
+                      {' '}
+                      · lethal <b>{pct(result.lethalWin)}</b>
+                    </>
+                  ) : null}
+                </span>
+              </div>
+              <div className="tl-sim__col is-tie">
+                <span className="tl-sim__gemrow">
+                  <Gem tone="tie" size={11} />
+                  <span className="tl-sim__big">{pct(result.tie)}</span>
+                </span>
+                <span className="tl-sim__label">Tie</span>
+              </div>
+              <div className="tl-sim__col is-loss">
+                <span className="tl-sim__gemrow">
+                  <Gem tone="loss" size={13} />
+                  <span className="tl-sim__big">{pct(result.loss)}</span>
+                </span>
+                <span className="tl-sim__label">Loss</span>
+                <span className="tl-sim__sub">
+                  dmg <b>{num(result.avgDamageTaken)}</b>
+                  {result.lethalLoss > 0 ? (
+                    <>
+                      {' '}
+                      · <span className="tl-sim__lethal">lethal {pct(result.lethalLoss)}</span>
+                    </>
+                  ) : null}
+                </span>
+              </div>
             </div>
-            <div className="tl-sim__col is-tie">
-              <span className="tl-sim__gemrow">
-                <Gem tone="tie" size={11} />
-                <span className="tl-sim__big">{pct(result.tie)}</span>
-              </span>
-              <span className="tl-sim__label">Tie</span>
-            </div>
-            <div className="tl-sim__col is-loss">
-              <span className="tl-sim__gemrow">
-                <Gem tone="loss" size={13} />
-                <span className="tl-sim__big">{pct(result.loss)}</span>
-              </span>
-              <span className="tl-sim__label">Loss</span>
-              <span className="tl-sim__sub">
-                dmg <b>{num(result.avgDamageTaken)}</b>
-                {result.lethalLoss > 0 ? (
-                  <>
-                    {' '}
-                    · <span className="tl-sim__lethal">lethal {pct(result.lethalLoss)}</span>
-                  </>
-                ) : null}
-              </span>
-            </div>
+            <OddsBar result={result} height={12} labels={false} />
+          </>
+        ) : status === 'error' ? (
+          <div className="tl-sim__error">
+            <WarningIcon size={13} /> {error ?? 'The simulator could not run this combat.'}
           </div>
-          <OddsBar result={result} height={12} labels={false} />
-        </>
-      ) : status === 'error' ? (
-        <div className="tl-sim__error">
-          <WarningIcon size={13} /> {error ?? 'The simulator could not run this combat.'}
-        </div>
-      ) : (
-        <div className="tl-sim__pending">
-          <span className="tl-sim__shimmer" />
-          <span className="tl-muted">{status === 'running' ? 'Running thousands of combats…' : 'Waiting for both boards…'}</span>
-        </div>
-      )}
+        ) : (
+          <div className="tl-sim__pending">
+            <span className="tl-sim__shimmer" />
+            <span className="tl-muted">{status === 'running' ? 'Running thousands of combats…' : 'Waiting for both boards…'}</span>
+          </div>
+        )}
+      </div>
 
       {unsupported.length ? (
         <div className="tl-sim__warn" title={unsupported.join(', ')}>
@@ -190,7 +246,8 @@ function BattleSimPanel({ handle }: { handle: HandleProps }) {
         </div>
       ) : null}
 
-      {actual ? <ActualLine actual={actual} matched={matched} /> : null}
+      {/* Reserved row: the result replaces the placeholder in place (no jump). */}
+      {actual ? <ActualLine actual={actual} matched={matched} /> : <div className="tl-sim__actual is-pending">Result after the fight</div>}
     </div>
   );
 }
@@ -213,51 +270,50 @@ function ActualLine({ actual, matched, compact }: { actual: NonNullable<BattleSt
   );
 }
 
-/** Recruit phase: the previous combat, compact, foldable to a small badge. */
-function LastBattle({ handle }: { handle: HandleProps }) {
+/** Folded badge (either view): turn, win odds and the actual result. */
+function FoldedBattle({ handle, view, onUnfold }: { handle: HandleProps; view: 'combat' | 'last'; onUnfold: () => void }) {
   const game = useApp((s) => s.game)!;
-  const { battle, result, oppHero, oppName, matched } = useBattleInfo(game);
-  const [folded, setFolded] = useState(readFolded);
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(FOLD_KEY, folded ? '1' : '0');
-    } catch {
-      /* ignore */
-    }
-  }, [folded]);
+  const { battle, result, preliminary, matched } = useBattleInfo(game);
   const actual = battle.actual;
   const actualTone = actual ? (actual.result === 'won' ? 'win' : actual.result === 'lost' ? 'loss' : 'tie') : undefined;
-
-  if (folded) {
-    return (
-      <div className="tl-panel tl-sim is-folded" title={`Last battle · turn ${battle.turn}`}>
-        <DragHandle handle={handle} />
-        <span className="tl-sim__crest is-small">
-          <SwordsIcon size={11} />
+  const turn = battle.turn || game.turn;
+  return (
+    <div className={clsx('tl-panel tl-sim is-folded', preliminary && 'is-prelim')} title={`${view === 'combat' ? 'Battle' : 'Last battle'} · turn ${turn}`}>
+      <DragHandle handle={handle} />
+      <span className="tl-sim__crest is-small">
+        <SwordsIcon size={11} />
+      </span>
+      <span className="tl-sim__turn">T{turn}</span>
+      {result ? (
+        <span className="tl-sim__foldodds" title={preliminary ? 'Preliminary odds' : undefined}>
+          <Gem tone="win" size={9} />
+          {pct(result.win, 0)}
         </span>
-        <span className="tl-sim__turn">T{battle.turn}</span>
-        {result ? (
-          <span className="tl-sim__foldodds">
-            <Gem tone="win" size={9} />
-            {pct(result.win, 0)}
-          </span>
-        ) : null}
-        {actual ? (
-          <span className={clsx('tl-sim__foldres', `is-${actual.result}`)}>
-            <Gem tone={actualTone!} size={9} />
-            {actual.result === 'won' ? 'W' : actual.result === 'lost' ? 'L' : 'T'}
-            {matched !== undefined ? matched ? <CheckIcon size={11} className="tl-up" /> : <CrossIcon size={10} className="tl-down" /> : null}
-          </span>
-        ) : null}
-        <button className="tl-sim__fold" onClick={() => setFolded(false)} title="Show the last battle">
-          <ChevronIcon size={12} dir="down" />
-        </button>
-      </div>
-    );
-  }
+      ) : view === 'combat' ? (
+        <span className="tl-sim__foldodds tl-muted">…</span>
+      ) : null}
+      {actual ? (
+        <span className={clsx('tl-sim__foldres', `is-${actual.result}`)}>
+          <Gem tone={actualTone!} size={9} />
+          {actual.result === 'won' ? 'W' : actual.result === 'lost' ? 'L' : 'T'}
+          {matched !== undefined ? matched ? <CheckIcon size={11} className="tl-up" /> : <CrossIcon size={10} className="tl-down" /> : null}
+        </span>
+      ) : null}
+      <button className="tl-sim__fold" onClick={onUnfold} title={view === 'combat' ? 'Show the battle odds' : 'Show the last battle'}>
+        <ChevronIcon size={12} dir="down" />
+      </button>
+    </div>
+  );
+}
+
+/** Recruit phase: the previous combat, compact, foldable to a small badge. */
+function LastBattle({ handle, onFold }: { handle: HandleProps; onFold: () => void }) {
+  const game = useApp((s) => s.game)!;
+  const { battle, result, preliminary, oppHero, oppName, matched } = useBattleInfo(game);
+  const actual = battle.actual;
 
   return (
-    <div className="tl-panel tl-sim is-compact">
+    <div className={clsx('tl-panel tl-sim is-compact', preliminary && 'is-prelim')}>
       <div className="tl-sim__head">
         <DragHandle handle={handle} />
         <span className="tl-sim__crest is-small">
@@ -270,10 +326,12 @@ function LastBattle({ handle }: { handle: HandleProps }) {
           <span className="tl-sim__vs">
             <span className="tl-sim__vsword">vs</span>
             <HeroPortrait cardId={oppHero} size={20} />
-            <span className="tl-sim__opp">{oppName}</span>
+            <span className="tl-sim__opp" title={oppName}>
+              {oppName}
+            </span>
           </span>
         ) : null}
-        <button className="tl-sim__fold" onClick={() => setFolded(true)} title="Fold to a small badge">
+        <button className="tl-sim__fold" onClick={onFold} title="Fold to a small badge">
           <ChevronIcon size={12} dir="up" />
         </button>
       </div>

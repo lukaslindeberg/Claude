@@ -47,6 +47,13 @@ class FakeTracker implements TrackerLike {
     this.pendingOnFlush = [];
     return e;
   }
+  expireOnTick = false;
+  tick(): boolean {
+    if (!this.expireOnTick) return false;
+    this.expireOnTick = false;
+    this.version++;
+    return true;
+  }
 }
 
 describe('GameFeed', () => {
@@ -97,6 +104,23 @@ describe('GameFeed', () => {
     expect(events).toEqual([[end]]);
     expect(tracker.resets).toEqual([{ keepUnfinishedGame: true }]);
     expect(states).toHaveLength(1); // published right away
+    feed.dispose();
+  });
+
+  it('tick publishes state that changed with time while the log is silent', () => {
+    const tracker = new FakeTracker();
+    const states: number[] = [];
+    const feed = new GameFeed({ label: 'test', tracker, onState: (s) => states.push(s.turn), onEvents: () => undefined, logTransitions: false });
+    feed.feed(['a']);
+    expect(states).toEqual([1]);
+    vi.advanceTimersByTime(1000);
+    feed.tick();
+    vi.advanceTimersByTime(200);
+    expect(states).toEqual([1]); // nothing changed
+    tracker.expireOnTick = true;
+    feed.tick();
+    vi.advanceTimersByTime(200);
+    expect(states).toEqual([1, 2]);
     feed.dispose();
   });
 });

@@ -338,7 +338,7 @@ export class BgTracker {
         if (pk.reset) {
           // New game or reconnect: values printed before belong to the previous connection.
           g.playback = freshPlayback();
-          this.bump();
+          if (g.isBg) this.bump();
           return;
         }
         const pb = g.playback;
@@ -346,7 +346,7 @@ export class BgTracker {
         if (pk.tag === T.TURN) pb.turn = pk.value;
         else if (pk.tag === T.BOARD_VISUAL_STATE) pb.visual = pk.value;
         else if (pk.tag === T.STATE && pk.value === GAME_STATE_COMPLETE) pb.complete = true;
-        this.bump();
+        if (g.isBg) this.bump();
         return;
       }
       case 'BlockEnd': {
@@ -612,6 +612,7 @@ export class BgTracker {
         this.finishGame(g);
         return;
       }
+      if (tag === T.TURN && !g.turnTs.has(value)) g.turnTs.set(value, this.logTs);
       // After our game ended the server keeps simulating (victory laps, ghost combats): ignore.
       if (g.ended) return;
       if (tag === T.TURN) this.onTurn(g, value);
@@ -665,7 +666,6 @@ export class BgTracker {
   }
 
   private onTurn(g: GameCtx, value: number): void {
-    if (!g.turnTs.has(value)) g.turnTs.set(value, this.logTs);
     const turn = Math.ceil(value / 2);
     if (value % 2 === 1) {
       if (g.combat && !g.combat.ended) this.endCombat(g);

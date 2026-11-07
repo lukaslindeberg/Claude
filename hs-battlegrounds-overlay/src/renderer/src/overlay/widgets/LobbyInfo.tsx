@@ -2,32 +2,36 @@ import { useApp } from '../../store/appStore';
 import { TribeChip } from '../../components/Bits';
 import { Tooltip } from '../../components/Tooltip';
 import { cleanCardText } from '../../lib/format';
+import { useViewport } from '../../hooks/useViewport';
 import { DragHandle, FloatingWidget } from '../Widget';
-import { effectiveScale } from '../layout';
+import { bottomLeftMaxWidth, effectiveScale } from '../layout';
+import { SESSION_HEIGHT } from './SessionWidget';
 
-/** Small badge: mode, turn, lobby tribes and anomaly. */
+/**
+ * Small badge: mode, turn, lobby tribes and anomaly. Docked bottom-left, just above the
+ * session widget, in every phase (the top of the screen belongs to the tier bar and the
+ * battle plaque, the bottom centre to the hand), so it never jumps between phases.
+ */
 export function LobbyInfoWidget() {
   const game = useApp((s) => s.game);
   const db = useApp((s) => s.cardDb);
   const settingsScale = useApp((s) => s.settings.scale);
-  // Hidden during combat: the battle simulation owns the top of the screen then.
-  if (!game || !game.active || game.phase === 'idle' || game.phase === 'gameOver' || game.phase === 'combat') return null;
+  const sessionShown = useApp(
+    (s) => s.history.length > 0 && s.settings.widgets.sessionStats !== false && !s.hidden.sessionStats,
+  );
+  const vp = useViewport();
+  if (!game || !game.active || game.phase === 'idle' || game.phase === 'gameOver') return null;
   const anomaly = db.get(game.anomalyCardId);
   const inferred = game.tribesSource === 'inferred';
+  const scale = effectiveScale(settingsScale, vp);
   return (
     <FloatingWidget
       id="lobbyInfo"
-      // During the hero pick the top row belongs to the hero stat cards.
-      // Otherwise just under the tier bar (about 43px tall at scale 1).
-      defaultPosition={(vp, size) =>
-        game.phase === 'heroSelection'
-          ? { left: 10, top: vp.height - size.height - Math.round(18 + 48 * effectiveScale(settingsScale, vp)) }
-          : { left: 10, top: Math.round(15 + 43 * effectiveScale(settingsScale, vp)) }
-      }
+      defaultPosition={(vp, size) => ({ left: 10, top: vp.height - size.height - 10 - (sessionShown ? Math.round(SESSION_HEIGHT * scale) + 6 : 0) })}
       zIndex={20}
     >
       {(handle) => (
-        <div className="tl-plaque tl-lobby">
+        <div className="tl-plaque tl-lobby" style={{ maxWidth: `calc(${Math.round(bottomLeftMaxWidth(vp))}px / var(--tl-scale))` }}>
           <DragHandle handle={handle} />
           <span className="tl-lobby__mode">{game.mode === 'duos' ? 'Duos' : 'Solo'}</span>
           <span className="tl-lobby__turn">{game.phase === 'heroSelection' ? 'Hero pick' : `Turn ${game.turn}`}</span>
@@ -38,7 +42,7 @@ export function LobbyInfoWidget() {
                   ? 'Tribes inferred from minions seen so far (the log did not list them).'
                   : 'Minion types in this lobby.'
               }
-              placement="bottom"
+              placement="top"
             >
               <span className={inferred ? 'tl-lobby__tribes is-inferred' : 'tl-lobby__tribes'}>
                 {game.availableTribes.map((t) => (
@@ -52,7 +56,7 @@ export function LobbyInfoWidget() {
           )}
           {anomaly ? (
             <Tooltip
-              placement="bottom"
+              placement="top"
               content={
                 <div className="tl-anomaly-tip">
                   <div className="tl-cardtip__name">{anomaly.name}</div>

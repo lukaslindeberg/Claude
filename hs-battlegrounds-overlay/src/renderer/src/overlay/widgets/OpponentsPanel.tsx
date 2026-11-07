@@ -9,14 +9,18 @@ import { MinionToken } from '../../components/MinionToken';
 import { HealthBar, ResultChip, Sparkline, StatGem, TierTimeline, TriplesBadge } from '../../components/Bits';
 import { ChevronIcon, KeywordIcons } from '../../components/Icons';
 import { ordinal } from '../../lib/format';
+import { bottomReserve } from '../layout';
 
 const COLLAPSE_KEY = 'tl-opponents-collapsed';
+/** Duos keeps its own choice: the expanded panel would cover the teammate portal. */
+const COLLAPSE_KEY_DUOS = 'tl-opponents-collapsed-duos';
 
-function readCollapsed(): boolean {
+function readCollapsed(duos: boolean): boolean {
   try {
-    return localStorage.getItem(COLLAPSE_KEY) === '1';
+    const v = localStorage.getItem(duos ? COLLAPSE_KEY_DUOS : COLLAPSE_KEY);
+    return v === null ? duos : v === '1';
   } catch {
-    return false;
+    return duos;
   }
 }
 
@@ -38,21 +42,24 @@ export function OpponentsPanel() {
   const game = useApp((s) => s.game);
   const pulse = useApp((s) => s.togglePulse.opponentsPanel ?? 0);
   const vp = useViewport();
-  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const duos = game?.mode === 'duos';
+  const [collapsed, setCollapsedState] = useState(() => readCollapsed(duos));
   const [expanded, setExpanded] = useState<number | null>(null);
   const inter = useInteractive();
   const firstPulse = useRef(pulse);
-
-  useEffect(() => {
-    if (pulse !== firstPulse.current) setCollapsed((c) => !c);
-  }, [pulse]);
-  useEffect(() => {
+  const setCollapsed = (next: boolean) => {
+    setCollapsedState(next);
     try {
-      localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+      localStorage.setItem(duos ? COLLAPSE_KEY_DUOS : COLLAPSE_KEY, next ? '1' : '0');
     } catch {
       /* ignore */
     }
-  }, [collapsed]);
+  };
+
+  useEffect(() => setCollapsedState(readCollapsed(duos)), [duos]);
+  useEffect(() => {
+    if (pulse !== firstPulse.current) setCollapsed(!collapsed);
+  }, [pulse]);
 
   const players = useMemo(
     () => [...(game?.players ?? [])].sort((a, b) => a.leaderboardPlace - b.leaderboardPlace || a.playerId - b.playerId),
@@ -61,11 +68,13 @@ export function OpponentsPanel() {
   if (!game || (game.phase !== 'recruit' && game.phase !== 'combat') || players.length === 0) return null;
   const alive = players.filter((p) => !p.dead).length;
   const top = Math.round(vp.height * 0.07);
+  // Ends above the game's menu gear (bottom-right corner).
+  const maxHeight = vp.height - top - bottomReserve(vp);
 
   return (
     <div className={clsx('tl-widget tl-opp', collapsed && 'is-collapsed')} style={{ top, right: 6 }} {...inter} data-widget="opponentsPanel">
       <div className="tl-widget__scale">
-        <div className="tl-panel tl-opp__panel" style={{ maxHeight: `calc(${vp.height - top - 16}px / var(--tl-scale))` }}>
+        <div className="tl-panel tl-opp__panel" style={{ maxHeight: `calc(${maxHeight}px / var(--tl-scale))` }}>
           <div className="tl-opp__header">
             {collapsed ? null : (
               <>
@@ -126,6 +135,7 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
   const seen = seenAgo(game, p);
   // Your own row and eliminated players stay one line unless expanded.
   const compactRow = p.isLocal || p.dead;
+  const label = p.isLocal ? 'You' : p.heroName || 'Unknown hero';
   return (
     <div
       className={clsx('tl-opp__row', p.dead && 'is-dead', p.isNextOpponent && !fighting && 'is-next', fighting && 'is-fighting', p.isLocal && 'is-local', expanded && 'is-expanded')}
@@ -147,7 +157,10 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
         />
         <div className="tl-opp__info">
           <div className="tl-opp__line">
-            <span className="tl-opp__hero">{p.isLocal ? 'You' : p.heroName}</span>
+            <span className="tl-opp__hero" title={p.isLocal ? undefined : label}>
+              {label}
+            </span>
+            {p.isTeammate ? <span className="tl-tag is-mate">Mate</span> : null}
             {p.isNextOpponent && !fighting ? <span className="tl-tag is-next">Next</span> : null}
             {fighting ? <span className="tl-tag is-fighting">Fighting</span> : null}
             {!p.isNextOpponent && !fighting && last ? <ResultChip result={last.result} damage={last.damage} size="sm" /> : null}
