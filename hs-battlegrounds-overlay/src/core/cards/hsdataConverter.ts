@@ -162,6 +162,36 @@ export function cleanCardText(raw: string | undefined, tags?: Map<string, number
   return t || undefined;
 }
 
+const TRIBE_WORDS: [RegExp, Tribe][] = [
+  [/\bBeasts?\b/, 'BEAST'],
+  [/\bDemons?\b/, 'DEMON'],
+  [/\bDragons?\b/, 'DRAGON'],
+  [/\bElementals?\b/, 'ELEMENTAL'],
+  [/\bMech(?:s|anicals?)?\b/, 'MECHANICAL'],
+  [/\bMurlocs?\b/, 'MURLOC'],
+  [/\bNagas?\b/, 'NAGA'],
+  [/\bPirates?\b/, 'PIRATE'],
+  [/\bQuilboars?\b/, 'QUILBOAR'],
+  [/\bUndeads?\b/, 'UNDEAD'],
+  [/\bAberrations?\b/, 'ABERRATION'],
+];
+/** LOBBY_TRIBES order (not imported: scripts/build-card-data.ts runs this file without path aliases). */
+const TRIBE_ORDER = TRIBE_WORDS.map(([, t]) => t).sort();
+/** Card types whose text is scanned for `relatedTribes`. */
+const RELATED_TRIBE_TYPES = new Set<BgCardType>(['HERO', 'HERO_POWER', 'TRINKET', 'REWARD', 'QUEST', 'SPELL', 'MINION']);
+
+/**
+ * Tribes a card's text names ("Beasts", "a Mech", "Undead"...), in LOBBY_TRIBES order.
+ * Tribe-agnostic wording ("of any type", "of each type", "all minion types") adds nothing.
+ */
+export function relatedTribesFromText(text: string | undefined): Tribe[] {
+  if (!text) return [];
+  const t = text.replace(/<[^>]*>/g, ' ');
+  const found = new Set<Tribe>();
+  for (const [re, tribe] of TRIBE_WORDS) if (re.test(t)) found.add(tribe);
+  return TRIBE_ORDER.filter((x) => found.has(x));
+}
+
 export function parseRaceTagMap(xml: string): Map<number, string> {
   const out = new Map<number, string>();
   const re = /<Race race="(\w+)" tag="(\d+)"\s*\/>/g;
@@ -316,6 +346,19 @@ export function convertHsData(baconXml: string, raceTagMapXml: string, opts: Con
 
   // Golden versions inherit pool status / tier from their base for convenience.
   const byId = new Map(cards.map((c) => [c.id, c]));
+  for (const c of cards) {
+    if (!RELATED_TRIBE_TYPES.has(c.type)) continue;
+    const rel = relatedTribesFromText(c.text);
+    if (rel.length) c.relatedTribes = rel;
+  }
+  // A hero needs what its hero power needs.
+  for (const c of cards) {
+    if (c.type !== 'HERO' || !c.heroPowerId) continue;
+    const hp = byId.get(c.heroPowerId)?.relatedTribes;
+    if (!hp?.length) continue;
+    const all = new Set([...(c.relatedTribes ?? []), ...hp]);
+    c.relatedTribes = TRIBE_ORDER.filter((x) => all.has(x));
+  }
   for (const c of cards) {
     if (c.normalId) {
       const base = byId.get(c.normalId);

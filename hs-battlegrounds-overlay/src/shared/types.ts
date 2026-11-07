@@ -620,7 +620,8 @@ export type WidgetId =
   | 'tierList'
   | 'sessionStats'
   | 'lobbyInfo'
-  | 'postMatch';
+  | 'postMatch'
+  | 'trinketPick';
 
 export interface WidgetPosition {
   /** Fraction of the game window (0..1) for the widget's top-left corner. */
@@ -676,6 +677,7 @@ export const DEFAULT_SETTINGS: Settings = {
     sessionStats: true,
     lobbyInfo: true,
     postMatch: true,
+    trinketPick: true,
   },
   positions: {},
   scale: 1,

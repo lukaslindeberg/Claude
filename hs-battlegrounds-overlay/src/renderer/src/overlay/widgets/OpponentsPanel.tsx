@@ -9,6 +9,10 @@ import { MinionToken } from '../../components/MinionToken';
 import { HealthBar, ResultChip, Sparkline, StatGem, TierTimeline, TriplesBadge } from '../../components/Bits';
 import { ChevronIcon, KeywordIcons } from '../../components/Icons';
 import { ordinal } from '../../lib/format';
+import { Tooltip } from '../../components/Tooltip';
+import { CardTooltip } from '../../components/CardTooltip';
+import { TipTooltip } from '../../components/Synergy';
+import { tipFor, tribeRelevance, useLobbyTribes, wantedTribes } from '../../lib/synergy';
 import { bottomReserve } from '../layout';
 
 const COLLAPSE_KEY = 'tl-opponents-collapsed';
@@ -136,6 +140,20 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
   // Your own row and eliminated players stay one line unless expanded.
   const compactRow = p.isLocal || p.dead;
   const label = p.isLocal ? 'You' : p.heroName || 'Unknown hero';
+  const db = useApp((s) => s.cardDb);
+  const lobby = useLobbyTribes();
+  const tip = tipFor(db, p.heroCardId);
+  const portrait = (
+    <HeroPortrait
+      cardId={p.heroCardId}
+      name={p.heroName}
+      size={36}
+      dead={p.dead}
+      shape="rounded"
+      tier={p.tavernTier}
+      glow={fighting ? 'fighting' : p.isNextOpponent ? 'next' : p.isLocal || p.isTeammate ? 'local' : undefined}
+    />
+  );
   return (
     <div
       className={clsx('tl-opp__row', p.dead && 'is-dead', p.isNextOpponent && !fighting && 'is-next', fighting && 'is-fighting', p.isLocal && 'is-local', expanded && 'is-expanded')}
@@ -146,15 +164,18 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
     >
       <div className="tl-opp__main">
         <span className={clsx('tl-opp__place', p.leaderboardPlace === 1 && 'is-first')}>{p.leaderboardPlace}</span>
-        <HeroPortrait
-          cardId={p.heroCardId}
-          name={p.heroName}
-          size={36}
-          dead={p.dead}
-          shape="rounded"
-          tier={p.tavernTier}
-          glow={fighting ? 'fighting' : p.isNextOpponent ? 'next' : p.isLocal || p.isTeammate ? 'local' : undefined}
-        />
+        {tip ? (
+          <Tooltip
+            placement="left"
+            className="tl-opp__tipanchor"
+            content={() => <TipTooltip name={p.heroName || db.name(p.heroCardId)} tip={tip} rel={tribeRelevance(wantedTribes(db.get(p.heroCardId), tip), lobby.tribes)} />}
+          >
+            {portrait}
+            <span className="tl-tipmark" aria-hidden />
+          </Tooltip>
+        ) : (
+          portrait
+        )}
         <div className="tl-opp__info">
           <div className="tl-opp__line">
             <span className="tl-opp__hero" title={p.isLocal ? undefined : label}>
@@ -199,6 +220,7 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
 }
 
 function OpponentDetail({ p, board }: { game: BgGameState; p: PlayerState; board?: MinionSnapshot[] }) {
+  const db = useApp((s) => s.cardDb);
   return (
     <div className="tl-opp__detail" onClick={(e) => e.stopPropagation()}>
       {board && board.length ? (
@@ -213,6 +235,18 @@ function OpponentDetail({ p, board }: { game: BgGameState; p: PlayerState; board
               </span>
             </div>
           ))}
+        </div>
+      ) : null}
+      {p.trinkets?.length ? (
+        <div className="tl-opp__section">
+          <span className="tl-opp__label">Trinkets</span>
+          <span className="tl-opp__trinkets">
+            {p.trinkets.map((id) => (
+              <Tooltip key={id} placement="left" tipClassName="tl-tooltip--card" content={() => <CardTooltip cardId={id} />}>
+                <span className="tl-opp__trinket">{db.name(id)}</span>
+              </Tooltip>
+            ))}
+          </span>
         </div>
       ) : null}
       <div className="tl-opp__section">

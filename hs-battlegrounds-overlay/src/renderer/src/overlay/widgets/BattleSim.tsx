@@ -42,12 +42,15 @@ function useFold(view: 'combat' | 'last', auto: boolean): [boolean, (v: boolean)
 /**
  * Full plaque during combat. Through the following recruit phase it stays as a
  * compact "Last battle" view (odds, prediction and the actual result) until the
- * next combat replaces it; hero selection and game over hide it.
+ * next combat replaces it; hero selection, trinket offers and game over hide it.
  */
 function useBattleView(): 'combat' | 'last' | null {
   const phase = useApp((s) => s.game?.phase);
   const battle = useApp((s) => s.game?.battle);
+  // A trinket offer takes the top of the screen (the trinket pick cards sit there).
+  const trinketPick = useApp((s) => !!s.game?.trinketOptions?.length && s.settings.widgets.trinketPick !== false && !s.hidden.trinketPick);
   if (phase === 'combat') return 'combat';
+  if (phase === 'recruit' && trinketPick) return null;
   if (phase === 'recruit' && battle && battle.turn > 0 && (battle.input || battle.result || battle.actual)) return 'last';
   return null;
 }

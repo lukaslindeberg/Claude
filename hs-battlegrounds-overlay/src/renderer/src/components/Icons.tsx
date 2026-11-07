@@ -177,6 +177,8 @@ export const NAV_ICONS = {
   stats: (p: P) => svg(p.size, p.className, <path d="M2.5 13.5h11M4 11V8M7 11V4.5M10 11V6.5M13 11V3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />),
   heroes: (p: P) => svg(p.size, p.className, <path d="M8 2.2a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM2.8 14c.5-2.8 2.6-4.3 5.2-4.3s4.7 1.5 5.2 4.3" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />),
   minions: (p: P) => svg(p.size, p.className, <ellipse cx="8" cy="8" rx="4.6" ry="6" fill="none" stroke="currentColor" strokeWidth="1.4" />),
+  trinkets: (p: P) =>
+    svg(p.size, p.className, <path d="M8 1.8 13.4 6 8 14.2 2.6 6 8 1.8ZM2.6 6h10.8M5.6 6 8 14.2 10.4 6M5.6 6 8 1.8 10.4 6" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />),
   settings: (p: P) =>
     svg(
       p.size,

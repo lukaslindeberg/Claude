@@ -9,6 +9,8 @@ import {
   type HeroStatsBundle,
   type MatchRecord,
   type Settings,
+  type Tribe,
+  type TrinketStatsBundle,
   type WidgetId,
 } from '@shared/types';
 import type { TavernLensBridge } from '@shared/ipc';
@@ -41,6 +43,12 @@ export interface AppStore {
   settings: UiSettings;
   history: MatchRecord[];
   heroStats: HeroStatsBundle[];
+  trinketStats: TrinketStatsBundle[];
+  /**
+   * Lobby tribes the user picked by hand at hero selection, per gameId (Hearthstone's
+   * log does not list them until shop offers reveal them).
+   */
+  lobbyPicks: Record<string, Tribe[]>;
   events: BgEvent[];
   /** Overlay: simulator runs by key. */
   sims: Record<string, SimRun>;
@@ -54,6 +62,28 @@ export interface AppStore {
   updateSettings(patch: Partial<UiSettings>): Promise<void>;
   setSim(run: SimRun): void;
   dismissPostMatch(gameId: string): void;
+  setLobbyPicks(gameId: string, tribes: Tribe[]): void;
+}
+
+const PICKS_KEY = 'tl-lobby-picks';
+
+/** Manual lobby picks survive a reload of the window (last few games only). */
+function loadPicks(): Record<string, Tribe[]> {
+  try {
+    const raw = localStorage.getItem(PICKS_KEY);
+    const v = raw ? JSON.parse(raw) : null;
+    return v && typeof v === 'object' ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePicks(picks: Record<string, Tribe[]>) {
+  try {
+    localStorage.setItem(PICKS_KEY, JSON.stringify(picks));
+  } catch {
+    /* ignore */
+  }
 }
 
 export const useApp = create<AppStore>((set, get) => ({
@@ -66,6 +96,8 @@ export const useApp = create<AppStore>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   history: [],
   heroStats: [],
+  trinketStats: [],
+  lobbyPicks: loadPicks(),
   events: [],
   sims: {},
   hidden: {},
@@ -92,6 +124,14 @@ export const useApp = create<AppStore>((set, get) => ({
   dismissPostMatch(gameId) {
     set({ dismissedPostMatch: gameId });
   },
+
+  setLobbyPicks(gameId, tribes) {
+    const entries = Object.entries({ ...get().lobbyPicks, [gameId]: tribes }).filter(([, t]) => t.length);
+    // Insertion order = age: keep the newest few games.
+    const lobbyPicks = Object.fromEntries(entries.slice(-5));
+    set({ lobbyPicks });
+    savePicks(lobbyPicks);
+  },
 }));
 
 /** Subscribe the store to a bridge. Returns an unsubscribe function. */
@@ -113,13 +153,17 @@ export async function connectStore(bridge: TavernLensBridge, demo: boolean): Pro
       pushed.add('settings');
       const prev = useApp.getState().settings;
       useApp.setState((s) => ({ settings: { ...s.settings, ...settings } }));
-      if (prev.communityStats !== settings.communityStats) void refreshHeroStats();
+      if (prev.communityStats !== settings.communityStats) {
+        void refreshHeroStats();
+        void refreshTrinketStats();
+      }
     }),
     bridge.onHistory((history) => {
       pushed.add('history');
       useApp.setState({ history });
-      // Personal hero stats are derived from the history.
+      // Personal hero / trinket stats are derived from the history.
       void refreshHeroStats();
+      void refreshTrinketStats();
     }),
     bridge.onEvent((ev) => useApp.setState((s) => ({ events: [...s.events.slice(-49), ev] }))),
     bridge.onToggleWidget((w) =>
@@ -129,6 +173,7 @@ export async function connectStore(bridge: TavernLensBridge, demo: boolean): Pro
 
   // Hero stats may need a network fetch (community stats): never block startup on them.
   void refreshHeroStats();
+  void refreshTrinketStats();
 
   const settled = await Promise.allSettled([bridge.getSettings(), bridge.getState(), bridge.getStatus(), bridge.getHistory()]);
   const [settings, game, status, history] = settled.map((r) => (r.status === 'fulfilled' ? r.value : undefined)) as [
@@ -169,6 +214,21 @@ export async function refreshHeroStats(): Promise<void> {
     const heroStats = await bridge.getHeroStats();
     // A slower, older request (e.g. waiting on the network) must not overwrite a newer one.
     if (seq === heroStatsSeq) useApp.setState({ heroStats });
+  } catch {
+    /* ignore */
+  }
+}
+
+let trinketStatsSeq = 0;
+
+/** Refresh trinket stats (personal + community). Older main processes lack the call. */
+export async function refreshTrinketStats(): Promise<void> {
+  const { bridge } = useApp.getState();
+  if (!bridge || typeof bridge.getTrinketStats !== 'function') return;
+  const seq = ++trinketStatsSeq;
+  try {
+    const trinketStats = await bridge.getTrinketStats();
+    if (seq === trinketStatsSeq && Array.isArray(trinketStats)) useApp.setState({ trinketStats });
   } catch {
     /* ignore */
   }

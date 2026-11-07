@@ -17,6 +17,7 @@ import type {
   GameWindowInfo,
   HeroStatsBundle,
   Settings,
+  TrinketStatsBundle,
   WidgetId,
 } from '@shared/types';
 import { CardDb } from '@core/cards/cardDb';
@@ -29,6 +30,7 @@ import { LogTailer } from './hearthstone/logTailer';
 import { findHearthstoneInstall, logsDirFor, looksLikeHearthstoneInstall, resolvePowerLog } from './hearthstone/paths';
 import { GameWindowTracker } from './hearthstone/windowTracker';
 import { CommunityHeroStatsProvider, personalBundles } from './heroStats';
+import { CommunityTrinketStatsProvider, personalTrinketBundles } from './trinketStats';
 import { registerHotkeys, unregisterHotkeys, type HotkeyAction } from './hotkeys';
 import { describeSim, describeVerdict, describeWindow, diffSettings } from './diagnostics/describe';
 import { writeDiagnosticsZip, pickExportDir } from './diagnostics/export';
@@ -62,6 +64,7 @@ export class TavernLensApp {
   private status!: StatusStore;
   private cardData!: CardDataService;
   private community!: CommunityHeroStatsProvider;
+  private communityTrinkets!: CommunityTrinketStatsProvider;
   private live!: GameFeed;
   private demoFeed: GameFeed | undefined;
   private demo!: DemoPlayer;
@@ -147,6 +150,7 @@ export class TavernLensApp {
       fetch: fetchImpl,
       normalize: (id) => this.cardData.current.baseHeroId(id),
     });
+    this.communityTrinkets = new CommunityTrinketStatsProvider({ cacheDir: join(userData, 'cache'), fetch: fetchImpl });
 
     const logTransitions = !!process.env.TL_DEBUG;
     const cardName = (id: string) => this.cardData?.current.get(id)?.name;
@@ -182,6 +186,7 @@ export class TavernLensApp {
       },
       getCardData: () => this.cardData.current.data,
       getHeroStats: () => this.getHeroStats(),
+      getTrinketStats: () => this.getTrinketStats(),
       reportSimResult: (turn, result) => this.reportSimResult(turn, result),
       startDemo: (speed) => this.startDemo(speed),
       stopDemo: () => this.stopDemo(),
@@ -237,7 +242,12 @@ export class TavernLensApp {
 
     // Background data
     this.cardData.start();
-    if (settings.communityStats) setTimeout(() => this.community.prefetch(), 5000);
+    if (settings.communityStats) {
+      setTimeout(() => {
+        this.community.prefetch();
+        this.communityTrinkets.prefetch();
+      }, 5000);
+    }
 
     this.housekeepingTimer = setInterval(() => this.housekeeping(), 5000);
     this.updateOverlay();
@@ -426,7 +436,10 @@ export class TavernLensApp {
     if (JSON.stringify(prev.hotkeys) !== JSON.stringify(next.hotkeys)) this.applyHotkeys(next);
     if (prev.launchOnStartup !== next.launchOnStartup) this.applyLoginItem(next);
     if ((prev.hearthstonePath ?? '') !== (next.hearthstonePath ?? '')) void this.discover();
-    if (!prev.communityStats && next.communityStats) this.community.prefetch();
+    if (!prev.communityStats && next.communityStats) {
+      this.community.prefetch();
+      this.communityTrinkets.prefetch();
+    }
     this.updateOverlay();
     this.tray?.update(this.trayState());
     this.broadcast(IPC.settingsChanged, next);
@@ -845,6 +858,18 @@ export class TavernLensApp {
         bundles.push(...(await this.community.getBundles()));
       } catch (err) {
         log.warn('community stats failed', err);
+      }
+    }
+    return bundles;
+  }
+
+  private async getTrinketStats(): Promise<TrinketStatsBundle[]> {
+    const bundles = personalTrinketBundles(this.store.getHistory());
+    if (this.store.getSettings().communityStats) {
+      try {
+        bundles.push(...(await this.communityTrinkets.getBundles()));
+      } catch (err) {
+        log.warn('community trinket stats failed', err);
       }
     }
     return bundles;

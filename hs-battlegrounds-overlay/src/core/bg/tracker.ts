@@ -19,6 +19,7 @@ import type {
   ShopOffer,
   SimSide,
   Tribe,
+  TrinketOption,
 } from '@shared/types';
 import { CardDb } from '../cards/cardDb';
 import { CardType, GameTag as T, PlayState, Zone } from '../log/enums';
@@ -161,6 +162,13 @@ interface GameCtx {
   lastLocalBoard: MinionSnapshot[];
   matchRecord?: MatchRecord;
   damageCapEnabled?: boolean;
+  /** Open trinket offer to the local player (lesser / greater trinket discover). */
+  trinketChoice?: { choiceId: number; ids: number[] };
+  /** Trinkets the local player picked from trinket offers, in order. */
+  trinketPicks: string[];
+  /** Trinkets / quest rewards seen in the local player's PLAY zone (card ids, first seen first). */
+  ownedTrinkets: string[];
+  ownedRewards: string[];
 }
 
 const EMPTY_BATTLE: BattleState = { status: 'idle', turn: 0 };
@@ -558,6 +566,9 @@ export class BgTracker {
       firstCombatSeen: false,
       lastTurn: 0,
       lastLocalBoard: [],
+      trinketPicks: [],
+      ownedTrinkets: [],
+      ownedRewards: [],
     };
   }
 
@@ -779,10 +790,13 @@ export class BgTracker {
   // -------------------------------------------------------------------------
 
   private onChoices(g: GameCtx, pk: Extract<Packet, { type: 'EntityChoices' }>): void {
-    if (pk.choiceType !== 1 /* MULLIGAN */) return;
     const s = this.store;
     const pl = s.resolve(pk.player, 'local');
     if (pl !== undefined && s.localPlayer && pl !== s.localPlayer.entityId) return;
+    if (pk.choiceType !== 1 /* MULLIGAN */) {
+      this.onTrinketChoices(g, pk);
+      return;
+    }
     const ids: number[] = [];
     for (const r of pk.entities) {
       if (r.id === undefined) continue;
@@ -822,7 +836,44 @@ export class BgTracker {
     this.emit({ type: 'heroOptions', options: opts });
   }
 
+  /**
+   * Trinket offers: a GENERAL choice whose source is the "Lesser Trinket" / "Greater Trinket"
+   * slot (BG30_Trinket_1st / _2nd) and whose options are BATTLEGROUND_TRINKET entities in
+   * SETASIDE. Any other choice (discovers, triple rewards...) closes a stale offer.
+   */
+  private onTrinketChoices(g: GameCtx, pk: Extract<Packet, { type: 'EntityChoices' }>): void {
+    const s = this.store;
+    const ids: number[] = [];
+    let allTrinkets = pk.entities.length > 0;
+    for (const r of pk.entities) {
+      const id = r.id ?? s.resolve(r);
+      const e = s.get(id);
+      if (id === undefined || !e) {
+        allTrinkets = false;
+        continue;
+      }
+      if (!e.cardId && r.cardId) e.cardId = r.cardId;
+      const isTrinket =
+        e.tags.get(T.CARDTYPE) === CardType.BATTLEGROUND_TRINKET || this.cardDb.get(e.cardId)?.type === 'TRINKET';
+      if (!isTrinket) allTrinkets = false;
+      ids.push(id);
+    }
+    const src = s.get(s.resolve(pk.source));
+    const fromSlot = !!src && isTrinketPlaceholder(src.cardId);
+    if (ids.length && (allTrinkets || fromSlot)) g.trinketChoice = { choiceId: pk.choiceId, ids };
+    else g.trinketChoice = undefined;
+  }
+
   private onChosen(g: GameCtx, pk: Extract<Packet, { type: 'EntitiesChosen' }>): void {
+    const tc = g.trinketChoice;
+    if (tc && pk.choiceId === tc.choiceId) {
+      g.trinketChoice = undefined;
+      const r = pk.entities[0];
+      const id = r?.id ?? (r ? this.store.resolve(r) : undefined);
+      const cardId = this.store.get(id)?.cardId || r?.cardId;
+      if (cardId && !g.trinketPicks.includes(cardId)) g.trinketPicks.push(cardId);
+      return;
+    }
     if (g.heroChoiceId === undefined || pk.choiceId !== g.heroChoiceId || g.chosenHeroCardId) return;
     const r = pk.entities[0];
     if (!r || r.id === undefined) return;
@@ -831,6 +882,57 @@ export class BgTracker {
     if (!cardId) return;
     g.chosenHeroCardId = cardId;
     this.emit({ type: 'heroChosen', cardId });
+  }
+
+  /** The open trinket offer, while its options are still waiting in SETASIDE. */
+  private trinketOptions(g: GameCtx): TrinketOption[] | undefined {
+    const tc = g.trinketChoice;
+    if (!tc || g.ended) return undefined;
+    const s = this.store;
+    const db = this.cardDb;
+    const out: TrinketOption[] = [];
+    for (const id of tc.ids) {
+      const e = s.get(id);
+      // Resolved without an EntitiesChosen line (e.g. timed out): the options leave SETASIDE.
+      if (!e || e.tags.get(T.ZONE) !== Zone.SETASIDE) return undefined;
+      const o: TrinketOption = { entityId: id, cardId: e.cardId, name: displayName(e, db) };
+      const cost = e.tags.get(T.COST) ?? db.get(e.cardId)?.cost;
+      if (cost !== undefined) o.cost = cost;
+      out.push(o);
+    }
+    return out.length ? out : undefined;
+  }
+
+  /** Remember the trinkets / quest rewards the local player has in PLAY (for the match record). */
+  private noteOwnedItems(g: GameCtx): void {
+    const s = this.store;
+    const lctl = this.localController;
+    for (const e of s.entities.values()) {
+      if (e.tags.get(T.CONTROLLER) !== lctl || e.tags.get(T.ZONE) !== Zone.PLAY || !e.cardId) continue;
+      const ct = e.tags.get(T.CARDTYPE);
+      if (ct === CardType.BATTLEGROUND_TRINKET) {
+        if (!isTrinketPlaceholder(e.cardId) && !g.ownedTrinkets.includes(e.cardId)) g.ownedTrinkets.push(e.cardId);
+      } else if (ct === CardType.BATTLEGROUND_QUEST_REWARD) {
+        if (!g.ownedRewards.includes(e.cardId)) g.ownedRewards.push(e.cardId);
+      }
+    }
+  }
+
+  /**
+   * The local player's trinket picks: from the trinket offers seen, completed from the hero's
+   * BACON_FIRST/SECOND_TRINKET_DATABASE_ID (e.g. when the log started after a pick), else
+   * the trinkets seen in PLAY.
+   */
+  private pickedTrinkets(g: GameCtx): string[] {
+    const out = g.trinketPicks.slice();
+    if (out.length < 2) {
+      const hero = this.store.get(g.localHeroId);
+      for (const tag of [T.BACON_FIRST_TRINKET_DATABASE_ID, T.BACON_SECOND_TRINKET_DATABASE_ID]) {
+        const id = this.cardDb.getByDbfId(hero?.tags.get(tag))?.id;
+        if (id && out.length < 2 && !out.includes(id)) out.push(id);
+      }
+    }
+    return out.length ? out : g.ownedTrinkets.slice();
   }
 
   // -------------------------------------------------------------------------
@@ -906,6 +1008,8 @@ export class BgTracker {
     const s = this.store;
     this.refreshLocalHero(g);
     this.syncPlayers(g);
+    this.noteOwnedItems(g);
+    g.trinketChoice = undefined;
     const lp = s.localPlayer;
     const oppPid = lp ? s.tag(lp.entityId, T.NEXT_OPPONENT_PLAYER_ID) || s.tag(g.localHeroId, T.NEXT_OPPONENT_PLAYER_ID) : 0;
     const localSide = this.buildLiveSide(g, 'local', this.localPid(g));
@@ -1275,6 +1379,8 @@ export class BgTracker {
   private endGame(g: GameCtx): void {
     if (g.ended) return;
     if (g.combat && !g.combat.ended) this.endCombat(g);
+    this.noteOwnedItems(g);
+    g.trinketChoice = undefined;
     g.ended = true;
     g.endedAt = this.now();
     g.endedTs = this.logTs;
@@ -1346,6 +1452,9 @@ export class BgTracker {
       }),
     };
     if (state.anomalyCardId) rec.anomalyCardId = state.anomalyCardId;
+    const trinkets = this.pickedTrinkets(g);
+    if (trinkets.length) rec.trinkets = trinkets;
+    if (g.ownedRewards.length) rec.questRewards = g.ownedRewards.slice();
     g.matchRecord = JSON.parse(JSON.stringify(rec)) as MatchRecord;
     this.bump();
     this.emit({ type: 'gameEnd', record: rec });
@@ -1589,6 +1698,8 @@ export class BgTracker {
     if (localPid) state.localPlayerId = localPid;
     if (lp?.name) state.localPlayerName = lp.name;
     if (g.chosenHeroCardId) state.chosenHeroCardId = g.chosenHeroCardId;
+    const trinketOptions = this.trinketOptions(g);
+    if (trinketOptions) state.trinketOptions = trinketOptions;
     if (nextOpp) state.nextOpponentPlayerId = nextOpp;
     if (currentOpponentPlayerId) state.currentOpponentPlayerId = currentOpponentPlayerId;
     const anomaly = this.anomalyCardId();

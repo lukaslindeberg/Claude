@@ -8,6 +8,8 @@ import { HealthBar, ResultChip, TierBadge, TriplesBadge } from '../../components
 import { ordinal } from '../../lib/format';
 import { leaderboardSlots } from '../layout';
 import { boardFor, seenAgo } from './OpponentsPanel';
+import { RelevanceLine } from '../../components/Synergy';
+import { tipFor, tribeRelevance, useLobbyTribes, wantedTribes } from '../../lib/synergy';
 
 /**
  * Invisible hover zones over the in-game leaderboard. Hover is detected from the
@@ -20,6 +22,8 @@ export function LeaderboardHover() {
   const calibrating = useApp((s) => !!s.settings.leaderboardCalibrationMode);
   const forced = useApp((s) => s.demo) ? Number(new URLSearchParams(location.search).get('hover') ?? NaN) : NaN;
   const vp = useViewport();
+  const db = useApp((s) => s.cardDb);
+  const lobby = useLobbyTribes();
   const [hover, setHover] = useState<number | null>(Number.isFinite(forced) ? forced : null);
 
   const players = useMemo(() => [...(game?.players ?? [])].sort((a, b) => a.leaderboardPlace - b.leaderboardPlace), [game?.players]);
@@ -64,6 +68,8 @@ export function LeaderboardHover() {
   const board = boardFor(game!, p);
   const last = p.combatsAgainst[p.combatsAgainst.length - 1];
   const seen = seenAgo(game!, p);
+  const tip = tipFor(db, p.heroCardId);
+  const rel = tip ? tribeRelevance(wantedTribes(db.get(p.heroCardId), tip), lobby.tribes) : undefined;
 
   return (
     <>
@@ -113,6 +119,12 @@ export function LeaderboardHover() {
                 ) : null}
               </div>
             </div>
+            {tip ? (
+              <div className="tl-lbhover__tip tl-parchment">
+                <span className="tl-lbhover__tiptext">{tip.tip}</span>
+                {rel && rel.status !== 'none' && rel.status !== 'unknown' ? <RelevanceLine rel={rel} /> : null}
+              </div>
+            ) : null}
             <div className="tl-lbhover__boardhead">
               <span className="tl-heading">{p.isLocal ? 'Your board' : 'Last seen board'}</span>
               {seen && !p.isLocal ? (

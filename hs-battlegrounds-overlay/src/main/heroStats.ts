@@ -7,13 +7,18 @@
  *   src/lib/meta-heroes/bgs-meta-hero-stats-access.service.ts; the files are written by
  *   @firestone-hs/bgs-global-stats to s3://static.zerotoheroes.com/api/bgs/... as
  *   gzipped JSON with Content-Encoding: gzip, schema `BgsHeroStatsV2`).
+ *   Checked against the live files (Nov 2026): served as JSON with `Content-Encoding: gzip`
+ *   when the client accepts gzip (fetch decodes it) and as plain JSON otherwise; rows carry
+ *   `tribeStats` (Race enum numbers; Naga absent while it is out of rotation). A trimmed copy
+ *   is in test/fixtures/stats/.
  *
  * No Electron imports. Every network/disk failure degrades to "no community stats".
  */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import type { GameMode, HeroStat, HeroStatsBundle, MatchRecord } from '@shared/types';
+import type { GameMode, HeroStat, HeroStatsBundle, MatchRecord, Tribe, TribeSynergy } from '@shared/types';
+import { sortSynergies, tribeFromRace, tribeSynergyFromGames } from '@core/stats/synergy';
 import { createLogger } from './logger';
 
 const log = createLogger('hero-stats');
@@ -68,6 +73,7 @@ export function computePersonalHeroStats(
   const slots = mode === 'duos' ? 4 : 8;
   const top4Cut = mode === 'duos' ? 2 : 4;
   const groups = new Map<string, number[]>();
+  const tribeGames = new Map<string, { placement: number; tribes: Tribe[] }[]>();
   const offered = new Map<string, number>();
   for (const m of history) {
     if ((m.mode ?? 'solo') !== mode) continue;
@@ -76,7 +82,13 @@ export function computePersonalHeroStats(
     if (!id) continue;
     let arr = groups.get(id);
     if (!arr) groups.set(id, (arr = []));
-    arr.push(Math.min(slots, Math.round(m.placement)));
+    const place = Math.min(slots, Math.round(m.placement));
+    arr.push(place);
+    if (m.availableTribes?.length) {
+      let tg = tribeGames.get(id);
+      if (!tg) tribeGames.set(id, (tg = []));
+      tg.push({ placement: place, tribes: m.availableTribes });
+    }
     for (const o of new Set((m.heroOptions ?? []).map(normalize))) offered.set(o, (offered.get(o) ?? 0) + 1);
   }
   const out: HeroStat[] = [];
@@ -86,6 +98,7 @@ export function computePersonalHeroStats(
     const dist = new Array<number>(slots).fill(0);
     for (const p of places) dist[p - 1]++;
     const timesOffered = offered.get(heroCardId);
+    const tribeStats = tribeSynergyFromGames(tribeGames.get(heroCardId) ?? []);
     out.push({
       heroCardId,
       games,
@@ -95,6 +108,7 @@ export function computePersonalHeroStats(
       pickRate: timesOffered ? round(Math.min(100, (100 * games) / timesOffered), 1) : undefined,
       placementDistribution: dist.map((n) => round(n / games, 4)),
       tier: tierForAvgPlacement(avg, mode),
+      ...(tribeStats.length ? { tribeStats } : {}),
     });
   }
   return out.sort((a, b) => a.avgPlacement - b.avgPlacement || b.games - a.games);
@@ -131,7 +145,68 @@ export const FIRESTONE_HERO_STATS_URL = {
 export const COMMUNITY_LABEL = 'Community (Firestone public data)';
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 /** Firestone itself drops heroes with fewer data points as unreliable. */
-const MIN_DATA_POINTS = 30;
+export const MIN_DATA_POINTS = 30;
+/**
+ * Per-tribe rows below this are dropped: the real files have a handful of rows with 1-2
+ * games (impacts of -3), every other row has 40+ (solo: 250+ for 95% of rows).
+ */
+export const MIN_TRIBE_DATA_POINTS = 10;
+
+interface TribeAcc {
+  dataPoints: number;
+  posSum: number;
+  impactSum: number;
+  withoutPoints: number;
+  withoutSum: number;
+}
+
+/**
+ * Accumulates one Firestone `tribeStats` array (BgsHeroTribeStat: `tribe` is the Race enum
+ * number, `impactAveragePosition` = averagePosition - the hero's overall average).
+ */
+function addTribeStats(acc: Map<Tribe, TribeAcc>, rows: unknown, slots: number): void {
+  if (!Array.isArray(rows)) return;
+  for (const r of rows) {
+    if (typeof r !== 'object' || r === null) continue;
+    const row = r as Record<string, unknown>;
+    const tribe = tribeFromRace(row.tribe);
+    const dp = row.dataPoints;
+    const avg = row.averagePosition;
+    if (!tribe || !isNum(dp) || dp < MIN_TRIBE_DATA_POINTS || !isNum(avg) || avg < 1 || avg > slots) continue;
+    const impact = isNum(row.impactAveragePosition)
+      ? row.impactAveragePosition
+      : isNum(row.refAveragePosition)
+        ? avg - row.refAveragePosition
+        : undefined;
+    if (impact === undefined) continue;
+    let a = acc.get(tribe);
+    if (!a) acc.set(tribe, (a = { dataPoints: 0, posSum: 0, impactSum: 0, withoutPoints: 0, withoutSum: 0 }));
+    a.dataPoints += dp;
+    a.posSum += avg * dp;
+    a.impactSum += impact * dp;
+    const without = row.averagePositionWithoutTribe;
+    const dpWithout = isNum(row.dataPointsOnMissingTribe) ? row.dataPointsOnMissingTribe : dp;
+    if (isNum(without) && without >= 1 && without <= slots && dpWithout > 0) {
+      a.withoutPoints += dpWithout;
+      a.withoutSum += without * dpWithout;
+    }
+  }
+}
+
+function tribeSynergies(acc: Map<Tribe, TribeAcc>): TribeSynergy[] {
+  const out: TribeSynergy[] = [];
+  for (const [tribe, a] of acc) {
+    const s: TribeSynergy = {
+      tribe,
+      games: a.dataPoints,
+      avgPlacement: round(a.posSum / a.dataPoints),
+      impact: round(a.impactSum / a.dataPoints),
+    };
+    if (a.withoutPoints > 0) s.avgPlacementWithout = round(a.withoutSum / a.withoutPoints);
+    out.push(s);
+  }
+  return sortSynergies(out);
+}
 
 /** Decodes a response body that may still be gzipped (if no Content-Encoding was applied). */
 export function decodeMaybeGzip(buf: Uint8Array): string {
@@ -163,6 +238,7 @@ export function parseFirestoneHeroStats(
     picked: number;
     dist: number[]; // match counts per rank
     distPoints: number;
+    tribes: Map<Tribe, TribeAcc>;
   }
   const acc = new Map<string, Acc>();
   let valid = 0;
@@ -174,13 +250,14 @@ export function parseFirestoneHeroStats(
     valid++;
     const id = normalize(row.heroCardId) || row.heroCardId;
     let a = acc.get(id);
-    if (!a) acc.set(id, (a = { dataPoints: 0, posSum: 0, offered: 0, picked: 0, dist: new Array(slots).fill(0), distPoints: 0 }));
+    if (!a) acc.set(id, (a = { dataPoints: 0, posSum: 0, offered: 0, picked: 0, dist: new Array(slots).fill(0), distPoints: 0, tribes: new Map() }));
     a.dataPoints += row.dataPoints;
     a.posSum += row.averagePosition * row.dataPoints;
     if (isNum(row.totalOffered) && isNum(row.totalPicked)) {
       a.offered += row.totalOffered;
       a.picked += row.totalPicked;
     }
+    addTribeStats(a.tribes, row.tribeStats, slots);
     if (Array.isArray(row.placementDistribution)) {
       let rowTotal = 0;
       const counts = new Array<number>(slots).fill(0);
@@ -203,6 +280,7 @@ export function parseFirestoneHeroStats(
   for (const [heroCardId, a] of acc) {
     if (a.dataPoints < MIN_DATA_POINTS) continue;
     const dist = a.distPoints > 0 ? a.dist.map((n) => round(n / a.distPoints, 4)) : undefined;
+    const tribeStats = tribeSynergies(a.tribes);
     stats.push({
       heroCardId,
       games: a.dataPoints,
@@ -211,6 +289,7 @@ export function parseFirestoneHeroStats(
       winRate: dist ? round(100 * dist[0], 1) : undefined,
       pickRate: a.offered > 0 ? round((100 * a.picked) / a.offered, 1) : undefined,
       placementDistribution: dist,
+      ...(tribeStats.length ? { tribeStats } : {}),
     });
   }
   return assignRelativeTiers(stats).sort((a, b) => a.avgPlacement - b.avgPlacement);

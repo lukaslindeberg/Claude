@@ -6,7 +6,8 @@ import { Toggle } from '../../components/Bits';
 import { Card, SectionHeader } from '../ui';
 
 const WIDGETS: { id: WidgetId; label: string; hint: string }[] = [
-  { id: 'heroSelection', label: 'Hero selection stats', hint: 'Tier, average placement and your record above each offered hero.' },
+  { id: 'heroSelection', label: 'Hero selection stats', hint: 'Tier, placement in this lobby, tribe synergies, your record and play tips above each offered hero.' },
+  { id: 'trinketPick', label: 'Trinket pick', hint: 'Average placement, pick rate, lobby tribes and play tips above each offered trinket.' },
   { id: 'opponentsPanel', label: 'Opponents panel', hint: 'Right-edge list of every player with their last seen board.' },
   { id: 'leaderboardHover', label: 'Leaderboard hover', hint: 'Hover a hero on the in-game leaderboard to see their board.' },
   { id: 'battleSim', label: 'Battle simulation', hint: 'Win / tie / loss odds when combat starts.' },

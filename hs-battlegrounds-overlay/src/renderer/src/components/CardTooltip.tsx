@@ -7,6 +7,7 @@ import { primaryTribe, tribeColor, tribeLabel } from '../lib/tribes';
 import { CardArt, CardRender, wantLargeRender } from './CardArt';
 import { StatGem, TierBadge, TribeEmblem } from './Bits';
 import { KEYWORDS, keywordsFromMechanics } from './Icons';
+import { tipFor } from '../lib/synergy';
 
 /** What a tooltip needs from a minion on a board (a MinionSnapshot fits). */
 export interface TooltipMinion {
@@ -39,10 +40,18 @@ export function CardTooltip({ cardId, minion }: { cardId: string; minion?: Toolt
   const card = db.get(cardId);
   const renderId = card?.normalId && minion?.golden ? card.normalId : cardId;
   const large = useMemo(wantLargeRender, []);
+  // Heroes and trinkets that need a specific approach carry a short play tip.
+  const tip = !minion && (card?.type === 'TRINKET' || card?.type === 'HERO') ? tipFor(db, cardId) : undefined;
   return (
-    <div className={clsx('tl-cardtip', minion && 'has-note')}>
+    <div className={clsx('tl-cardtip', (minion || tip) && 'has-note')}>
       <CardRender cardId={renderId} large={large} className="tl-cardtip__render" fallback={<ParchmentCard cardId={cardId} minion={minion} />} />
       {minion ? <MinionNote cardId={cardId} minion={minion} /> : null}
+      {tip ? (
+        <div className="tl-cardtip__note tl-on-parchment">
+          <div className="tl-cardtip__label">How to play it</div>
+          <p className="tl-cardtip__body">{tip.tip}</p>
+        </div>
+      ) : null}
     </div>
   );
 }

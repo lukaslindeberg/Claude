@@ -14,6 +14,7 @@ import { TierListWidget } from './widgets/TierList';
 import { LobbyInfoWidget } from './widgets/LobbyInfo';
 import { PostMatchWidget } from './widgets/PostMatch';
 import { SessionWidget } from './widgets/SessionWidget';
+import { TrinketPickWidget } from './widgets/TrinketPick';
 import '../styles/overlay.css';
 
 /** Applies scale/opacity settings as CSS variables on :root (tooltips are portalled). */
@@ -66,6 +67,7 @@ export default function OverlayApp() {
           {on('lobbyInfo') ? <WidgetBoundary id="lobbyInfo"><LobbyInfoWidget /></WidgetBoundary> : null}
           {on('opponentsPanel') ? <WidgetBoundary id="opponentsPanel"><OpponentsPanel /></WidgetBoundary> : null}
           {on('battleSim') ? <WidgetBoundary id="battleSim"><BattleSimWidget /></WidgetBoundary> : null}
+          {on('trinketPick') ? <WidgetBoundary id="trinketPick"><TrinketPickWidget /></WidgetBoundary> : null}
           {on('tierList') ? <WidgetBoundary id="tierList"><TierListWidget /></WidgetBoundary> : null}
           {on('postMatch') ? <WidgetBoundary id="postMatch"><PostMatchWidget /></WidgetBoundary> : null}
         </>

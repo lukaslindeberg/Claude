@@ -19,6 +19,7 @@ import type {
   LogLevel,
   MatchRecord,
   Settings,
+  TrinketStatsBundle,
   WidgetId,
 } from '@shared/types';
 
@@ -55,6 +56,7 @@ const bridge: TavernLensBridge = {
   clearHistory: () => ipcRenderer.invoke(IPC.clearHistory) as Promise<void>,
   getCardData: () => ipcRenderer.invoke(IPC.getCardData) as Promise<BgCardData>,
   getHeroStats: () => ipcRenderer.invoke(IPC.getHeroStats) as Promise<HeroStatsBundle[]>,
+  getTrinketStats: () => ipcRenderer.invoke(IPC.getTrinketStats) as Promise<TrinketStatsBundle[]>,
   reportSimResult: (turn: number, result: BattleSimResult) =>
     ipcRenderer.invoke(IPC.reportSimResult, turn, result) as Promise<void>,
   startDemo: (speed?: number) => ipcRenderer.invoke(IPC.startDemo, speed) as Promise<void>,

@@ -36,6 +36,32 @@ export function heroPickCenters(count: number, vp: Viewport): number[] {
   return Array.from({ length: count }, (_, i) => mid + (i - (count - 1) / 2) * spacing);
 }
 
+/** Top of the game's hero portraits on the hero picker (fraction of height): stat cards end above. */
+export const HERO_PICK_ART_TOP = 0.315;
+
+/** Unscaled widths of the pick cards (CSS px at scale 1). */
+export const PICK_CARD_WIDTH = { hero: 252, trinket: 226 };
+
+/**
+ * Trinket offers (lesser / greater) are dealt like a Discover: a row of cards across the
+ * middle of the screen. Our stat cards sit above that row, centred over each card, and
+ * keep clear of the tier bar (top-left) and the leaderboard panel (top-right).
+ */
+export function trinketPickLayout(count: number, vp: Viewport, s: number): { centers: number[]; spacing: number; top: number; bottom: number } {
+  const H = vp.height;
+  const n = Math.max(1, count);
+  const side = 2 * (10 + WIDGET_WIDTH.oppPanel * s * 0.95);
+  const spacing = Math.min(H * (n <= 3 ? 0.31 : 0.27), (vp.width - side) / n);
+  const mid = vp.width / 2;
+  return {
+    centers: Array.from({ length: n }, (_, i) => mid + (i - (n - 1) / 2) * spacing),
+    spacing,
+    top: Math.round(H * 0.03),
+    /** The game's trinket cards start a little below this. */
+    bottom: Math.round(H * 0.285),
+  };
+}
+
 /** Automatic scale: settings.scale × game-window height relative to 1080p. */
 export function effectiveScale(settingsScale: number, vp: Viewport): number {
   const auto = Math.max(0.7, Math.min(2.2, vp.height / 1080));

@@ -12,6 +12,7 @@ const LABELS: Record<WidgetId, string> = {
   sessionStats: 'Session tracker',
   lobbyInfo: 'Lobby info',
   postMatch: 'Post-match summary',
+  trinketPick: 'Trinket pick',
 };
 
 /**
