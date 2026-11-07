@@ -105,6 +105,17 @@ export interface TagChangePacket extends PacketBase {
   /** `DEF CHANGE` suffix (definition change). */
   def?: boolean;
 }
+/**
+ * A GameEntity tag change seen in the *inactive* PowerTaskList stream. PowerTaskList
+ * lines are printed as the client plays packets back with their animations, so these
+ * tell the tracker where the on-screen game is (e.g. a combat still animating) while
+ * the game state itself comes from the earlier GameState stream.
+ */
+export interface PlaybackPacket extends PacketBase {
+  type: 'Playback';
+  tag: number;
+  value: number;
+}
 export interface BlockStartPacket extends PacketBase {
   type: 'BlockStart';
   blockType: number;
@@ -169,6 +180,7 @@ export type Packet =
   | ChangeEntityPacket
   | HideEntityPacket
   | TagChangePacket
+  | PlaybackPacket
   | BlockStartPacket
   | BlockEndPacket
   | MetaDataPacket
@@ -514,6 +526,18 @@ export class PowerLogParser {
     return out;
   }
 
+  /** GameEntity tags whose animation-paced (PowerTaskList) values the tracker follows. */
+  private static readonly PLAYBACK_TAGS = new Set([GameTag.TURN, GameTag.BOARD_VISUAL_STATE, GameTag.STATE]);
+
+  private playbackLine(p: string, ts: string, out: Packet[]): void {
+    if (!p.startsWith('TAG_CHANGE Entity=GameEntity ')) return;
+    const m = TAG_CHANGE_RE.exec(p);
+    if (!m) return;
+    const t = tagId(m[2]);
+    if (!PowerLogParser.PLAYBACK_TAGS.has(t)) return;
+    out.push({ type: 'Playback', ts, tag: t, value: tagValue(t, m[3]) });
+  }
+
   private powerLine(line: string, start: number, source: LogSource, ts: string, out: Packet[]): Packet[] {
     // skip indentation
     let i = start;
@@ -526,7 +550,10 @@ export class PowerLogParser {
       if (this.activeSource === undefined || (!this.locked && p.startsWith('CREATE_GAME'))) {
         if (this.pending) this.flush(out);
         this.activeSource = source;
-      } else return out;
+      } else {
+        if (source === 'PowerTaskList') this.playbackLine(p, ts, out);
+        return out;
+      }
     }
     if (!this.locked && p.startsWith('CREATE_GAME')) this.locked = true;
 

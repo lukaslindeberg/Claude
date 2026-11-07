@@ -82,7 +82,20 @@ interface CombatCtx {
   ended: boolean;
 }
 
+/** Where the client's animated playback of the game is (from PowerTaskList lines). */
+interface Playback {
+  /** True once any PowerTaskList GameEntity change was seen for this game. */
+  seen: boolean;
+  /** GameEntity TURN as animated. */
+  turn: number;
+  /** GameEntity BOARD_VISUAL_STATE as animated (1 shop, 2 combat). */
+  visual: number;
+  /** STATE=COMPLETE animated (or the log ended). */
+  complete: boolean;
+}
+
 interface GameCtx {
+  playback: Playback;
   gameId: string;
   isBg: boolean;
   bgDecided: boolean;
@@ -117,6 +130,8 @@ interface GameCtx {
 }
 
 const EMPTY_BATTLE: BattleState = { status: 'idle', turn: 0 };
+/** State enum: COMPLETE. */
+const GAME_STATE_COMPLETE = 3;
 
 /** GameEntity tags copied into every SimSide.playerTags (lobby-wide modifiers). */
 const GLOBAL_GAME_TAGS = [T.BACON_GLOBAL_OLD_GOD_DBID, T.BACON_GLOBAL_ANOMALY_DBID, T.BACON_COMBAT_DAMAGE_CAP];
@@ -208,6 +223,11 @@ export class BgTracker {
     for (const p of pk) this.handle(p);
     const g = this.g;
     if (g && g.isBg && g.ended && !g.matchRecord) this.finishGame(g);
+    if (g && g.ended && g.playback.seen && !g.playback.complete) {
+      // The log ended: nothing more will be animated.
+      g.playback.complete = true;
+      this.bump();
+    }
     return this.events;
   }
 
@@ -255,6 +275,16 @@ export class BgTracker {
         const g = this.g;
         if (g?.isBg) this.onBlockStart(g, pk);
         this.depth++;
+        return;
+      }
+      case 'Playback': {
+        const pb = this.g?.playback;
+        if (!pb) return;
+        pb.seen = true;
+        if (pk.tag === T.TURN) pb.turn = pk.value;
+        else if (pk.tag === T.BOARD_VISUAL_STATE) pb.visual = pk.value;
+        else if (pk.tag === T.STATE && pk.value === GAME_STATE_COMPLETE) pb.complete = true;
+        this.bump();
         return;
       }
       case 'BlockEnd': {
@@ -347,6 +377,7 @@ export class BgTracker {
     }
     const startedAt = this.now();
     this.g = {
+      playback: { seen: false, turn: 0, visual: 0, complete: false },
       gameId: `bg-${seed || 0}-${startedAt}`,
       isBg: false,
       bgDecided: false,
@@ -1234,13 +1265,20 @@ export class BgTracker {
     const lp = s.localPlayer;
     const localPid = this.localPid(g);
     const nextOpp = lp ? s.tag(lp.entityId, T.NEXT_OPPONENT_PLAYER_ID) || s.tag(g.localHeroId, T.NEXT_OPPONENT_PLAYER_ID) : 0;
-    const turn = this.bgTurn();
+    // GameState lines arrive as soon as the server sends them: a combat is fully
+    // resolved in the log within a fraction of a second, while the client animates it
+    // for 20-40 s. When PowerTaskList lines are present (log.config Verbose=true), follow
+    // their animation-paced turn/board state for what the player is watching.
+    const pb = g.playback;
+    const followPlayback = pb.seen && !(g.ended && pb.complete) && pb.turn > 0 && pb.turn <= s.tag(s.gameEntityId, T.TURN);
+    const turn = followPlayback ? Math.ceil(pb.turn / 2) : this.bgTurn();
     const inCombat = !!g.combat && !g.combat.ended;
     const mode = this.mode(g);
     const teammate = mode === 'duos' ? this.teammatePid() : 0;
 
     let phase: BgGameState['phase'];
-    if (g.ended) phase = 'gameOver';
+    if (followPlayback) phase = pb.visual === 2 || pb.turn % 2 === 0 ? 'combat' : 'recruit';
+    else if (g.ended) phase = 'gameOver';
     else if (inCombat) phase = 'combat';
     else if (turn === 0) phase = 'heroSelection';
     else if (s.tag(s.gameEntityId, T.TURN) % 2 === 0) phase = 'combat';
@@ -1377,6 +1415,12 @@ export class BgTracker {
       battles: g.battles,
       startedAt: g.startedAt,
     };
+    if (followPlayback && phase === 'combat') {
+      // Don't reveal the outcome of the combat that is still being animated.
+      const hide = (b: BattleState): BattleState => (b.turn >= turn && b.actual ? { ...b, actual: undefined } : b);
+      state.battle = hide(g.battle);
+      state.battles = g.battles.map(hide);
+    }
     if (g.buildNumber) state.buildNumber = g.buildNumber;
     if (localPid) state.localPlayerId = localPid;
     if (lp?.name) state.localPlayerName = lp.name;
