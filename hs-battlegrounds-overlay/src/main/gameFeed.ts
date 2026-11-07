@@ -14,6 +14,8 @@ export interface TrackerLike {
   reset(opts?: { keepUnfinishedGame?: boolean }): void;
   /** End of input: emits a buffered packet and a pending gameEnd. */
   flush?(): BgEvent[];
+  /** Periodic re-check of time-based state while the log is silent. */
+  tick?(): boolean;
 }
 
 /** Leading + trailing throttle. `request(true)` fires synchronously. */
@@ -139,6 +141,17 @@ export class GameFeed {
     this.publishedVersion = -1;
     this.throttle.request(true);
     return events;
+  }
+
+  /** Call every few seconds: lets time-based state (a stalled playback) expire while the log is silent. */
+  tick(): void {
+    try {
+      this.tracker.tick?.();
+    } catch (err) {
+      this.log.error('tracker tick failed', err);
+      return;
+    }
+    if (this.tracker.version !== this.publishedVersion) this.throttle.request(false);
   }
 
   /** Publishes the current state now (even if unchanged). */

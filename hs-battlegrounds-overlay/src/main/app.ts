@@ -450,6 +450,8 @@ export class TavernLensApp {
     });
     this.tray.update(this.trayState());
     this.maybeSwapTracker();
+    this.live.tick();
+    this.demoFeed?.tick();
   }
 
   // ------------------------------------------------------------- game state

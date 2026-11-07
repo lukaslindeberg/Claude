@@ -96,6 +96,10 @@ interface Playback {
 
 interface GameCtx {
   playback: Playback;
+  /** Log timestamp at which the GameState stream reached each GameEntity TURN. */
+  turnTs: Map<number, string>;
+  /** Log timestamp at which the GameState stream ended the local player's game. */
+  endedTs?: string;
   gameId: string;
   isBg: boolean;
   bgDecided: boolean;
@@ -132,6 +136,34 @@ interface GameCtx {
 const EMPTY_BATTLE: BattleState = { status: 'idle', turn: 0 };
 /** State enum: COMPLETE. */
 const GAME_STATE_COMPLETE = 3;
+/**
+ * How far (log time) the animated playback may trail the GameState stream and still be
+ * followed. Real logs trail by up to a combat's length (~65 s for a big final fight);
+ * beyond this the client has stopped animating (left the game screen, disconnected,
+ * crashed) and the GameState stream is shown instead.
+ */
+export const MAX_PLAYBACK_LAG_MS = 150_000;
+const DAY_MS = 86_400_000;
+
+function freshPlayback(): Playback {
+  return { seen: false, turn: 0, visual: 0, complete: false };
+}
+
+/** Power.log timestamp `HH:MM:SS.fffffff` -> ms of the day (NaN if absent / malformed). */
+export function logTimeMs(ts: string): number {
+  if (ts.length < 8 || ts.charCodeAt(2) !== 58 || ts.charCodeAt(5) !== 58) return NaN;
+  const h = +ts.slice(0, 2);
+  const m = +ts.slice(3, 5);
+  const sec = parseFloat(ts.slice(6));
+  return (h * 3600 + m * 60 + sec) * 1000;
+}
+
+/** `later - earlier` in ms for two log timestamps, across midnight; NaN if either is missing. */
+export function logTimeDiff(later: string, earlier: string): number {
+  let d = logTimeMs(later) - logTimeMs(earlier);
+  if (d < -DAY_MS / 2) d += DAY_MS;
+  return d < 0 ? 0 : d;
+}
 
 /** GameEntity tags copied into every SimSide.playerTags (lobby-wide modifiers). */
 const GLOBAL_GAME_TAGS = [T.BACON_GLOBAL_OLD_GOD_DBID, T.BACON_GLOBAL_ANOMALY_DBID, T.BACON_COMBAT_DAMAGE_CAP];
@@ -159,6 +191,12 @@ export class BgTracker {
   private spectating = false;
   private _version = 0;
   private cache?: { version: number; state: BgGameState };
+  /** Timestamp of the latest packet. */
+  private logTs = '';
+  /** Since when (wall clock, measured by tick()) the log has been silent at `logTs`. */
+  private idle?: { ts: string; at: number };
+  /** Whether the last built state followed the playback. */
+  private followed = false;
 
   constructor(opts: BgTrackerOptions = {}) {
     this.cardDb = opts.cardDb ?? CardDb.bundled();
@@ -188,6 +226,8 @@ export class BgTracker {
     this.depth = 0;
     this.events = [];
     this.spectating = false;
+    this.logTs = '';
+    this.idle = undefined;
     this._version++;
     this.cache = undefined;
   }
@@ -231,6 +271,20 @@ export class BgTracker {
     return this.events;
   }
 
+  /**
+   * Call every few seconds. While the log is silent, time still passes for a playback
+   * that has stopped (the client left the game screen): this re-checks whether it should
+   * still be followed. Returns true if the state changed.
+   */
+  tick(): boolean {
+    const g = this.g;
+    if (!g?.isBg) return false;
+    if (!this.idle || this.idle.ts !== this.logTs) this.idle = { ts: this.logTs, at: this.now() };
+    if (!this.cache || this.followsPlayback(g) === this.followed) return false;
+    this.bump();
+    return true;
+  }
+
   private spectatorLine(line: string): void {
     if (/Begin Spectating|Start Spectator/.test(line)) this.spectating = true;
     else if (/End Spectator/.test(line)) this.spectating = false;
@@ -252,6 +306,7 @@ export class BgTracker {
 
   private handle(pk: Packet): void {
     const s = this.store;
+    if (pk.ts) this.logTs = pk.ts;
     switch (pk.type) {
       case 'CreateGame': {
         if (this.g && this.g.isBg && this.g.ended && !this.g.matchRecord) this.finishGame(this.g);
@@ -278,8 +333,15 @@ export class BgTracker {
         return;
       }
       case 'Playback': {
-        const pb = this.g?.playback;
-        if (!pb) return;
+        const g = this.g;
+        if (!g) return;
+        if (pk.reset) {
+          // New game or reconnect: values printed before belong to the previous connection.
+          g.playback = freshPlayback();
+          this.bump();
+          return;
+        }
+        const pb = g.playback;
         pb.seen = true;
         if (pk.tag === T.TURN) pb.turn = pk.value;
         else if (pk.tag === T.BOARD_VISUAL_STATE) pb.visual = pk.value;
@@ -369,15 +431,17 @@ export class BgTracker {
     const prev = this.prevGame;
     this.prevGame = undefined;
     if (prev && seed && prev.seed === seed) {
-      // Reconnect: same game, continue history.
+      // Reconnect: same game, continue history. Playback restarts with the new connection.
       this.g = prev;
       prev.combat = undefined;
+      prev.playback = freshPlayback();
       this.bump();
       return;
     }
     const startedAt = this.now();
     this.g = {
-      playback: { seen: false, turn: 0, visual: 0, complete: false },
+      playback: freshPlayback(),
+      turnTs: new Map(),
       gameId: `bg-${seed || 0}-${startedAt}`,
       isBg: false,
       bgDecided: false,
@@ -601,6 +665,7 @@ export class BgTracker {
   }
 
   private onTurn(g: GameCtx, value: number): void {
+    if (!g.turnTs.has(value)) g.turnTs.set(value, this.logTs);
     const turn = Math.ceil(value / 2);
     if (value % 2 === 1) {
       if (g.combat && !g.combat.ended) this.endCombat(g);
@@ -1116,6 +1181,7 @@ export class BgTracker {
     if (g.combat && !g.combat.ended) this.endCombat(g);
     g.ended = true;
     g.endedAt = this.now();
+    g.endedTs = this.logTs;
     const heroes = this.syncPlayers(g);
     const turn = this.bgTurn();
     for (const [pid, e] of heroes) {
@@ -1270,7 +1336,9 @@ export class BgTracker {
     // for 20-40 s. When PowerTaskList lines are present (log.config Verbose=true), follow
     // their animation-paced turn/board state for what the player is watching.
     const pb = g.playback;
-    const followPlayback = pb.seen && !(g.ended && pb.complete) && pb.turn > 0 && pb.turn <= s.tag(s.gameEntityId, T.TURN);
+    const gsTurn = s.tag(s.gameEntityId, T.TURN);
+    const followPlayback = this.followsPlayback(g);
+    this.followed = followPlayback;
     const turn = followPlayback ? Math.ceil(pb.turn / 2) : this.bgTurn();
     const inCombat = !!g.combat && !g.combat.ended;
     const mode = this.mode(g);
@@ -1284,8 +1352,9 @@ export class BgTracker {
     else if (s.tag(s.gameEntityId, T.TURN) % 2 === 0) phase = 'combat';
     else phase = 'recruit';
 
-    // Shop (recruit only) also feeds tribe inference.
-    const shop = phase === 'recruit' ? this.shopOffers(g) : [];
+    // Shop (recruit only). While the playback still shows the previous shop and GameState
+    // is in combat, the dummy player's minions are the opponent's board, not a shop.
+    const shop = phase === 'recruit' && !inCombat && gsTurn % 2 === 1 ? this.shopOffers(g) : [];
 
     // Local live board / hand
     const enchants = enchantmentIndex(s);
@@ -1391,6 +1460,9 @@ export class BgTracker {
       const cur = dp ? s.tag(dp.entityId, T.BACON_CURRENT_COMBAT_PLAYER_ID) : 0;
       const hero = dp ? s.get(s.tag(dp.entityId, T.HERO_ENTITY)) : undefined;
       currentOpponentPlayerId = cur || (hero && !g.bobIds.has(hero.id) ? hero.tags.get(T.PLAYER_ID) : 0) || g.combat.input?.opponent.playerId || g.combat.oppPid || undefined;
+    } else if (phase === 'combat' && followPlayback && g.combat && g.combat.turn === turn) {
+      // GameState already resolved the combat that is still being animated.
+      currentOpponentPlayerId = g.combat.input?.opponent.playerId || g.combat.oppPid || undefined;
     }
 
     const resources = lp ? s.tag(lp.entityId, T.RESOURCES) : 0;
@@ -1437,6 +1509,29 @@ export class BgTracker {
     if (g.endedAt !== undefined) state.endedAt = g.endedAt;
     // Plain JSON (no shared references with internal state).
     return JSON.parse(JSON.stringify(state)) as BgGameState;
+  }
+
+  /**
+   * Follow the PowerTaskList (animation-paced) turn and board state rather than the
+   * GameState one? Only while it is within MAX_PLAYBACK_LAG_MS of GameState.
+   */
+  private followsPlayback(g: GameCtx): boolean {
+    const pb = g.playback;
+    if (!pb.seen || pb.turn <= 0 || (g.ended && pb.complete)) return false;
+    const gsTurn = this.store.tag(this.store.gameEntityId, T.TURN);
+    // Ahead of GameState: a previous game's / connection's leftovers.
+    if (pb.turn > gsTurn) return false;
+    // Since when GameState has been ahead of what is animated.
+    let since: string | undefined;
+    if (pb.turn < gsTurn) {
+      for (let t = pb.turn + 1; t <= gsTurn && since === undefined; t++) since = g.turnTs.get(t);
+      if (since === undefined) return false; // can't tell how stale it is (reconnect)
+    } else if (g.ended) since = g.endedTs;
+    if (since === undefined) return true; // caught up
+    const lag = logTimeDiff(this.logTs, since);
+    if (Number.isNaN(lag)) return true; // no timestamps in this log
+    const idle = this.idle && this.idle.ts === this.logTs ? Math.max(0, this.now() - this.idle.at) : 0;
+    return lag + idle <= MAX_PLAYBACK_LAG_MS;
   }
 
   // -------------------------------------------------------------------------

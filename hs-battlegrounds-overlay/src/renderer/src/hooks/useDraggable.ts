@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { WidgetId } from '@shared/types';
 import { useApp } from '../store/appStore';
-import { acquireInteractive, releaseInteractive } from './useInteractive';
+import { acquireDragInteractive, releaseInteractive } from './useInteractive';
 import { useViewport, type Viewport } from './useViewport';
 
 export interface Size {
@@ -66,7 +66,7 @@ export function useDraggable(id: WidgetId, computeDefault: DefaultPosition, enab
       drag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top, startX: e.clientX, startY: e.clientY, moved: false, key };
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       ref.current.dataset.tlDragging = 'true';
-      acquireInteractive(key);
+      acquireDragInteractive(key);
       e.preventDefault();
     },
     [enabled],

@@ -18,17 +18,19 @@ export interface FloatingWidgetProps {
   zIndex?: number;
   /** Told when the pointer enters or leaves the widget (interactive widgets only). */
   onHoverChange?: (inside: boolean) => void;
+  /** Zoom for this widget instead of the overlay scale (to fit beside the game's buttons). */
+  scale?: number;
 }
 
 /** Absolutely positioned, scale-aware overlay widget. */
-export function FloatingWidget({ id, defaultPosition, draggable = true, interactive = true, className, children, zIndex, onHoverChange }: FloatingWidgetProps) {
+export function FloatingWidget({ id, defaultPosition, draggable = true, interactive = true, className, children, zIndex, onHoverChange, scale }: FloatingWidgetProps) {
   const { ref, pos, handleProps, dragging } = useDraggable(id, defaultPosition, draggable);
   const inter = useInteractive(interactive, onHoverChange);
   return (
     <div
       ref={ref}
       className={clsx('tl-widget', `tl-widget--${id}`, dragging && 'is-dragging', className)}
-      style={{ left: pos.left, top: pos.top, zIndex }}
+      style={{ left: pos.left, top: pos.top, zIndex, ...(scale ? ({ '--tl-scale': String(scale) } as React.CSSProperties) : null) }}
       data-widget={id}
       {...(interactive ? inter : {})}
     >

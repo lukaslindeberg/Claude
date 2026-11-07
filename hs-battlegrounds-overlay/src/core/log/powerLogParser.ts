@@ -115,6 +115,8 @@ export interface PlaybackPacket extends PacketBase {
   type: 'Playback';
   tag: number;
   value: number;
+  /** The playback stream printed CREATE_GAME (new game, reconnect): forget earlier values. */
+  reset?: boolean;
 }
 export interface BlockStartPacket extends PacketBase {
   type: 'BlockStart';
@@ -530,6 +532,10 @@ export class PowerLogParser {
   private static readonly PLAYBACK_TAGS = new Set([GameTag.TURN, GameTag.BOARD_VISUAL_STATE, GameTag.STATE]);
 
   private playbackLine(p: string, ts: string, out: Packet[]): void {
+    if (p.startsWith('CREATE_GAME')) {
+      out.push({ type: 'Playback', ts, tag: 0, value: 0, reset: true });
+      return;
+    }
     if (!p.startsWith('TAG_CHANGE Entity=GameEntity ')) return;
     const m = TAG_CHANGE_RE.exec(p);
     if (!m) return;
