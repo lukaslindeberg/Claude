@@ -2,7 +2,8 @@
  * Mock implementation of the preload bridge for browser development, the
  * `vite.demo.config.ts` demo server and screenshots.
  *
- * Scenes (URL `?scene=`): heroSelection | recruit | combat | gameOver | idle | replay
+ * Scenes (URL `?scene=`): heroSelection | trinketPick | recruit | combat | gameOver | idle | replay
+ * `?scene=heroSelection&tribes=inferred` shows hero selection with the lobby's tribes known.
  */
 import type { TavernLensBridge, Unsubscribe } from '@shared/ipc';
 import {
@@ -13,12 +14,14 @@ import {
   type BgGameState,
   type HeroStatsBundle,
   type MatchRecord,
+  type TrinketStatsBundle,
   type Settings,
   type WidgetId,
 } from '@shared/types';
 import { CardDb } from '@core/cards/cardDb';
 import * as samples from '../dev/samples';
 import { personalBundle } from '../lib/stats';
+import { personalTrinketBundle } from '../lib/synergy';
 
 type Listener<T> = (v: T) => void;
 
@@ -53,8 +56,16 @@ function loadSettings(): Settings {
 
 function sceneState(scene: string): BgGameState {
   switch (scene) {
-    case 'heroSelection':
-      return samples.heroSelectionState();
+    case 'heroSelection': {
+      const s = samples.heroSelectionState();
+      if (new URLSearchParams(window.location.search).get('tribes') === 'inferred') {
+        s.availableTribes = ['ABERRATION', 'BEAST', 'MECHANICAL', 'NAGA', 'UNDEAD'];
+        s.tribesSource = 'inferred';
+      }
+      return s;
+    }
+    case 'trinketPick':
+      return samples.trinketPickState();
     case 'combat':
       return samples.combatState();
     case 'gameOver':
@@ -189,6 +200,11 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
     async getHeroStats(): Promise<HeroStatsBundle[]> {
       const bundles = [personalBundle(history)];
       if (settings.communityStats) bundles.unshift(samples.communityStats());
+      return bundles;
+    },
+    async getTrinketStats(): Promise<TrinketStatsBundle[]> {
+      const bundles = [personalTrinketBundle(history)];
+      if (settings.communityStats) bundles.unshift(samples.communityTrinketStats());
       return bundles;
     },
     async reportSimResult(turn: number, result: BattleSimResult) {

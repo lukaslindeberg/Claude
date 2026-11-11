@@ -1710,3 +1710,234 @@ div.tl-tip-anchor {
     display: none;
   }
 }
+
+/* ------------------------------------------------------------------ tribe synergy & play tips */
+/* Tribe emblem + placement impact ("−.09" green helps, "+.15" red hurts). */
+.tl-syn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 5px 0 2px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  box-shadow: 0 1px 0 rgba(255, 225, 170, 0.06);
+  white-space: nowrap;
+  transition: opacity 0.15s, filter 0.15s;
+}
+.tl-syn__v {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.tl-syn.is-good .tl-syn__v {
+  color: #86ea9c;
+}
+.tl-syn.is-bad .tl-syn__v {
+  color: #ff8b80;
+}
+/* In this lobby: brass ring. Not in this lobby (once it is known): dimmed. */
+.tl-syn.is-lobby {
+  background: rgba(244, 205, 108, 0.14);
+  border-color: rgba(244, 205, 108, 0.75);
+  box-shadow: 0 0 6px rgba(244, 205, 108, 0.3);
+}
+.tl-syn.is-out {
+  opacity: 0.42;
+  filter: saturate(0.4);
+}
+
+.tl-delta {
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.3);
+}
+.tl-delta.is-good {
+  color: #86ea9c;
+  background: rgba(40, 140, 70, 0.28);
+}
+.tl-delta.is-bad {
+  color: #ff8b80;
+  background: rgba(160, 50, 35, 0.3);
+}
+.tl-delta.is-flat {
+  color: var(--tl-muted);
+}
+
+/* Play tip: a strip of parchment with a red wax-ink initial rule. */
+.tl-tipnote {
+  position: relative;
+  pointer-events: auto;
+  padding: 5px 8px 5px 9px;
+  font-size: 11px;
+  line-height: 1.32;
+  color: var(--ink);
+  background:
+    var(--tex-parch) 0 0 / 300px 300px,
+    linear-gradient(175deg, #f6ebcf, #e6d2a6);
+  border: 1px solid #7a5428;
+  border-left: 3px solid var(--ink-red);
+  border-radius: 3px;
+  box-shadow: inset 0 0 8px rgba(120, 75, 25, 0.3), 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+.tl-tipnote__text {
+  display: -webkit-box;
+  -webkit-line-clamp: var(--lines, 2);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* The full text unfolds over what is below on hover, without changing the layout. */
+.tl-tipnote__full {
+  display: none;
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  z-index: 6;
+  padding: inherit;
+  padding-left: 9px;
+  color: var(--ink);
+  background: inherit;
+  border: 1px solid #7a5428;
+  border-left: 3px solid var(--ink-red);
+  border-radius: 3px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+}
+.tl-tipnote.is-long:hover .tl-tipnote__full {
+  display: block;
+}
+.tl-tipnote.is-compact {
+  font-size: 10.5px;
+}
+
+/* "✓ Beasts in lobby" / "No Beasts in this lobby" / "Wants Beasts" */
+.tl-rel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tl-rel__emblems {
+  display: inline-flex;
+  gap: 2px;
+}
+.tl-rel.is-ok {
+  color: #9cefb0;
+}
+.tl-rel.is-missing {
+  color: #ff8f84;
+}
+.tl-rel.is-unknown {
+  color: var(--tl-text-2);
+}
+.tl-on-parchment .tl-rel.is-ok,
+.tl-parchment .tl-rel.is-ok,
+.tl-tooltip__body .tl-rel.is-ok {
+  color: #1f6b33;
+}
+.tl-on-parchment .tl-rel.is-missing,
+.tl-parchment .tl-rel.is-missing,
+.tl-tooltip__body .tl-rel.is-missing {
+  color: var(--ink-red);
+}
+.tl-tooltip__body .tl-rel.is-unknown {
+  color: var(--ink-2);
+}
+
+/* Tooltip with a play tip (hero / trinket). */
+.tl-tiptip {
+  max-width: 290px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tl-tiptip__body {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.38;
+}
+.tl-tiptip__meta {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.tl-tiptip__syn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+}
+.tl-tiptip__syn > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tl-tiptip__syn b {
+  width: 64px;
+  color: var(--ink-2);
+}
+.tl-tooltip__body .tl-syn {
+  background: rgba(90, 60, 30, 0.12);
+  border-color: rgba(90, 60, 30, 0.25);
+  box-shadow: none;
+}
+.tl-tooltip__body .tl-syn.is-good .tl-syn__v {
+  color: #1f6b33;
+}
+.tl-tooltip__body .tl-syn.is-bad .tl-syn__v {
+  color: var(--ink-red);
+}
+.tl-tooltip__body .tl-syn.is-lobby {
+  border-color: #a8742a;
+  background: rgba(220, 170, 80, 0.25);
+}
+
+/* Small scroll marker: this hero / trinket has a play tip. */
+.tl-tipmark {
+  position: absolute;
+  right: -3px;
+  bottom: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: linear-gradient(175deg, #f6ebcf, #d9c08c);
+  border: 1px solid #5a3a16;
+  box-shadow: inset -2px 0 0 rgba(142, 43, 22, 0.75), 0 1px 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.tl-tipmark.is-inline {
+  position: relative;
+  display: inline-block;
+  right: auto;
+  bottom: auto;
+  margin-left: 5px;
+  vertical-align: -1px;
+  width: 10px;
+  height: 10px;
+}
+
+/* Lesser / greater trinket tag. */
+.tl-trinketkind {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(160, 200, 255, 0.4);
+  color: #bcd6ff;
+  background: rgba(40, 70, 130, 0.35);
+}
+.tl-trinketkind.is-greater {
+  border-color: rgba(214, 160, 255, 0.5);
+  color: #e4c8ff;
+  background: rgba(100, 50, 150, 0.38);
+}

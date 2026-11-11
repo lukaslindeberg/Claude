@@ -896,8 +896,8 @@ export class BgTracker {
       // Resolved without an EntitiesChosen line (e.g. timed out): the options leave SETASIDE.
       if (!e || e.tags.get(T.ZONE) !== Zone.SETASIDE) return undefined;
       const o: TrinketOption = { entityId: id, cardId: e.cardId, name: displayName(e, db) };
-      const cost = e.tags.get(T.COST) ?? db.get(e.cardId)?.cost;
-      if (cost !== undefined) o.cost = cost;
+      // No COST tag = free (e.g. Bob-blehead).
+      o.cost = e.tags.get(T.COST) ?? db.get(e.cardId)?.cost ?? 0;
       out.push(o);
     }
     return out.length ? out : undefined;

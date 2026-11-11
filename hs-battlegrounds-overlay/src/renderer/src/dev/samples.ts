@@ -10,6 +10,7 @@ import type {
   BgGameState,
   BoardSnapshot,
   CombatRecord,
+  HeroStat,
   HeroStatsBundle,
   MatchRecord,
   MinionKeywords,
@@ -18,7 +19,10 @@ import type {
   ShopOffer,
   SimSide,
   Tribe,
+  TrinketOption,
+  TrinketStatsBundle,
 } from '@shared/types';
+import { COMMUNITY_HEROES, COMMUNITY_TRINKETS } from './sampleCommunity';
 
 const db = CardDb.bundled();
 let nextEntity = 100;
@@ -516,6 +520,29 @@ export function heroSelectionState(): BgGameState {
   s.battle = { status: 'idle', turn: 0 };
   s.startedAt = Date.now() - 30_000;
   s.gold = undefined;
+  // Hearthstone's log does not list the lobby's tribes at hero selection: they are
+  // inferred from shop offers on turn 1-2.
+  s.availableTribes = [];
+  s.tribesSource = 'unknown';
+  s.anomalyCardId = undefined;
+  return s;
+}
+
+/** Lesser trinket offer on turn 6 (one Pirate trinket in a lobby without Pirates). */
+export const TRINKET_OFFER = ['BG30_MagicItem_924', 'BG35_MagicItem_301', 'BG36_MagicItem_201', 'BG36_MagicItem_206'];
+
+export function trinketPickState(): BgGameState {
+  const s = recruitState();
+  s.turn = 6;
+  s.tribesSource = 'inferred';
+  s.players = buildPlayers(6, 7);
+  s.nextOpponentPlayerId = 7;
+  s.battles = pastBattles(5);
+  s.battle = s.battles[s.battles.length - 1];
+  s.localBoard = boardOf(LOCAL_BOARD_T9.slice(0, 5).map(([id]) => [id] as M));
+  s.trinketOptions = TRINKET_OFFER.map(
+    (cardId, i): TrinketOption => ({ entityId: 900 + i, cardId, name: db.get(cardId)?.name ?? cardId, cost: db.get(cardId)?.cost }),
+  );
   return s;
 }
 
@@ -668,6 +695,15 @@ const HISTORY_HEROES = [
   'BG36_HERO_105', // Xavius
 ];
 
+/** [lesser, greater] trinkets cycled through the sample history. */
+const HISTORY_TRINKETS: [string, string][] = [
+  ['BG35_MagicItem_301', 'BG30_MagicItem_418'],
+  ['BG36_MagicItem_206', 'BG36_MagicItem_450'],
+  ['BG36_MagicItem_201', 'BG35_MagicItem_742'],
+  ['BG30_MagicItem_888', 'BG30_MagicItem_442'],
+  ['BG35_MagicItem_301', 'BG36_MagicItem_215'],
+];
+
 const PLACEMENTS = [2, 4, 1, 6, 3, 5, 2, 8, 4, 3, 1, 7, 5, 2, 4, 3, 6, 1, 4, 2, 5, 3, 7, 2, 4];
 const OPP_NAMES = ['Grimbold', 'Nyxara', 'Quillstorm', 'Bonecrusher', 'Tidecaller', 'Feralmancer', 'SirSnipalot', 'Vexmoor', 'Oakhart', 'Ziggles', 'Morwen', 'Thalric'];
 
@@ -769,6 +805,7 @@ export function sampleHistory(): MatchRecord[] {
       combats,
       healthHistory,
       lobby: lobbyPlayers,
+      trinkets: turns >= 9 ? [HISTORY_TRINKETS[i % HISTORY_TRINKETS.length][0], HISTORY_TRINKETS[(i * 3 + 1) % HISTORY_TRINKETS.length][1]] : turns >= 6 ? [HISTORY_TRINKETS[i % HISTORY_TRINKETS.length][0]] : [],
       ratingBefore: 6400 + (n - i) * 9,
       ratingAfter: 6400 + (n - i) * 9 + ratingAfterDelta,
     });
@@ -782,52 +819,46 @@ const LOBBY_TRIBES_ALL: Tribe[] = ['ABERRATION', 'BEAST', 'DEMON', 'DRAGON', 'EL
 // Community hero stats (hand-written sample, shaped like a real provider)
 // ---------------------------------------------------------------------------
 
-const COMMUNITY: [string, number, number, number][] = [
-  // heroCardId, avgPlacement, games, top4 %
-  ['BG36_HERO_000', 3.71, 18420, 64.8],
-  ['BG34_HERO_002', 4.12, 15210, 55.9],
-  ['TB_BaconShop_HERO_56', 4.38, 21907, 50.7],
-  ['BG31_HERO_802', 3.94, 16733, 60.1],
-  ['BG20_HERO_100', 4.05, 19811, 57.4],
-  ['BG23_HERO_304', 3.88, 14002, 61.3],
-  ['BG22_HERO_007', 4.21, 12450, 54.2],
-  ['BG24_HERO_100', 3.79, 13377, 63.0],
-  ['BG31_HERO_811', 4.47, 11021, 48.9],
-  ['TB_BaconShop_HERO_18', 4.29, 20140, 52.6],
-  ['BG23_HERO_201', 4.62, 9934, 45.1],
-  ['BG36_HERO_101', 3.66, 17512, 65.9],
-  ['BG34_HERO_001', 4.01, 15888, 58.3],
-  ['TB_BaconShop_HERO_52', 4.55, 10233, 46.7],
-  ['BG25_HERO_100', 3.84, 12011, 62.2],
-  ['BG28_HERO_400', 4.33, 9122, 51.5],
-  ['BG36_HERO_105', 4.71, 8871, 43.8],
-  ['BG36_HERO_002', 3.92, 14550, 60.4],
-  ['BG35_HERO_001', 4.18, 13022, 55.0],
-  ['TB_BaconShop_HERO_41', 4.83, 7733, 41.2],
-  ['TB_BaconShop_HERO_22', 3.98, 16341, 59.2],
-  ['BG21_HERO_000', 4.44, 9877, 49.3],
-  ['TB_BaconShop_HERO_02', 4.09, 12780, 56.6],
-  ['BG26_HERO_102', 4.94, 6120, 39.4],
-  ['BG32_HERO_002', 4.26, 10544, 53.1],
-  ['BG33_HERO_001', 3.75, 15009, 63.8],
-  ['TB_BaconShop_HERO_37', 4.15, 11873, 55.7],
-  ['BG25_HERO_103', 4.6, 8433, 45.9],
-  ['BG27_HERO_801', 3.86, 13650, 61.8],
-  ['BG34_HERO_000', 4.52, 9011, 47.0],
-];
-
+/**
+ * Community hero stats from a real snapshot of Firestone's public data (see
+ * sampleCommunity.ts), with per-tribe placements and relative tiers like the main process.
+ */
 export function communityStats(): HeroStatsBundle {
+  const stats: HeroStat[] = COMMUNITY_HEROES.map(([heroCardId, avgPlacement, games, top4Rate, pickRate, tribes]) => ({
+    heroCardId,
+    avgPlacement,
+    games,
+    top4Rate,
+    pickRate,
+    tribeStats: tribes
+      .split('|')
+      .filter(Boolean)
+      .map((row) => {
+        const [tribe, n, avg, without, impact] = row.split(' ');
+        return { tribe: tribe as Tribe, games: Number(n), avgPlacement: Number(avg), avgPlacementWithout: Number(without), impact: Number(impact) };
+      }),
+  }));
+  const mean = stats.reduce((a, s) => a + s.avgPlacement, 0) / stats.length;
+  const sd = Math.sqrt(stats.reduce((a, s) => a + (s.avgPlacement - mean) ** 2, 0) / stats.length) || 1;
+  for (const s of stats) {
+    const z = (s.avgPlacement - mean) / sd;
+    s.tier = z <= -1.25 ? 'S' : z <= -0.4 ? 'A' : z <= 0.4 ? 'B' : z <= 1.25 ? 'C' : 'D';
+  }
   return {
     source: 'community',
-    label: 'Community · patch 37.0, all ranks',
+    label: 'Community (Firestone public data)',
     updatedAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
-    stats: COMMUNITY.map(([heroCardId, avgPlacement, games, top4Rate]) => ({
-      heroCardId,
-      avgPlacement,
-      games,
-      top4Rate,
-      tier: avgPlacement <= 3.8 ? 'S' : avgPlacement <= 4.0 ? 'A' : avgPlacement <= 4.3 ? 'B' : avgPlacement <= 4.6 ? 'C' : 'D',
-    })),
+    mode: 'solo',
+    stats,
+  };
+}
+
+export function communityTrinketStats(): TrinketStatsBundle {
+  return {
+    source: 'community',
+    label: 'Community (Firestone public data)',
+    updatedAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
+    stats: COMMUNITY_TRINKETS.filter(([id]) => db.get(id)).map(([trinketCardId, avgPlacement, games, pickRate]) => ({ trinketCardId, avgPlacement, games, pickRate })),
   };
 }
 

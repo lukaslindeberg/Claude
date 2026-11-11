@@ -70,13 +70,12 @@ function HeroStatCard({ option, index, lobby }: { option: HeroOption; index: num
                 <StatGem kind="armor" value={armor} size={17} /> armor
               </>
             ) : null}
-            {found ? <span className={`tl-source is-${found.bundle.source}`} title={found.bundle.label}>{found.bundle.source === 'community' ? 'Community' : 'Personal'}</span> : null}
           </span>
         </div>
         <HeroTierBadge tier={tier} size="lg" />
       </div>
       {stat ? (
-        <div className="tl-herocard__stats">
+        <div className="tl-herocard__stats" title={found?.bundle.label}>
           <div className="tl-stat">
             <span className="tl-stat__value">{num(stat.avgPlacement, 2)}</span>
             <span className="tl-stat__label">Avg place</span>

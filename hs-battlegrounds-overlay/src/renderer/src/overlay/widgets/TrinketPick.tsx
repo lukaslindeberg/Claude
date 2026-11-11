@@ -13,7 +13,8 @@ import { PickRow } from './PickRow';
 /**
  * Stat cards above the trinket offer (lesser / greater trinket picks): community average
  * placement and pick rate, your own record, whether the tribes the trinket wants are in
- * this lobby, and its play tip. The best option by average placement gets a crown.
+ * this lobby, and its play tip. The best option by average placement (among those whose
+ * tribes are not missing from the lobby) gets a crown.
  */
 export function TrinketPickWidget() {
   const options = useApp((s) => s.game?.trinketOptions);
@@ -21,9 +22,16 @@ export function TrinketPickWidget() {
   const vp = useViewport();
   const scale = useApp((s) => effectiveScale(s.settings.scale, vp));
   const bundles = useTrinketBundles();
+  const db = useApp((s) => s.cardDb);
+  const lobby = useLobbyTribes();
   if (!options?.length || phase === 'heroSelection' || phase === 'gameOver') return null;
   const layout = trinketPickLayout(options.length, vp, scale);
-  const avgs = options.map((o) => trinketStatFor(bundles, o.cardId, 'community')?.avgPlacement);
+  // Best = lowest average placement among the options whose tribes are not missing here.
+  const avgs = options.map((o) => {
+    const card = db.get(o.cardId);
+    if (tribeRelevance(wantedTribes(card, tipFor(db, o.cardId)), lobby.tribes).status === 'missing') return undefined;
+    return trinketStatFor(bundles, o.cardId, 'community')?.avgPlacement;
+  });
   const known = avgs.filter((a): a is number => a !== undefined);
   const best = known.length >= 2 ? avgs.indexOf(Math.min(...known)) : -1;
   return (

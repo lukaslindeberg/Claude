@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import { useApp } from '../store/appStore';
 import { useViewport } from '../hooks/useViewport';
 import { HeroPortrait } from '../components/HeroPortrait';
+import { CardArt } from '../components/CardArt';
 import { MinionToken, type TokenMinion } from '../components/MinionToken';
-import { heroPickCenters, leaderboardSlots } from './layout';
+import { effectiveScale, heroPickCenters, leaderboardSlots, trinketPickLayout } from './layout';
 
 /**
  * Browser-demo only: a dim stand-in for the Hearthstone game window so the
@@ -24,6 +25,8 @@ export function DemoBackdrop() {
     .filter((s) => s.type === 'MINION')
     .map((s) => ({ cardId: s.cardId, name: s.name, attack: s.attack, health: s.health, tier: s.tier, tribes: s.tribes, golden: s.golden }));
   const spellsInShop = (game?.shop ?? []).filter((s) => s.type === 'SPELL');
+  const scale = useApp((s) => effectiveScale(s.settings.scale, vp));
+  const trinkets = phase === 'recruit' ? (game?.trinketOptions ?? []) : [];
 
   return (
     <div className="tl-demo-bg" aria-hidden>
@@ -99,6 +102,26 @@ export function DemoBackdrop() {
             </div>
           ) : null}
         </>
+      ) : null}
+
+      {trinkets.length ? (
+        // The game's trinket offer: a dimmed board with the trinket cards across the middle.
+        <div className="tl-demo-bg__offer">
+          <div className="tl-demo-bg__caption" style={{ top: H * 0.3 }}>
+            Choose a Lesser Trinket
+          </div>
+          {trinketPickLayout(trinkets.length, vp, scale).centers.map((x, i) => {
+            const size = Math.round(H * 0.17);
+            return (
+              <div key={trinkets[i].entityId} className="tl-demo-bg__trinket" style={{ left: x - size / 2, top: H * 0.38, width: size }}>
+                <span className="tl-demo-bg__trinketart" style={{ width: size, height: size }}>
+                  <CardArt cardId={trinkets[i].cardId} name={trinkets[i].name} />
+                </span>
+                <span>{trinkets[i].name}</span>
+              </div>
+            );
+          })}
+        </div>
       ) : null}
 
       {phase === 'gameOver' || phase === 'idle' ? <div className="tl-demo-bg__caption" style={{ top: H * 0.12 }}>{phase === 'idle' ? 'Main menu' : 'Game over'}</div> : null}
