@@ -158,7 +158,7 @@ function HeroPickCard({ row, rank, index, lobby }: { row: HeroRow; rank?: number
       </div>
       {syn && (syn.best.length || syn.worst.length) ? (
         <div className="tl-pick__chips">
-          <span className="tl-pick__chiplabel">Best with</span>
+          <span className="tl-pick__chiplabel">Best</span>
           {syn.best.map((t) => (
             <SynergyChip key={t.tribe} syn={t} lobby={lobby.tribes} />
           ))}
@@ -203,7 +203,7 @@ function LobbyTribePicker({ gameId, lobby }: { gameId: string; lobby: LobbyTribe
         <div className={clsx('tl-panel tl-tpick', locked && 'is-locked')}>
           <div className="tl-tpick__head">
             <DragHandle handle={handle} />
-            <span className="tl-tpick__title">{locked ? 'Tribes in this lobby' : 'Tribes in this lobby?'}</span>
+            <span className="tl-plate">{locked ? 'Tribes in this lobby' : 'Tribes in this lobby?'}</span>
             {locked ? (
               <span className="tl-tpick__tag">{lobby.inferred ? 'inferred' : 'from game'}</span>
             ) : (

@@ -4,29 +4,38 @@ import { useApp } from '../store/appStore';
 import { NAV_ICONS } from '../components/Icons';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Overview } from './sections/Overview';
-import { History } from './sections/History';
-import { Stats } from './sections/Stats';
+import { Matches } from './sections/Matches';
 import { Heroes } from './sections/Heroes';
 import { Trinkets } from './sections/Trinkets';
 import { SettingsSection } from './sections/SettingsSection';
 import { About } from './sections/About';
 import '../styles/companion.css';
 
-export type SectionId = 'overview' | 'history' | 'stats' | 'heroes' | 'trinkets' | 'settings' | 'about';
+export type SectionId = 'overview' | 'matches' | 'heroes' | 'trinkets' | 'settings';
+
+function SettingsPage() {
+  return (
+    <>
+      <SettingsSection />
+      <About />
+    </>
+  );
+}
 
 const SECTIONS: { id: SectionId; label: string; Component: ComponentType }[] = [
   { id: 'overview', label: 'Overview', Component: Overview },
-  { id: 'history', label: 'Match History', Component: History },
-  { id: 'stats', label: 'Stats', Component: Stats },
+  { id: 'matches', label: 'Matches', Component: Matches },
   { id: 'heroes', label: 'Heroes', Component: Heroes },
   { id: 'trinkets', label: 'Trinkets', Component: Trinkets },
-  { id: 'settings', label: 'Settings', Component: SettingsSection },
-  { id: 'about', label: 'About', Component: About },
+  { id: 'settings', label: 'Settings', Component: SettingsPage },
 ];
 
+/** Links from older versions (and the tray menu) still land on the merged pages. */
+const ALIASES: Record<string, SectionId> = { history: 'matches', stats: 'matches', about: 'settings', diagnostics: 'settings', minions: 'overview' };
+
 function fromHash(): SectionId {
-  const h = window.location.hash.replace('#', '') as SectionId;
-  return SECTIONS.some((s) => s.id === h) ? h : 'overview';
+  const h = window.location.hash.replace('#', '');
+  return SECTIONS.find((s) => s.id === h)?.id ?? ALIASES[h] ?? 'overview';
 }
 
 export function navigate(id: SectionId) {
@@ -82,7 +91,7 @@ export default function CompanionApp() {
               <button key={id} className={clsx('tl-nav__item', id === section && 'is-active')} onClick={() => navigate(id)}>
                 <Icon size={16} />
                 <span>{label}</span>
-                {id === 'history' && historyCount ? <span className="tl-nav__count">{historyCount}</span> : null}
+                {id === 'matches' && historyCount ? <span className="tl-nav__count">{historyCount}</span> : null}
                 {id === 'overview' && live ? <span className="tl-nav__live">Live</span> : null}
               </button>
             );

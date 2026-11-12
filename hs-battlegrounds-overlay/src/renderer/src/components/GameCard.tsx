@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import clsx from 'clsx';
 import type { MinionSnapshot } from '@shared/types';
 import { useApp } from '../store/appStore';
-import { CardRender, wantLargeRender } from './CardArt';
+import { CardRender, useImagesEnabled, wantLargeRender } from './CardArt';
 import { ParchmentCard, baseStats, type TooltipMinion } from './CardTooltip';
 import { StatGem } from './Bits';
 import { CrownIcon } from './Icons';
@@ -23,7 +23,9 @@ export function GameCard({ cardId, width = 150, minion, className }: { cardId: s
   const renderId = card?.normalId && golden ? card.normalId : cardId;
   const large = useMemo(() => width > 190 || wantLargeRender(), [width]);
   const base = minion ? baseStats(card, golden) : undefined;
-  const changed = !!minion && (!base || base.attack !== minion.attack || base.health !== minion.health);
+  // The parchment fallback (images off) already draws the current stats.
+  const images = useImagesEnabled();
+  const changed = images && !!minion && (!base || base.attack !== minion.attack || base.health !== minion.health);
   const damaged = !!minion && minion.maxHealth !== undefined && minion.health < minion.maxHealth;
   return (
     <span className={clsx('tl-gamecard', golden && 'is-golden', className)} style={{ width, height: Math.round((width * 776) / 512) }}>

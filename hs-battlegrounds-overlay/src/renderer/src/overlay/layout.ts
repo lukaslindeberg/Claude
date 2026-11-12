@@ -20,7 +20,7 @@ export function heroPickCenters(count: number, vp: Viewport): number[] {
 export const HERO_PICK_ART_TOP = 0.315;
 
 /** Unscaled widths of the pick cards (CSS px at scale 1). */
-export const PICK_CARD_WIDTH = { hero: 300, trinket: 280 };
+export const PICK_CARD_WIDTH = { hero: 310, trinket: 280 };
 
 /**
  * Trinket offers (lesser / greater) are dealt like a Discover: a row of cards across the
@@ -80,18 +80,6 @@ export const HS_ZONES = {
 export function zoneRect(z: Zone, vp: Viewport): Rect {
   const H = vp.height;
   return { left: vp.width / 2 + z.x0 * H, top: z.y0 * H, width: (z.x1 - z.x0) * H, height: (z.y1 - z.y0) * H };
-}
-
-/** The 16:9 area Hearthstone draws in (narrower windows use their full width). */
-export function gameArea(vp: Viewport): { left: number; right: number } {
-  const w = Math.min(vp.width, (vp.height * 16) / 9);
-  return { left: (vp.width - w) / 2, right: (vp.width + w) / 2 };
-}
-
-/** The options menu gear in the bottom-right corner of the game area. */
-export function gearRect(vp: Viewport): Rect {
-  const s = vp.height * 0.075;
-  return { left: gameArea(vp).right - s, top: vp.height - s, width: s, height: s };
 }
 
 /** Space kept free at the bottom of the right-edge panels (menu gear). */

@@ -1886,36 +1886,6 @@ div.tl-tip-anchor {
 }
 
 /* Tooltip with a play tip (hero / trinket). */
-.tl-tiptip {
-  max-width: 290px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.tl-tiptip__body {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.38;
-}
-.tl-tiptip__meta {
-  font-size: 11px;
-  color: var(--ink-2);
-}
-.tl-tiptip__syn {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-}
-.tl-tiptip__syn > span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.tl-tiptip__syn b {
-  width: 64px;
-  color: var(--ink-2);
-}
 .tl-tooltip__body .tl-syn {
   background: rgba(90, 60, 30, 0.12);
   border-color: rgba(90, 60, 30, 0.25);
@@ -1933,28 +1903,6 @@ div.tl-tip-anchor {
 }
 
 /* Small scroll marker: this hero / trinket has a play tip. */
-.tl-tipmark {
-  position: absolute;
-  right: -3px;
-  bottom: -2px;
-  width: 11px;
-  height: 11px;
-  border-radius: 2px;
-  background: linear-gradient(175deg, #f6ebcf, #d9c08c);
-  border: 1px solid #5a3a16;
-  box-shadow: inset -2px 0 0 rgba(142, 43, 22, 0.75), 0 1px 2px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-}
-.tl-tipmark.is-inline {
-  position: relative;
-  display: inline-block;
-  right: auto;
-  bottom: auto;
-  margin-left: 5px;
-  vertical-align: -1px;
-  width: 10px;
-  height: 10px;
-}
 
 /* Lesser / greater trinket tag. */
 .tl-trinketkind {

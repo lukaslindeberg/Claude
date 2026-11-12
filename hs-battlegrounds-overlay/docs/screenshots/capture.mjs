@@ -23,39 +23,38 @@ const companion = { width: 1280, height: 800 };
 /** name, url, viewport, optional page action, wait ms */
 const shots = [
   ['overlay-hero-selection', '/overlay.html?scene=heroSelection', overlay],
-  ['overlay-recruit', '/overlay.html?scene=recruit', overlay],
-  ['overlay-leaderboard-hover', '/overlay.html?scene=recruit&hover=0', overlay],
-  ['overlay-tier-list', '/overlay.html?scene=recruit&tierList=4', overlay],
-  ['overlay-tier-list-filtered', '/overlay.html?scene=recruit&tierList=3', overlay, async (p) => {
-    await p.locator('.tl-kwbtn').nth(2).click();
-    await p.locator('.tl-tierpanel__tier.is-all').click();
+  // The lobby's tribes ticked on the picker: heroes re-ranked for this lobby.
+  ['overlay-hero-selection-lobby', '/overlay.html?scene=heroSelection', overlay, async (p) => {
+    for (const i of [0, 1, 5, 7, 10]) await p.locator('.tl-tpick__btn').nth(i).click();
   }],
-  ['overlay-card-tooltip', '/overlay.html?scene=recruit', overlay, async (p) => {
-    await p.hover('.tl-opp__row:nth-child(3) .tl-opp__board .tl-tip-anchor:nth-child(2)');
+  ['overlay-trinket-pick', '/overlay.html?scene=trinketPick', overlay],
+  ['overlay-recruit', '/overlay.html?scene=recruit', overlay],
+  ['overlay-recruit-1440p', '/overlay.html?scene=recruit', { width: 2560, height: 1440 }],
+  ['overlay-opponent-hover', '/overlay.html?scene=recruit', overlay, async (p) => {
+    await p.hover('.tl-opp__row:nth-child(3) .tl-opp__board');
   }, 1500],
-  ['overlay-images-off', '/overlay.html?scene=recruit&hover=2&images=0', overlay],
   ['overlay-opponent-expanded', '/overlay.html?scene=recruit', overlay, async (p) => {
     await p.locator('.tl-opp__row').nth(2).click();
+    await p.mouse.move(900, 500);
   }],
-  ['overlay-combat-simulating', '/overlay.html?scene=combat&actual=0', overlay, null, 2500],
-  ['overlay-combat-result', '/overlay.html?scene=combat&actualDelay=1500', overlay, null, 3500],
+  ['overlay-images-off', '/overlay.html?scene=recruit&images=0', overlay, async (p) => {
+    await p.hover('.tl-opp__row:nth-child(3) .tl-opp__board');
+  }, 1200],
+  ['overlay-combat', '/overlay.html?scene=combat&sim=ok&actualDelay=1500', overlay, null, 2500],
+  ['overlay-combat-unreliable', '/overlay.html?scene=combat&sim=unreliable&actual=0', overlay, async (p) => {
+    await p.hover('.tl-sim__warn');
+  }, 800],
   ['overlay-game-over', '/overlay.html?scene=gameOver', overlay],
-  ['overlay-calibration', '/overlay.html?scene=recruit&calibrate=1', overlay],
-  ['overlay-recruit-1440p', '/overlay.html?scene=recruit&hover=2', { width: 2560, height: 1440 }],
   ['overlay-replay', '/overlay.html?scene=replay&speed=400&until=combat@6', overlay, null, 14000],
   ['companion-overview', '/settings.html?scene=recruit#overview', companion],
-  ['companion-history', '/settings.html?scene=recruit#history', companion],
-  ['companion-history-detail', '/settings.html?scene=recruit#history', companion, async (p) => {
+  ['companion-matches', '/settings.html?scene=recruit#matches', companion],
+  ['companion-match-detail', '/settings.html?scene=recruit#matches', companion, async (p) => {
     await p.locator('.tl-hist__row').first().click();
   }],
   ['companion-stats', '/settings.html?scene=recruit#stats', companion],
   ['companion-heroes', '/settings.html?scene=recruit#heroes', companion],
-  ['companion-minions', '/settings.html?scene=recruit#minions', companion],
+  ['companion-trinkets', '/settings.html?scene=recruit#trinkets', companion],
   ['companion-settings', '/settings.html?scene=recruit#settings', companion],
-  ['companion-settings-calibration', '/settings.html?scene=recruit#settings', companion, async (p) => {
-    await p.locator('.tl-main').evaluate((el) => el.scrollTo(0, el.scrollHeight));
-  }],
-  ['companion-about', '/settings.html?scene=recruit#about', companion],
 ];
 
 const browser = await chromium.launch();

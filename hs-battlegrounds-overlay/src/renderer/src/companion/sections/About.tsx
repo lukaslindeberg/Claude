@@ -1,5 +1,5 @@
 import { useApp } from '../../store/appStore';
-import { Card, SectionHeader } from '../ui';
+import { Card } from '../ui';
 import { DiagnosticsCard } from './Diagnostics';
 
 const LINKS: [string, string][] = [
@@ -12,8 +12,8 @@ export function About() {
   const db = useApp((s) => s.cardDb);
   const bridge = useApp((s) => s.bridge);
   return (
-    <div className="tl-section">
-      <SectionHeader title="About" />
+    <div className="tl-section tl-section--sub">
+      <h2 className="tl-subhead">About &amp; diagnostics</h2>
       <div className="tl-about">
         <Card className="tl-about__hero">
           <div className="tl-about__brand">
@@ -21,8 +21,8 @@ export function About() {
             <span className="tl-muted">Version {status?.version ?? '1.0.0'} · {status?.platform ?? 'unknown platform'}</span>
           </div>
           <p>
-            A Hearthstone Battlegrounds companion: opponent boards, combat simulation, minions by tier, hero statistics and session
-            tracking. It reads the game's own log file and never touches the game's memory or network traffic.
+            A Hearthstone Battlegrounds companion: opponent boards, combat odds, hero and trinket rankings
+            and session tracking. It reads the game's own log file and never touches the game's memory or network traffic.
           </p>
           <dl className="tl-about__facts">
             <dt>Card data</dt>

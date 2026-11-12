@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import type { Tribe } from '@shared/types';
 import { refreshTrinketStats, useApp } from '../../store/appStore';
-import { CardArt } from '../../components/CardArt';
-import { CardTooltip } from '../../components/CardTooltip';
+import { GameCard } from '../../components/GameCard';
 import { ChevronIcon, SearchIcon } from '../../components/Icons';
 import { RelevanceLine } from '../../components/Synergy';
 import { Toggle } from '../../components/Bits';
@@ -76,13 +75,11 @@ export function Trinkets() {
     });
   }, [rows, sort]);
 
-  const header = (key: SortKey, label: string, cls?: string) => (
-    <th className={clsx(cls, sort.key === key && 'is-sorted')}>
-      <button onClick={() => setSort((s) => ({ key, dir: s.key === key ? ((-s.dir) as 1 | -1) : 1 }))}>
-        {label}
-        {sort.key === key ? <ChevronIcon size={10} dir={sort.dir === 1 ? 'down' : 'up'} /> : null}
-      </button>
-    </th>
+  const head = (key: SortKey, label: string, cls?: string) => (
+    <button className={clsx(cls, sort.key === key && 'is-sorted')} onClick={() => setSort((s) => ({ key, dir: s.key === key ? ((-s.dir) as 1 | -1) : 1 }))}>
+      {label}
+      {sort.key === key ? <ChevronIcon size={10} dir={sort.dir === 1 ? 'down' : 'up'} /> : null}
+    </button>
   );
 
   return (
@@ -117,81 +114,54 @@ export function Trinkets() {
         </Empty>
       ) : (
         <Card pad={false}>
-          <table className="tl-table tl-trinkettable">
-            <thead>
-              <tr>
-                {header('name', 'Trinket', 'is-left')}
-                {header('avg', 'Avg place')}
-                {header('pick', 'Picked')}
-                {header('games', 'Games')}
-                {header('mine', 'You')}
-                <th className="is-left">
-                  <button disabled>Tribes</button>
-                </th>
-                <th className="is-left">
-                  <button disabled>How to play it</button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((r) => (
-                <tr key={r.id} className={clsx(r.rel.status === 'missing' && 'is-warn')}>
-                  <td className="is-left">
-                    <Tooltip placement="right" tipClassName="tl-tooltip--card" content={() => <CardTooltip cardId={r.id} />}>
-                      <span className="tl-trinketrow">
-                        <span className="tl-trinketrow__art">
-                          <CardArt cardId={r.id} name={r.name} initialsSize={11} />
-                        </span>
-                        <span className="tl-trinketrow__name">{r.name}</span>
-                        {r.kind ? <span className={`tl-trinketkind is-${r.kind}`}>{r.kind}</span> : null}
-                      </span>
-                    </Tooltip>
-                  </td>
-                  <td>
-                    {r.c ? (
-                      <span className="tl-table__avg" style={{ color: placementColor(Math.round(r.c.avgPlacement)) }}>
-                        {num(r.c.avgPlacement, 2)}
-                      </span>
-                    ) : (
-                      <span className="tl-muted">—</span>
-                    )}
-                  </td>
-                  <td>
-                    {r.c?.pickRate !== undefined ? (
-                      <span className="tl-table__bar">
-                        <i style={{ width: `${Math.round(r.c.pickRate * 100)}%` }} />
-                        <span>{Math.round(r.c.pickRate * 100)}%</span>
-                      </span>
-                    ) : (
-                      <span className="tl-muted">—</span>
-                    )}
-                  </td>
-                  <td className="tl-muted">{r.c ? compact(r.c.games) : '—'}</td>
-                  <td>
-                    {r.p ? (
-                      <span>
-                        <b>{num(r.p.avgPlacement, 1)}</b> <span className="tl-muted">×{r.p.games}</span>
-                      </span>
-                    ) : (
-                      <span className="tl-muted">—</span>
-                    )}
-                  </td>
-                  <td className="is-left">
-                    {r.rel.status === 'none' ? <span className="tl-muted tl-small">Any lobby</span> : <RelevanceLine rel={r.rel} />}
-                  </td>
-                  <td className="is-left tl-trinkettable__tip">
+          <div className="tl-rank tl-rank--trinkets">
+            <div className="tl-rank__head">
+              <span>#</span>
+              {head('name', 'Trinket', 'is-left')}
+              {head('avg', 'Avg place')}
+              {head('pick', 'Picked')}
+              {head('games', 'Games')}
+              {head('mine', 'You')}
+              <span className="is-left">Tribes</span>
+            </div>
+            {sorted.map((r, i) => (
+              <div key={r.id} className={clsx('tl-rank__row', r.rel.status === 'missing' && 'is-warn')}>
+                <span className="tl-rank__n">{i + 1}</span>
+                <span className="tl-rank__who">
+                  <Tooltip placement="right" tipClassName="tl-tooltip--card" content={() => <GameCard cardId={r.id} width={210} />}>
+                    <GameCard cardId={r.id} width={44} className="tl-rank__card" />
+                  </Tooltip>
+                  <span className="tl-rank__text">
+                    <span className="tl-rank__name">
+                      {r.name}
+                      {r.kind ? <span className={`tl-trinketkind is-${r.kind}`}>{r.kind}</span> : null}
+                    </span>
                     {r.tip ? (
-                      <Tooltip as="div" placement="left" content={r.tip.tip} disabled={r.tip.tip.length < 90}>
-                        <span className="tl-trinkettable__tiptext">{r.tip.tip}</span>
-                      </Tooltip>
-                    ) : (
-                      <span className="tl-muted">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <span className="tl-rank__tip">
+                        <b>How to play</b>
+                        {r.tip.tip}
+                      </span>
+                    ) : null}
+                  </span>
+                </span>
+                <span className="tl-rank__value" style={{ '--c': r.c ? placementColor(Math.round(r.c.avgPlacement)) : '#a08d70' } as React.CSSProperties}>
+                  <b>{r.c ? num(r.c.avgPlacement, 2) : '—'}</b>
+                </span>
+                <span>{r.c?.pickRate !== undefined ? `${Math.round(r.c.pickRate * 100)}%` : '—'}</span>
+                <span className="tl-muted">{r.c ? compact(r.c.games) : '—'}</span>
+                <span>
+                  {r.p ? (
+                    <>
+                      <b>{num(r.p.avgPlacement, 1)}</b> <span className="tl-muted">×{r.p.games}</span>
+                    </>
+                  ) : (
+                    <span className="tl-muted">—</span>
+                  )}
+                </span>
+                <span className="tl-rank__chips">{r.rel.status === 'none' ? <span className="tl-muted tl-small">Any lobby</span> : <RelevanceLine rel={r.rel} />}</span>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
     </div>

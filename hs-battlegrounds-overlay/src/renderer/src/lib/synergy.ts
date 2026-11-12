@@ -51,7 +51,7 @@ export function useLobbyTribes(): LobbyTribes {
 /** "Beasts", "Mechs", ... for sentences. */
 export function tribePlural(t: Tribe): string {
   const label = TRIBE_LABELS[t];
-  return t === 'ALL' ? 'all types' : `${label}s`;
+  return t === 'ALL' ? 'all types' : t === 'UNDEAD' || t === 'NAGA' || t === 'QUILBOAR' ? label : `${label}s`;
 }
 
 export function joinTribes(tribes: Tribe[]): string {

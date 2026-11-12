@@ -279,44 +279,6 @@ body.tl-body--overlay {
   border-radius: 4px;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
-.tl-opp__fullboard {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.tl-opp__minion {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-}
-.tl-opp__minion .tl-token--xs {
-  --w: 22px;
-  --h: 27px;
-  --badge: 0px;
-}
-.tl-opp__minion .tl-token__atk,
-.tl-opp__minion .tl-token__hp,
-.tl-opp__minion .tl-token__marks,
-.tl-opp__minion .tl-token__tierstar {
-  display: none;
-}
-.tl-opp__minion-name {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 650;
-}
-.tl-opp__minion-stats {
-  font-family: var(--tl-display);
-  font-weight: 800;
-  font-size: 12px;
-  min-width: 38px;
-  text-align: right;
-  color: #fff;
-}
 .atk {
   color: #ffd66b;
 }
@@ -420,7 +382,7 @@ body.tl-body--overlay {
   pointer-events: none;
 }
 .tl-pick {
-  width: 300px;
+  width: 310px;
   padding: 9px 11px 9px 12px;
   display: flex;
   flex-direction: column;
@@ -580,6 +542,15 @@ body.tl-body--overlay {
 }
 .tl-pick__card {
   margin: -4px 0 -6px -2px;
+}
+.tl-pick--trinket .tl-pick__name {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.tl-pick__chips .tl-syn {
+  padding: 0 4px 0 1px;
 }
 .tl-pick--trinket .tl-pick__value {
   font-size: 24px;
@@ -964,8 +935,8 @@ body.tl-body--overlay {
   text-shadow: 0 1px 0 #000, 0 0 8px #000;
 }
 .tl-boardtip__seen {
-  font-size: 11px;
-  color: var(--tl-text-2);
+  font-size: 11.5px;
+  color: #e9d9b8;
   text-shadow: 0 1px 0 #000;
 }
 .tl-boardtip__tip {

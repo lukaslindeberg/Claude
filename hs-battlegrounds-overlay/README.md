@@ -11,31 +11,32 @@ injection — and draws a transparent, click-through layer on top of the game.
 
 | In game | What it shows |
 | --- | --- |
-| **Hero selection** | A stat card above each offered hero: average placement, top-4 rate, tier (S–D) and your own record with that hero. |
-| **Opponents panel** | Every player by leaderboard place: hero, health + armor, tavern tier, triples, last board seen (with golden / keyword markers), how long ago, last result against you, next-opponent highlight. |
-| **Leaderboard hover** | Hover a hero on the in-game leaderboard to see that player's last board, tier and last result. Calibratable. |
-| **Battle simulation** | Before each combat: win / tie / loss odds, average damage, lethal chance. Flags results as approximate when the board has effects the simulator doesn't model; shows the actual outcome afterwards, and stays through the next shop as a compact (foldable) "Last battle" plaque. |
-| **Minions by tier** | Current-pool minions and tavern spells for each tier, filtered to the lobby's tribes, with card text and highlighting of what's in the shop. |
-| **Lobby info** | Mode, turn, tribes in the lobby, anomaly. |
-| **Post-match summary** | Placement, final board, tier timings, combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
-| **Session tracker** | Games today, average placement, last 10 placements. |
+| **Hero pick ranking** | Above each offered hero: its rank among the offer (#1 gets a crown and "Best pick"), expected placement, the tribes it does best and worst with, and a short "How to play" note. Tick the lobby's tribes on the tribe picker (11 emblems, mouse only) and the heroes are re-ranked for this lobby; once the game reveals the tribes they are used automatically. More numbers on hover. |
+| **Trinket pick ranking** | Above each offered trinket (lesser and greater): the game's own card, its rank by average placement, pick rate, a check or warning for the tribes it needs in this lobby (a trinket whose tribe is missing ranks last) and how to play it. |
+| **Opponents panel** | Every player by leaderboard place: hero, health + armor, tavern tier, triples, last board seen, last result against you, next-opponent highlight. Hover a row to see that board as the game's cards with their current stats; click a row for trinkets, tier timings and health history. |
+| **Battle odds** | One compact plaque: win / tie / loss, average damage, lethal chance when there is any, and the actual result afterwards (it stays through the next shop as "Last battle"). When the boards contain effects the simulator doesn't model, the odds are greyed out behind "Unreliable: N effects not simulated" (the cards are listed on hover) instead of being shown as confident numbers. |
+| **Lobby and session plaque** | One small plaque: turn, the lobby's tribes, your hero's expected placement in this lobby, the anomaly; games today, average and recent placements. Details on hover. |
+| **Post-match summary** | Placement, final board as the game's cards, tier timings, combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
 
-The **companion window** (tray icon → *Open Tavern Lens*) has setup checks, match history, personal stats,
-a hero tier list, a full minion browser and all settings. A **demo mode** replays a recorded game so you
-can see everything without launching Hearthstone.
+The **companion window** (tray icon → *Open Tavern Lens*) has five pages: **Overview** (setup checks and the
+current game), **Matches** (history and statistics), **Heroes** and **Trinkets** (ranked lists with a tribe
+filter that re-ranks them for a lobby, per-tribe effects, your own record and "How to play" notes) and
+**Settings** (with diagnostics and about). A **demo mode** replays a recorded game so you can see everything
+without launching Hearthstone.
 
 ### Screenshots
 
 The overlay screenshots come from the browser demo, which draws a placeholder game behind the overlay.
-Card art is loaded from HearthstoneJSON at runtime and couldn't be fetched where these were captured, so
-minions show their initials instead of art.
+Minions, trinkets and heroes are drawn with the game's own card renders and art from HearthstoneJSON; with
+card images turned off they fall back to cards drawn from the card data.
 
 | | |
 | --- | --- |
-| ![Recruit phase](docs/screenshots/overlay-recruit.jpg) Recruit phase: tier bar, lobby info, last battle, leaderboard panel, session widget | ![Battle simulation](docs/screenshots/overlay-combat-result.jpg) Battle simulation with the actual result |
-| ![Leaderboard hover](docs/screenshots/overlay-leaderboard-hover.jpg) Leaderboard hover | ![Minions by tier](docs/screenshots/overlay-tier-list.jpg) Minions by tier |
-| ![Hero selection](docs/screenshots/overlay-hero-selection.jpg) Hero selection | ![Post-match summary](docs/screenshots/overlay-game-over.jpg) Post-match summary |
-| ![Companion overview](docs/screenshots/companion-overview.jpg) Companion: overview and setup checks | ![Match history](docs/screenshots/companion-history-detail.jpg) Companion: match history |
+| ![Hero pick](docs/screenshots/overlay-hero-selection-lobby.jpg) Hero pick: heroes ranked for the lobby's tribes | ![Trinket pick](docs/screenshots/overlay-trinket-pick.jpg) Trinket pick: ranked offer, missing-tribe warning |
+| ![Recruit phase](docs/screenshots/overlay-recruit.jpg) Recruit phase: last battle, leaderboard panel, lobby and session plaque | ![Opponent board](docs/screenshots/overlay-opponent-hover.jpg) Hovering an opponent: their board as cards |
+| ![Battle odds](docs/screenshots/overlay-combat.jpg) Battle odds with the actual result | ![Unreliable odds](docs/screenshots/overlay-combat-unreliable.jpg) Odds flagged as unreliable |
+| ![Post-match summary](docs/screenshots/overlay-game-over.jpg) Post-match summary | ![Companion overview](docs/screenshots/companion-overview.jpg) Companion: overview and setup checks |
+| ![Heroes](docs/screenshots/companion-heroes.jpg) Companion: heroes ranked for a lobby | ![Trinkets](docs/screenshots/companion-trinkets.jpg) Companion: trinkets |
 
 More in [`docs/screenshots/`](docs/screenshots/); regenerate them with `node docs/screenshots/capture.mjs`
 while `npm run demo:web` is running.
@@ -76,7 +77,7 @@ first launch.
    Settings) and enables Hearthstone's `Power` log in `log.config`. **If Hearthstone was already running,
    restart it once** so the log setting takes effect.
 2. Start a Battlegrounds game. The overlay appears over the game window while Hearthstone is focused.
-3. Hotkeys (active while Hearthstone is in front): `Ctrl/Cmd+Shift+H` toggle overlay, `Ctrl/Cmd+Shift+T` tier list, `Ctrl/Cmd+Shift+O`
+3. Hotkeys (active while Hearthstone is in front): `Ctrl/Cmd+Shift+H` toggle overlay, `Ctrl/Cmd+Shift+O`
    opponents panel (configurable).
 4. On macOS, grant Accessibility permission so the overlay can follow the Hearthstone window; without it
    the overlay covers the main display.
@@ -138,17 +139,17 @@ npm run typecheck
 ```
 
 `npm run demo:web` serves the UI in a normal browser with sample scenes
-(`?scene=heroSelection|recruit|combat|gameOver|replay&window=overlay|settings`).
+(`?scene=heroSelection|trinketPick|recruit|combat|gameOver|replay&window=overlay|settings`).
 
 ## Known limitations
 
 - Hearthstone's log has no MMR, so rating tracking is manual.
-- The lobby's tribes are inferred from the minions offered in the shop until enough have been seen.
+- Hearthstone's log does not list the lobby's tribes: tick them on the hero-pick tribe picker, or wait until
+  they are inferred from the minions offered in the shop (turn 1–2).
+- Lobby-adjusted placements add up one-tribe-at-a-time community statistics, so they are estimates.
 - The simulator implements the in-combat effects of 111 of the 302 current-pool minions; the other 189
   were checked one by one and have no effect inside combat (their stats and keywords are simulated).
   Some trinkets, hero powers and older cards aren't modelled; results involving them are marked
-  *approximate* and list the cards. Start-of-combat ordering between the two sides is a best estimate.
-- Leaderboard hover zones assume the standard Hearthstone layout; use the calibration sliders if they're
-  offset on your resolution.
+  *unreliable* and list the cards. Start-of-combat ordering between the two sides is a best estimate.
 
 Tavern Lens is a fan project, not affiliated with or endorsed by Blizzard Entertainment.

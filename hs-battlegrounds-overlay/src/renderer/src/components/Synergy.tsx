@@ -86,14 +86,3 @@ export function RelevanceLine({ rel, className }: { rel: TribeRelevance; classNa
     </span>
   );
 }
-
-/** Tooltip body for a hero or trinket with a play tip. */
-export function TipTooltip({ name, tip, rel }: { name: string; tip: PlayTip; rel?: TribeRelevance }) {
-  return (
-    <div className="tl-tiptip">
-      <div className="tl-cardtip__name">{name}</div>
-      <p className="tl-tiptip__body">{tip.tip}</p>
-      {rel && rel.status !== 'none' ? <RelevanceLine rel={rel} /> : null}
-    </div>
-  );
-}

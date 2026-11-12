@@ -61,7 +61,7 @@ function LobbyLine() {
   return (
     <div className="tl-dock__line">
       <span className="tl-dock__turn">{game.phase === 'heroSelection' ? 'Hero pick' : `Turn ${game.turn}`}</span>
-      {lobby.tribes.length ? (
+      {game.phase === 'heroSelection' ? null : lobby.tribes.length ? (
         <Tooltip
           placement="top"
           content={

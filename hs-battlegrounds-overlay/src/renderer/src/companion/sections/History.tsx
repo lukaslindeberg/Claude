@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import type { MatchRecord } from '@shared/types';
@@ -13,7 +14,7 @@ import { Card, Empty, SectionHeader, Segmented } from '../ui';
 type ResultFilter = 'all' | 'wins' | 'top4' | 'bottom4';
 type ModeFilter = 'all' | 'solo' | 'duos';
 
-export function History() {
+export function History({ tabs }: { tabs?: ReactNode }) {
   const history = useApp((s) => s.history);
   const bridge = useApp((s) => s.bridge);
   const [query, setQuery] = useState('');
@@ -48,12 +49,15 @@ export function History() {
   return (
     <div className="tl-section">
       <SectionHeader
-        title="Match history"
+        title="Matches"
         subtitle={`${history.length} game${history.length === 1 ? '' : 's'} recorded on this computer`}
         actions={
+          <>
+            {tabs}
           <button className={clsx('tl-btn tl-btn--danger', confirm && 'is-armed')} onClick={clear} disabled={!history.length}>
             {confirm ? 'Click again to clear everything' : 'Clear history'}
           </button>
+          </>
         }
       />
       <div className="tl-toolbar">

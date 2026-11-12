@@ -6,12 +6,12 @@ import { Toggle } from '../../components/Bits';
 import { Card, SectionHeader } from '../ui';
 
 const WIDGETS: { id: WidgetId; label: string; hint: string }[] = [
-  { id: 'heroSelection', label: 'Hero selection stats', hint: 'Tier, placement in this lobby, tribe synergies, your record and play tips above each offered hero.' },
-  { id: 'trinketPick', label: 'Trinket pick', hint: 'Average placement, pick rate, lobby tribes and play tips above each offered trinket.' },
+  { id: 'heroSelection', label: 'Hero pick ranking', hint: 'Ranks the offered heroes for this lobby, with tribe effects and how to play them.' },
+  { id: 'trinketPick', label: 'Trinket pick ranking', hint: 'Ranks the offered trinkets, warns when their tribe is missing, and how to play them.' },
   { id: 'opponentsPanel', label: 'Opponents panel', hint: 'Right-edge list of every player with their last seen board.' },
-  { id: 'battleSim', label: 'Battle simulation', hint: 'Win / tie / loss odds when combat starts.' },
-  { id: 'lobbyInfo', label: 'Lobby info', hint: 'Mode, turn, lobby tribes and anomaly.' },
-  { id: 'sessionStats', label: 'Session tracker', hint: 'Games today, average placement and recent results.' },
+  { id: 'battleSim', label: 'Battle odds', hint: 'Win / tie / loss odds for each combat, flagged when they are unreliable.' },
+  { id: 'lobbyInfo', label: 'Lobby info', hint: 'Turn, lobby tribes, your hero\'s expected placement and the anomaly.' },
+  { id: 'sessionStats', label: 'Session tracker', hint: 'Games today and recent placements, on the same plaque.' },
   { id: 'postMatch', label: 'Post-match summary', hint: 'Placement, final board and combat timeline after each game.' },
 ];
 

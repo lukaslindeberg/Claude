@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useApp } from '../../store/appStore';
@@ -10,7 +11,7 @@ import { Card, Empty, Kpi, SectionHeader, Segmented } from '../ui';
 type Range = 'all' | '7d' | 'today';
 type SortKey = 'heroName' | 'games' | 'avgPlacement' | 'top4Rate' | 'wins' | 'lastPlayed';
 
-export function Stats() {
+export function Stats({ tabs }: { tabs?: ReactNode }) {
   const history = useApp((s) => s.history);
   const [range, setRange] = useState<Range>('all');
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'games', dir: -1 });
@@ -45,9 +46,11 @@ export function Stats() {
   return (
     <div className="tl-section">
       <SectionHeader
-        title="Stats"
+        title="Matches"
         subtitle="Your placements across recorded games."
         actions={
+          <>
+            {tabs}
           <Segmented<Range>
             value={range}
             onChange={setRange}
@@ -57,6 +60,7 @@ export function Stats() {
               { value: 'today', label: 'Today' },
             ]}
           />
+          </>
         }
       />
       {matches.length === 0 ? (

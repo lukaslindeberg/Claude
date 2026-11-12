@@ -82,7 +82,7 @@ export function OpponentsPanel() {
           <div className="tl-opp__header">
             {collapsed ? null : (
               <>
-                <span className="tl-opp__title">Leaderboard</span>
+                <span className="tl-plate">Leaderboard</span>
                 <span className="tl-opp__meta">
                   Turn {game.turn} · {alive} alive
                 </span>
