@@ -35,13 +35,17 @@ export function DeltaBadge({ delta, digits = 2 }: { delta: number; digits?: numb
  * unfold over the content below on hover (works in the click-through overlay: the
  * game forwards mouse moves).
  */
-export function TipNote({ tip, lines = 2, className, compact }: { tip: PlayTip; lines?: number; className?: string; compact?: boolean }) {
+export function TipNote({ tip, lines = 2, className, compact, label }: { tip: PlayTip; lines?: number; className?: string; compact?: boolean; label?: string }) {
   const long = tip.tip.length > (compact ? 70 : 95);
   return (
     <div className={clsx('tl-tipnote', long && 'is-long', compact && 'is-compact', className)} style={{ '--lines': lines } as React.CSSProperties}>
-      <span className="tl-tipnote__text">{tip.tip}</span>
+      <span className="tl-tipnote__text">
+        {label ? <b className="tl-tipnote__label">{label}</b> : null}
+        {tip.tip}
+      </span>
       {long ? (
         <span className="tl-tipnote__full" aria-hidden>
+          {label ? <b className="tl-tipnote__label">{label}</b> : null}
           {tip.tip}
         </span>
       ) : null}

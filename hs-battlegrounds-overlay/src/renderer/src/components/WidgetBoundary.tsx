@@ -6,9 +6,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 const LABELS: Record<WidgetId, string> = {
   heroSelection: 'Hero selection',
   opponentsPanel: 'Opponents panel',
-  leaderboardHover: 'Leaderboard hover',
   battleSim: 'Battle simulation',
-  tierList: 'Minions by tier',
   sessionStats: 'Session tracker',
   lobbyInfo: 'Lobby info',
   postMatch: 'Post-match summary',

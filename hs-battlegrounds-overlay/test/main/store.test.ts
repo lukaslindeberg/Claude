@@ -17,19 +17,38 @@ describe('settings merge', () => {
   it('deep-merges saved values over defaults, keeping new defaults', () => {
     const saved = {
       scale: 1.2,
-      widgets: { tierList: false },
+      widgets: { battleSim: false },
       hotkeys: { toggleOverlay: 'Alt+O' },
       hearthstonePath: 'D:\\HS',
-      positions: { tierList: { x: 0.1, y: 0.2 } },
+      positions: { battleSim: { x: 0.1, y: 0.2 } },
     };
     const s = normalizeSettings(saved);
     expect(s.scale).toBe(1.2);
-    expect(s.widgets.tierList).toBe(false);
-    expect(s.widgets.battleSim).toBe(true); // default retained
+    expect(s.widgets.battleSim).toBe(false);
+    expect(s.widgets.opponentsPanel).toBe(true); // default retained
     expect(s.hotkeys).toEqual({ ...DEFAULT_SETTINGS.hotkeys, toggleOverlay: 'Alt+O' });
     expect(s.hearthstonePath).toBe('D:\\HS');
-    expect(s.positions).toEqual({ tierList: { x: 0.1, y: 0.2 } });
-    expect(s.leaderboardCalibration).toEqual(DEFAULT_SETTINGS.leaderboardCalibration);
+    expect(s.positions).toEqual({ battleSim: { x: 0.1, y: 0.2 } });
+  });
+
+  it('drops widgets, hotkeys and options of removed features from old settings files', () => {
+    const s = normalizeSettings({
+      widgets: { tierList: true, leaderboardHover: false, battleSim: false },
+      hotkeys: { toggleTierList: 'CommandOrControl+Shift+T', toggleOpponents: 'Alt+P' },
+      positions: { tierList: { x: 0.1, y: 0.2 }, lobbyInfo: { x: 0.3, y: 0.4 } },
+      leaderboardCalibration: { left: -0.7, top: 0.1, width: 0.13, slotHeight: 0.09, gap: 0 },
+      leaderboardCalibrationMode: true,
+    });
+    expect(Object.keys(s.widgets).sort()).toEqual(Object.keys(DEFAULT_SETTINGS.widgets).sort());
+    expect(s.widgets.battleSim).toBe(false);
+    expect(s.hotkeys).toEqual({ ...DEFAULT_SETTINGS.hotkeys, toggleOpponents: 'Alt+P' });
+    expect(s.positions).toEqual({ lobbyInfo: { x: 0.3, y: 0.4 } });
+    expect('leaderboardCalibration' in s).toBe(false);
+    expect('leaderboardCalibrationMode' in s).toBe(false);
+    // A patch from an old renderer cannot bring them back either.
+    const patched = applySettingsPatch(s, { hotkeys: { toggleTierList: 'F5' } as never, widgets: { tierList: true } as never });
+    expect('toggleTierList' in patched.hotkeys).toBe(false);
+    expect('tierList' in patched.widgets).toBe(false);
   });
 
   it('ignores values of the wrong type and clamps ranges', () => {
@@ -48,14 +67,14 @@ describe('settings merge', () => {
 
   it('does not share nested objects with DEFAULT_SETTINGS', () => {
     const s = normalizeSettings({});
-    s.widgets.tierList = false;
-    expect(DEFAULT_SETTINGS.widgets.tierList).toBe(true);
+    s.widgets.battleSim = false;
+    expect(DEFAULT_SETTINGS.widgets.battleSim).toBe(true);
   });
 
   it('applies patches: shallow-merge objects, replace positions, delete on undefined', () => {
-    let s = normalizeSettings({ hearthstonePath: 'C:\\HS', positions: { tierList: { x: 0.5, y: 0.5 } } });
-    s = applySettingsPatch(s, { widgets: { tierList: false } as never, overlayEnabled: false });
-    expect(s.widgets.tierList).toBe(false);
+    let s = normalizeSettings({ hearthstonePath: 'C:\\HS', positions: { battleSim: { x: 0.5, y: 0.5 } } });
+    s = applySettingsPatch(s, { widgets: { battleSim: false } as never, overlayEnabled: false });
+    expect(s.widgets.battleSim).toBe(false);
     expect(s.widgets.opponentsPanel).toBe(true);
     expect(s.overlayEnabled).toBe(false);
     s = applySettingsPatch(s, { positions: { battleSim: { x: 0.2, y: 0.3 } } });

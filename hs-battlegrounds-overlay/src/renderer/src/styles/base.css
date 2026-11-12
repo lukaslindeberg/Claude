@@ -151,22 +151,54 @@ button {
 .tl-panel {
   position: relative;
   color: var(--tl-text);
-  border: 4px solid transparent;
-  border-image: url('../assets/ui/frame.svg') 16 / 13px / 1px stretch;
-  border-radius: 6px;
+  border: 6px solid transparent;
+  border-image: url('../assets/ui/frame-ornate.svg') 24 / 17px / 2px stretch;
+  border-radius: 8px;
   background:
-    radial-gradient(120% 70% at 50% -12%, rgba(255, 190, 110, 0.12), transparent 58%),
+    radial-gradient(130% 90% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.42) 100%),
+    radial-gradient(120% 60% at 50% -10%, rgba(255, 196, 110, 0.16), transparent 60%),
     var(--tex-grain) 0 0 / 420px 240px,
     linear-gradient(180deg, var(--wood-a-hi), var(--wood-a-lo));
   background-clip: padding-box;
   box-shadow:
-    inset 0 0 18px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 rgba(255, 220, 160, 0.08),
-    0 8px 22px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 2px 0 rgba(255, 220, 160, 0.1),
+    inset 0 0 22px rgba(0, 0, 0, 0.5),
+    0 10px 26px rgba(0, 0, 0, 0.55),
+    0 2px 5px rgba(0, 0, 0, 0.5);
 }
 .tl-panel.is-plain,
 .tl-plain-frame {
   border-image-source: url('../assets/ui/frame-plain.svg');
+  border-image-slice: 16;
+  border-image-width: 13px;
+  border-image-outset: 1px;
+}
+
+/* Engraved brass title plate with a rivet at each end. */
+.tl-plate {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 21px;
+  padding: 0 15px;
+  border-radius: 4px;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #2c1806;
+  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.55);
+  background:
+    radial-gradient(circle at 7px 50%, #fff3c4 0 1.2px, #7a5216 1.9px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 7px) 50%, #fff3c4 0 1.2px, #7a5216 1.9px, transparent 2.5px),
+    linear-gradient(180deg, #f6d98c 0%, #dba94a 45%, #b17c28 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 220, 0.75),
+    inset 0 -1px 0 rgba(80, 45, 5, 0.6),
+    0 0 0 1px #2a1704,
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* Slate-blue stone: wells inside panels, menu boards. */
@@ -1940,4 +1972,132 @@ div.tl-tip-anchor {
   border-color: rgba(214, 160, 255, 0.5);
   color: #e4c8ff;
   background: rgba(100, 50, 150, 0.38);
+}
+
+/* ------------------------------------------------------------------ the game's cards */
+/* A Battlegrounds card render standing free (transparent PNG): no box around it. */
+.tl-gamecard {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+.tl-gamecard__scale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 186px;
+}
+.tl-gamecard .tl-card-render {
+  filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.7));
+}
+.tl-gamecard.is-golden .tl-card-render {
+  filter: drop-shadow(0 0 7px rgba(255, 205, 90, 0.75)) drop-shadow(0 5px 9px rgba(0, 0, 0, 0.7));
+}
+/* Current stats over the printed ones (only when they differ). */
+.tl-gamecard__atk,
+.tl-gamecard__hp {
+  position: absolute;
+  bottom: 21px;
+  z-index: 2;
+}
+.tl-gamecard__atk {
+  left: 9px;
+}
+.tl-gamecard__hp {
+  right: 9px;
+}
+.tl-boardcards {
+  display: flex;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+/* Rank medal: a struck coin; #1 is bright gold under a crown. */
+.tl-medal {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 50%;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  color: #f1dcae;
+  text-shadow: 0 1px 0 #000;
+  background: radial-gradient(circle at 35% 28%, #a98352 0%, #6d4c26 48%, #2e1c0b 100%);
+  box-shadow:
+    0 0 0 1.5px #c4933f,
+    0 0 0 3px #1a0e04,
+    inset 0 -2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 1px 1px rgba(255, 240, 200, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.tl-medal.is-best {
+  color: #3a2104;
+  text-shadow: 0 1px 0 rgba(255, 245, 200, 0.7);
+  background: radial-gradient(circle at 35% 28%, #fffbe0 0%, #f6cf62 42%, #b47a1c 100%);
+  box-shadow:
+    0 0 0 1.5px #fff0b4,
+    0 0 0 3px #3a2104,
+    inset 0 -2px 3px rgba(120, 70, 5, 0.5),
+    0 0 14px rgba(255, 205, 90, 0.7),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.tl-medal.is-none {
+  color: var(--tl-muted);
+  filter: saturate(0.4);
+}
+.tl-medal__crown {
+  position: absolute;
+  top: -58%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffd76a;
+  filter: drop-shadow(0 1px 0 #3a2104) drop-shadow(0 0 4px rgba(255, 205, 90, 0.8));
+}
+
+/* Small table inside a parchment tooltip (pick details, lobby estimate). */
+.tl-picktip {
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+.tl-picktip__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.tl-picktip__row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tl-picktip__row b.is-good {
+  color: #1f6b33;
+}
+.tl-picktip__row b.is-bad {
+  color: var(--ink-red);
+}
+.tl-picktip__row.is-total {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(90, 60, 30, 0.3);
+}
+.tl-picktip__mine {
+  gap: 8px !important;
+  font-weight: 700;
+}
+.tl-picktip__mine > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.tl-tipnote__label {
+  margin-right: 5px;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  color: var(--ink-red);
 }

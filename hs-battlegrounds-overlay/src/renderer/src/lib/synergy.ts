@@ -228,3 +228,22 @@ export function tipFor(db: CardDb, cardId: string | undefined): PlayTip | undefi
     return undefined;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Ranking of pick options
+// ---------------------------------------------------------------------------
+
+/**
+ * Ranks options best (1) to worst by expected placement (lower is better). Options
+ * flagged `last` (e.g. a trinket whose tribe is missing from the lobby) rank after all
+ * others; options without a value get no rank.
+ */
+export function rankByPlacement(values: (number | undefined)[], last: boolean[] = []): (number | undefined)[] {
+  const order = values
+    .map((v, i) => ({ v, i, last: !!last[i] }))
+    .filter((o): o is { v: number; i: number; last: boolean } => o.v !== undefined && Number.isFinite(o.v))
+    .sort((a, b) => Number(a.last) - Number(b.last) || a.v - b.v || a.i - b.i);
+  const ranks: (number | undefined)[] = values.map(() => undefined);
+  order.forEach((o, n) => (ranks[o.i] = n + 1));
+  return ranks;
+}

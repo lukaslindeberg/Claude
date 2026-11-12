@@ -7,12 +7,12 @@ import { useViewport } from '../../hooks/useViewport';
 import { HeroPortrait } from '../../components/HeroPortrait';
 import { MinionToken } from '../../components/MinionToken';
 import { HealthBar, ResultChip, Sparkline, StatGem, TierTimeline, TriplesBadge } from '../../components/Bits';
-import { ChevronIcon, KeywordIcons } from '../../components/Icons';
+import { ChevronIcon } from '../../components/Icons';
 import { ordinal } from '../../lib/format';
 import { Tooltip } from '../../components/Tooltip';
 import { CardTooltip } from '../../components/CardTooltip';
-import { TipTooltip } from '../../components/Synergy';
-import { tipFor, tribeRelevance, useLobbyTribes, wantedTribes } from '../../lib/synergy';
+import { BoardCards } from '../../components/GameCard';
+import { tipFor } from '../../lib/synergy';
 import { bottomReserve } from '../layout';
 
 const COLLAPSE_KEY = 'tl-opponents-collapsed';
@@ -141,7 +141,6 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
   const compactRow = p.isLocal || p.dead;
   const label = p.isLocal ? 'You' : p.heroName || 'Unknown hero';
   const db = useApp((s) => s.cardDb);
-  const lobby = useLobbyTribes();
   const tip = tipFor(db, p.heroCardId);
   const portrait = (
     <HeroPortrait
@@ -162,51 +161,62 @@ function OpponentRow({ game, p, expanded, onToggle }: { game: BgGameState; p: Pl
       tabIndex={0}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onToggle()}
     >
-      <div className="tl-opp__main">
-        <span className={clsx('tl-opp__place', p.leaderboardPlace === 1 && 'is-first')}>{p.leaderboardPlace}</span>
-        {tip ? (
-          <Tooltip
-            placement="left"
-            className="tl-opp__tipanchor"
-            content={() => <TipTooltip name={p.heroName || db.name(p.heroCardId)} tip={tip} rel={tribeRelevance(wantedTribes(db.get(p.heroCardId), tip), lobby.tribes)} />}
-          >
-            {portrait}
-            <span className="tl-tipmark" aria-hidden />
-          </Tooltip>
-        ) : (
-          portrait
-        )}
-        <div className="tl-opp__info">
-          <div className="tl-opp__line">
-            <span className="tl-opp__hero" title={p.isLocal ? undefined : label}>
-              {label}
-            </span>
-            {p.isTeammate ? <span className="tl-tag is-mate">Mate</span> : null}
-            {p.isNextOpponent && !fighting ? <span className="tl-tag is-next">Next</span> : null}
-            {fighting ? <span className="tl-tag is-fighting">Fighting</span> : null}
-            {!p.isNextOpponent && !fighting && last ? <ResultChip result={last.result} damage={last.damage} size="sm" /> : null}
+      <Tooltip
+        as="div"
+        placement="left"
+        delay={220}
+        tipClassName="tl-tooltip--card"
+        disabled={!board?.length && !tip}
+        content={() => (
+          <div className="tl-panel tl-boardtip">
+            <div className="tl-boardtip__head">
+              <span className="tl-boardtip__name">{p.isLocal ? 'Your board' : `${label}'s board`}</span>
+              {seen && !p.isLocal ? <span className="tl-boardtip__seen">{seen}</span> : null}
+            </div>
+            {board?.length ? <BoardCards minions={board} width={board.length > 5 ? 128 : 150} /> : null}
+            {tip && !p.isLocal ? (
+              <div className="tl-boardtip__tip tl-parchment">
+                <b>{p.heroName}:</b> {tip.tip}
+              </div>
+            ) : null}
           </div>
-          {p.dead ? (
-            <div className="tl-opp__dead">
-              Eliminated{p.diedOnTurn ? ` T${p.diedOnTurn}` : ''} · <b>{ordinal(p.leaderboardPlace)}</b>
-            </div>
-          ) : (
+        )}
+      >
+        <div className="tl-opp__main">
+          <span className={clsx('tl-opp__place', p.leaderboardPlace === 1 && 'is-first')}>{p.leaderboardPlace}</span>
+          {portrait}
+          <div className="tl-opp__info">
             <div className="tl-opp__line">
-              <HealthBar health={p.health} maxHealth={p.maxHealth} armor={p.armor} compact />
-              <TriplesBadge count={p.triples} />
+              <span className="tl-opp__hero" title={p.isLocal ? undefined : label}>
+                {label}
+              </span>
+              {p.isTeammate ? <span className="tl-tag is-mate">Mate</span> : null}
+              {p.isNextOpponent && !fighting ? <span className="tl-tag is-next">Next</span> : null}
+              {fighting ? <span className="tl-tag is-fighting">Fighting</span> : null}
+              {!p.isNextOpponent && !fighting && last ? <ResultChip result={last.result} damage={last.damage} size="sm" /> : null}
             </div>
-          )}
+            {p.dead ? (
+              <div className="tl-opp__dead">
+                Eliminated{p.diedOnTurn ? ` T${p.diedOnTurn}` : ''} · <b>{ordinal(p.leaderboardPlace)}</b>
+              </div>
+            ) : (
+              <div className="tl-opp__line">
+                <HealthBar health={p.health} maxHealth={p.maxHealth} armor={p.armor} compact />
+                <TriplesBadge count={p.triples} />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      {compactRow && !expanded ? null : board && board.length ? (
-        <div className="tl-opp__board">
-          {board.map((m) => (
-            <MinionToken key={m.entityId} minion={m} size="sm" />
-          ))}
-        </div>
-      ) : (
-        <div className="tl-opp__noboard">{p.isLocal || p.lastBoard ? 'Empty board' : 'Board not seen yet'}</div>
-      )}
+        {compactRow && !expanded ? null : board && board.length ? (
+          <div className="tl-opp__board">
+            {board.map((m) => (
+              <MinionToken key={m.entityId} minion={m} size="sm" tooltip={false} />
+            ))}
+          </div>
+        ) : (
+          <div className="tl-opp__noboard">{p.isLocal || p.lastBoard ? 'Empty board' : 'Board not seen yet'}</div>
+        )}
+      </Tooltip>
       {seen && !p.isLocal && !(compactRow && !expanded) ? (
         <div className="tl-opp__seen">
           {seen}
@@ -223,20 +233,6 @@ function OpponentDetail({ p, board }: { game: BgGameState; p: PlayerState; board
   const db = useApp((s) => s.cardDb);
   return (
     <div className="tl-opp__detail" onClick={(e) => e.stopPropagation()}>
-      {board && board.length ? (
-        <div className="tl-opp__fullboard">
-          {board.map((m) => (
-            <div key={m.entityId} className="tl-opp__minion">
-              <MinionToken minion={m} size="xs" tooltip={false} />
-              <span className="tl-opp__minion-name">{m.name}</span>
-              <KeywordIcons keywords={m.keywords} size={10} max={3} />
-              <span className="tl-opp__minion-stats">
-                <b className="atk">{m.attack}</b>/<b className={m.health < m.maxHealth ? 'hp is-damaged' : 'hp'}>{m.health}</b>
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
       {p.trinkets?.length ? (
         <div className="tl-opp__section">
           <span className="tl-opp__label">Trinkets</span>

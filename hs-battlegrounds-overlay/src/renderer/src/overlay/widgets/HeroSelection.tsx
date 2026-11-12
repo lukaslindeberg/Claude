@@ -4,145 +4,171 @@ import { LOBBY_TRIBES, type HeroOption, type Tribe } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { useViewport } from '../../hooks/useViewport';
 import { HeroPortrait } from '../../components/HeroPortrait';
-import { HeroTierBadge, StatGem, TribeEmblem } from '../../components/Bits';
+import { HeroTierBadge, TribeEmblem } from '../../components/Bits';
 import { DeltaBadge, SynergyChip, TipNote } from '../../components/Synergy';
-import { compact, num, pct } from '../../lib/format';
+import { RankMedal } from '../../components/GameCard';
+import { Tooltip } from '../../components/Tooltip';
+import { num, pct } from '../../lib/format';
 import { summarize, tierFromAvg } from '../../lib/stats';
 import { tribeLabel } from '../../lib/tribes';
-import { heroStatFor, heroSynergy, personalTribeRecord, tipFor, useLobbyTribes, type LobbyTribes } from '../../lib/synergy';
+import { heroStatFor, heroSynergy, personalTribeRecord, rankByPlacement, signedDelta, tipFor, useLobbyTribes, type HeroSynergy, type LobbyTribes } from '../../lib/synergy';
 import { DragHandle, FloatingWidget } from '../Widget';
 import { HERO_PICK_ART_TOP, PICK_CARD_WIDTH, bottomLeftMaxWidth, heroPickCenters } from '../layout';
-import { useSessionDock } from './SessionWidget';
-import { useLobbyDock } from './LobbyInfo';
+import { useDock } from './Dock';
 import { PickRow } from './PickRow';
 
-/** Stat cards above each offered hero, in the same left→right order as the game. */
+interface HeroRow {
+  option: HeroOption;
+  baseId: string;
+  found?: ReturnType<typeof heroStatFor>;
+  syn?: HeroSynergy;
+  /** Expected placement: the lobby estimate when tribes are known, else the overall average. */
+  value?: number;
+}
+
+/**
+ * Above each offered hero (same left→right order as the game): its rank among the offer
+ * by expected placement in this lobby, how the tribes move it, and how to play it.
+ */
 export function HeroSelectionWidget() {
   const game = useApp((s) => s.game);
+  const db = useApp((s) => s.cardDb);
+  const bundles = useApp((s) => s.heroStats);
+  const community = useApp((s) => s.settings.communityStats);
   const vp = useViewport();
   const lobby = useLobbyTribes();
   const options = game?.heroOptions ?? [];
+  const mode = game?.mode ?? 'solo';
+  const rows = useMemo<HeroRow[]>(
+    () =>
+      options.map((option) => {
+        const baseId = option.baseCardId || db.baseHeroId(option.cardId);
+        const found = heroStatFor(bundles, baseId, { mode, community });
+        const syn = found ? heroSynergy(found.stat, found.bundle.source, lobby.tribes, mode) : undefined;
+        return { option, baseId, found, syn, value: found ? (syn?.estimate?.avgPlacement ?? found.stat.avgPlacement) : undefined };
+      }),
+    [options, db, bundles, community, lobby.tribes, mode],
+  );
   if (game?.phase !== 'heroSelection' || options.length === 0) return null;
+  const ranks = rankByPlacement(rows.map((r) => r.value));
   return (
     <>
       <PickRow
         centers={heroPickCenters(options.length, vp)}
-        top={Math.round(vp.height * 0.035)}
+        top={Math.round(vp.height * 0.03)}
         bottom={Math.round(vp.height * HERO_PICK_ART_TOP) - 6}
         cardWidth={PICK_CARD_WIDTH.hero}
         keys={options.map((o) => o.entityId || o.cardId)}
       >
-        {(i) => <HeroStatCard option={options[i]} index={i} lobby={lobby} />}
+        {(i) => <HeroPickCard row={rows[i]} rank={ranks[i]} index={i} lobby={lobby} />}
       </PickRow>
       <LobbyTribePicker gameId={game.gameId} lobby={lobby} />
     </>
   );
 }
 
-function HeroStatCard({ option, index, lobby }: { option: HeroOption; index: number; lobby: LobbyTribes }) {
+function HeroPickCard({ row, rank, index, lobby }: { row: HeroRow; rank?: number; index: number; lobby: LobbyTribes }) {
   const db = useApp((s) => s.cardDb);
-  const bundles = useApp((s) => s.heroStats);
   const history = useApp((s) => s.history);
   const mode = useApp((s) => s.game?.mode ?? 'solo');
-  const communityEnabled = useApp((s) => s.settings.communityStats);
-  const baseId = option.baseCardId || db.baseHeroId(option.cardId);
+  const { option, baseId, found, syn } = row;
   const name = option.name || db.name(baseId);
-  const found = heroStatFor(bundles, baseId, { mode, community: communityEnabled });
+  const stat = found?.stat;
   const mineGames = useMemo(() => history.filter((m) => (m.baseHeroCardId || m.heroCardId) === baseId && (m.mode ?? 'solo') === mode), [history, baseId, mode]);
   const mine = useMemo(() => summarize(mineGames), [mineGames]);
-  const mineByTribe = useMemo(() => (lobby.tribes.length ? personalTribeRecord(mineGames, baseId, lobby.tribes).slice(0, 3) : []), [mineGames, baseId, lobby.tribes]);
-  const stat = found?.stat;
-  const syn = stat && found ? heroSynergy(stat, found.bundle.source, lobby.tribes, mode) : undefined;
+  const mineByTribe = useMemo(() => (lobby.tribes.length ? personalTribeRecord(mineGames, baseId, lobby.tribes).slice(0, 4) : []), [mineGames, baseId, lobby.tribes]);
   const tier = stat ? (stat.tier ?? (stat.games >= 3 ? tierFromAvg(stat.avgPlacement) : undefined)) : undefined;
-  const armor = option.armor ?? db.get(baseId)?.armor;
   const tip = tipFor(db, baseId);
-  const hasSyn = !!syn && (syn.best.length > 0 || syn.worst.length > 0);
+  const adjusted = !!syn?.estimate && syn.delta !== undefined;
 
   return (
-    <div className="tl-panel tl-herocard" style={{ animationDelay: `${index * 60}ms` }}>
-      <div className="tl-herocard__top">
-        <HeroPortrait cardId={option.cardId} name={name} size={50} shape="rounded" />
-        <div className="tl-herocard__title">
-          <span className={clsx('tl-herocard__name', (name.length > 16 || name.split(/\s+/).some((w) => w.length > 9)) && 'is-long')}>{name}</span>
-          <span className="tl-herocard__sub">
-            {armor ? (
-              <>
-                <StatGem kind="armor" value={armor} size={17} /> armor
-              </>
-            ) : null}
-          </span>
+    <div className={clsx('tl-panel tl-pick', rank === 1 && 'is-best')} style={{ animationDelay: `${index * 60}ms` }}>
+      <RankMedal rank={rank} className="tl-pick__medal" />
+      {rank === 1 ? <span className="tl-pick__ribbon">Best pick</span> : null}
+      <div className="tl-pick__main">
+        <HeroPortrait cardId={option.cardId} name={name} size={74} shape="rounded" className="tl-pick__hero" />
+        <div className="tl-pick__info">
+          <div className="tl-pick__titlerow">
+            <span className={clsx('tl-pick__name', name.length > 15 && 'is-long')}>{name}</span>
+            <HeroTierBadge tier={tier} size="sm" />
+          </div>
+          {stat ? (
+            <Tooltip
+              as="div"
+              placement="bottom"
+              content={
+                <div className="tl-picktip">
+                  <div className="tl-cardtip__name">{name}</div>
+                  <div className="tl-picktip__row">
+                    <span>Overall average</span>
+                    <b>{num(stat.avgPlacement, 2)}</b>
+                  </div>
+                  <div className="tl-picktip__row">
+                    <span>Top 4</span>
+                    <b>{pct(stat.top4Rate, 0)}</b>
+                  </div>
+                  <div className="tl-picktip__row">
+                    <span>{found?.bundle.source === 'community' ? 'Community games' : 'Your games'}</span>
+                    <b>{stat.games.toLocaleString()}</b>
+                  </div>
+                  {syn?.estimate?.contributions.map((c) => (
+                    <div key={c.tribe} className="tl-picktip__row">
+                      <span>
+                        <TribeEmblem tribe={c.tribe} size={14} /> {tribeLabel(c.tribe)}
+                      </span>
+                      <b className={c.impact < 0 ? 'is-good' : 'is-bad'}>{signedDelta(c.impact)}</b>
+                    </div>
+                  ))}
+                  <div className="tl-picktip__row is-total">
+                    <span>You</span>
+                    <b>{mine.games ? `${num(mine.avgPlacement, 1)} avg · ${mine.games} game${mine.games === 1 ? '' : 's'}` : 'no games yet'}</b>
+                  </div>
+                  {mineByTribe.length ? (
+                    <div className="tl-picktip__row">
+                      <span>Your lobbies with</span>
+                      <span className="tl-picktip__mine">
+                        {mineByTribe.map((r) => (
+                          <span key={r.tribe}>
+                            <TribeEmblem tribe={r.tribe} size={13} /> {num(r.avg, 1)}
+                          </span>
+                        ))}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              }
+            >
+              <div className="tl-pick__place">
+                <span className="tl-pick__value">{num(row.value, 2)}</span>
+                <span className="tl-pick__placemeta">
+                  {adjusted ? (
+                    <span className="tl-pick__placeline">
+                      <DeltaBadge delta={syn!.delta!} />
+                      <span className="tl-pick__placelabel">in this lobby</span>
+                    </span>
+                  ) : null}
+                  <span className="tl-pick__placelabel">{adjusted ? `${num(stat.avgPlacement, 2)} overall` : 'avg placement'}</span>
+                </span>
+              </div>
+            </Tooltip>
+          ) : (
+            <div className="tl-pick__nostat">No stats for this hero</div>
+          )}
         </div>
-        <HeroTierBadge tier={tier} size="lg" />
       </div>
-      {stat ? (
-        <div className="tl-herocard__stats" title={found?.bundle.label}>
-          <div className="tl-stat">
-            <span className="tl-stat__value">{num(stat.avgPlacement, 2)}</span>
-            <span className="tl-stat__label">Avg place</span>
-          </div>
-          <div className="tl-stat">
-            <span className="tl-stat__value">{pct(stat.top4Rate, 0)}</span>
-            <span className="tl-stat__label">Top 4</span>
-          </div>
-          <div className="tl-stat">
-            <span className="tl-stat__value">{compact(stat.games)}</span>
-            <span className="tl-stat__label">Games</span>
-          </div>
-        </div>
-      ) : (
-        <div className="tl-herocard__empty">
-          <span>No stats yet</span>
-          <span className="tl-muted tl-small">{communityEnabled ? 'Not in the community data' : 'Community stats are off'}</span>
-        </div>
-      )}
-      {syn?.estimate && syn.delta !== undefined ? (
-        <div className="tl-herocard__lobby">
-          <span className="tl-herocard__lobby-label">In this lobby</span>
-          <span className="tl-herocard__lobby-value">≈ {num(syn.estimate.avgPlacement, 2)}</span>
-          <DeltaBadge delta={syn.delta} />
-        </div>
-      ) : stat && lobby.tribes.length ? (
-        <div className="tl-herocard__lobby is-none">No tribe data for this lobby</div>
-      ) : null}
-      {hasSyn ? (
-        <div className="tl-herocard__syn">
-          <div className="tl-herocard__syncol">
-            <span className="tl-herocard__synlabel">Best with</span>
-            <span className="tl-herocard__chips">
-              {syn!.best.length ? syn!.best.map((t) => <SynergyChip key={t.tribe} syn={t} lobby={lobby.tribes} />) : <span className="tl-muted">—</span>}
-            </span>
-          </div>
-          <div className="tl-herocard__syncol">
-            <span className="tl-herocard__synlabel">Worst with</span>
-            <span className="tl-herocard__chips">
-              {syn!.worst.length ? syn!.worst.map((t) => <SynergyChip key={t.tribe} syn={t} lobby={lobby.tribes} />) : <span className="tl-muted">—</span>}
-            </span>
-          </div>
-        </div>
-      ) : null}
-      <div className="tl-herocard__mine">
-        <span className="tl-herocard__mine-label">You</span>
-        {mine.games > 0 ? (
-          <span>
-            <b>{mine.games}</b> game{mine.games === 1 ? '' : 's'} · avg <b>{num(mine.avgPlacement, 1)}</b> · top 4 <b>{pct(mine.top4Rate, 0)}</b>
-          </span>
-        ) : (
-          <span className="tl-muted">No games with this hero yet</span>
-        )}
-      </div>
-      {mineByTribe.length ? (
-        <div className="tl-herocard__minetribes" title="Your average placement with this hero in lobbies that had each tribe">
-          <span className="tl-herocard__synlabel">Your lobbies with</span>
-          {mineByTribe.map((r) => (
-            <span key={r.tribe} className="tl-herocard__minetribe">
-              <TribeEmblem tribe={r.tribe} size={14} />
-              <b>{num(r.avg, 1)}</b>
-              <span className="tl-muted">×{r.games}</span>
-            </span>
+      {syn && (syn.best.length || syn.worst.length) ? (
+        <div className="tl-pick__chips">
+          <span className="tl-pick__chiplabel">Best with</span>
+          {syn.best.map((t) => (
+            <SynergyChip key={t.tribe} syn={t} lobby={lobby.tribes} />
+          ))}
+          <span className="tl-pick__chiplabel is-worst">Worst</span>
+          {syn.worst.map((t) => (
+            <SynergyChip key={t.tribe} syn={t} lobby={lobby.tribes} />
           ))}
         </div>
       ) : null}
-      {tip ? <TipNote tip={tip} /> : null}
+      {tip ? <TipNote tip={tip} label="How to play" /> : null}
     </div>
   );
 }
@@ -156,8 +182,7 @@ function HeroStatCard({ option, index, lobby }: { option: HeroOption; index: num
 function LobbyTribePicker({ gameId, lobby }: { gameId: string; lobby: LobbyTribes }) {
   const setPicks = useApp((s) => s.setLobbyPicks);
   const picks = useApp((s) => s.lobbyPicks[gameId]);
-  const sessionHeight = useSessionDock((s) => s.height);
-  const lobbyHeight = useLobbyDock((s) => s.height);
+  const dockHeight = useDock((s) => s.height);
   const vp = useViewport();
   const locked = lobby.source === 'game';
   const chosen = new Set<Tribe>(locked ? lobby.tribes : (picks ?? []));
@@ -166,7 +191,7 @@ function LobbyTribePicker({ gameId, lobby }: { gameId: string; lobby: LobbyTribe
     const next = chosen.has(t) ? [...chosen].filter((x) => x !== t) : [...chosen, t];
     setPicks(gameId, LOBBY_TRIBES.filter((x) => next.includes(x)));
   };
-  const below = (sessionHeight ? sessionHeight + 6 : 0) + (lobbyHeight ? lobbyHeight + 6 : 0);
+  const below = dockHeight ? dockHeight + 6 : 0;
   return (
     <FloatingWidget
       id="heroSelection"
@@ -175,7 +200,7 @@ function LobbyTribePicker({ gameId, lobby }: { gameId: string; lobby: LobbyTribe
       maxWidth={bottomLeftMaxWidth(vp)}
     >
       {(handle) => (
-        <div className={clsx('tl-plaque tl-tpick', locked && 'is-locked')}>
+        <div className={clsx('tl-panel tl-tpick', locked && 'is-locked')}>
           <div className="tl-tpick__head">
             <DragHandle handle={handle} />
             <span className="tl-tpick__title">{locked ? 'Tribes in this lobby' : 'Tribes in this lobby?'}</span>

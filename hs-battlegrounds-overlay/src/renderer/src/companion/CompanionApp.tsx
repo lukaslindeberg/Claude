@@ -7,13 +7,12 @@ import { Overview } from './sections/Overview';
 import { History } from './sections/History';
 import { Stats } from './sections/Stats';
 import { Heroes } from './sections/Heroes';
-import { Minions } from './sections/Minions';
 import { Trinkets } from './sections/Trinkets';
 import { SettingsSection } from './sections/SettingsSection';
 import { About } from './sections/About';
 import '../styles/companion.css';
 
-export type SectionId = 'overview' | 'history' | 'stats' | 'heroes' | 'trinkets' | 'minions' | 'settings' | 'about';
+export type SectionId = 'overview' | 'history' | 'stats' | 'heroes' | 'trinkets' | 'settings' | 'about';
 
 const SECTIONS: { id: SectionId; label: string; Component: ComponentType }[] = [
   { id: 'overview', label: 'Overview', Component: Overview },
@@ -21,7 +20,6 @@ const SECTIONS: { id: SectionId; label: string; Component: ComponentType }[] = [
   { id: 'stats', label: 'Stats', Component: Stats },
   { id: 'heroes', label: 'Heroes', Component: Heroes },
   { id: 'trinkets', label: 'Trinkets', Component: Trinkets },
-  { id: 'minions', label: 'Minions', Component: Minions },
   { id: 'settings', label: 'Settings', Component: SettingsSection },
   { id: 'about', label: 'About', Component: About },
 ];

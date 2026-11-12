@@ -469,7 +469,7 @@ export class TavernLensApp {
       this.setSettings({ overlayEnabled: !this.store.getSettings().overlayEnabled });
       return;
     }
-    const widget: WidgetId = action === 'toggleTierList' ? 'tierList' : 'opponentsPanel';
+    const widget: WidgetId = 'opponentsPanel';
     const win = this.overlay;
     if (win && !win.isDestroyed()) win.webContents.send(IPC.toggleWidget, widget);
   }

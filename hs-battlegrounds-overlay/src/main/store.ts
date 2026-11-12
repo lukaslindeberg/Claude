@@ -44,11 +44,25 @@ export function deepMergeDefaults<T>(defaults: T, saved: unknown): T {
   return out as T;
 }
 
+/** Top-level settings of removed features. */
+const REMOVED_SETTINGS = ['leaderboardCalibration', 'leaderboardCalibrationMode'];
+
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** Deep-merge over DEFAULT_SETTINGS and clamp numeric ranges. */
 export function normalizeSettings(saved: unknown): Settings {
   const s = deepMergeDefaults(DEFAULT_SETTINGS, saved);
+  // Settings files from older versions carry widgets, hotkeys and options that no longer
+  // exist (minions-by-tier, leaderboard hover): drop them, or a removed hotkey would still
+  // be registered and a removed widget's position kept forever.
+  const widgetIds = new Set(Object.keys(DEFAULT_SETTINGS.widgets));
+  const prune = (obj: Json, keep: (k: string) => boolean) => {
+    for (const k of Object.keys(obj)) if (!keep(k)) delete obj[k];
+  };
+  prune(s.widgets as unknown as Json, (k) => widgetIds.has(k));
+  prune(s.hotkeys as unknown as Json, (k) => k in DEFAULT_SETTINGS.hotkeys);
+  if (isPlainObject(s.positions)) prune(s.positions as unknown as Json, (k) => widgetIds.has(k));
+  for (const k of REMOVED_SETTINGS) delete (s as unknown as Json)[k];
   s.scale = Number.isFinite(s.scale) ? clamp(s.scale, 0.6, 1.6) : DEFAULT_SETTINGS.scale;
   s.opacity = Number.isFinite(s.opacity) ? clamp(s.opacity, 0.3, 1) : DEFAULT_SETTINGS.opacity;
   s.simIterations = Number.isFinite(s.simIterations)
@@ -63,7 +77,7 @@ export function normalizeSettings(saved: unknown): Settings {
 /**
  * Applies a renderer patch to the current settings.
  * - `positions` is replaced wholesale (so `{ positions: {} }` resets all widget positions);
- * - other nested objects (widgets, hotkeys, leaderboardCalibration) are shallow-merged;
+ * - other nested objects (widgets, hotkeys) are shallow-merged;
  * - an explicit `undefined`/`null` removes an optional key (e.g. hearthstonePath).
  */
 export function applySettingsPatch(current: Settings, patch: Partial<Settings>): Settings {

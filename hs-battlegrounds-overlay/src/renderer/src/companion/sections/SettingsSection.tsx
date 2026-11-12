@@ -9,9 +9,7 @@ const WIDGETS: { id: WidgetId; label: string; hint: string }[] = [
   { id: 'heroSelection', label: 'Hero selection stats', hint: 'Tier, placement in this lobby, tribe synergies, your record and play tips above each offered hero.' },
   { id: 'trinketPick', label: 'Trinket pick', hint: 'Average placement, pick rate, lobby tribes and play tips above each offered trinket.' },
   { id: 'opponentsPanel', label: 'Opponents panel', hint: 'Right-edge list of every player with their last seen board.' },
-  { id: 'leaderboardHover', label: 'Leaderboard hover', hint: 'Hover a hero on the in-game leaderboard to see their board.' },
   { id: 'battleSim', label: 'Battle simulation', hint: 'Win / tie / loss odds when combat starts.' },
-  { id: 'tierList', label: 'Minions by tier', hint: 'Tier bar that opens the minion pool for this lobby.' },
   { id: 'lobbyInfo', label: 'Lobby info', hint: 'Mode, turn, lobby tribes and anomaly.' },
   { id: 'sessionStats', label: 'Session tracker', hint: 'Games today, average placement and recent results.' },
   { id: 'postMatch', label: 'Post-match summary', hint: 'Placement, final board and combat timeline after each game.' },
@@ -19,7 +17,6 @@ const WIDGETS: { id: WidgetId; label: string; hint: string }[] = [
 
 const HOTKEYS: { key: keyof Settings['hotkeys']; label: string }[] = [
   { key: 'toggleOverlay', label: 'Show / hide overlay' },
-  { key: 'toggleTierList', label: 'Open minions by tier' },
   { key: 'toggleOpponents', label: 'Collapse opponents panel' },
 ];
 
@@ -112,7 +109,6 @@ export function SettingsSection() {
           <p className="tl-muted tl-small">{settings.hearthstonePath ? 'Using a custom install folder.' : 'Auto-detected from the Battle.net install.'}</p>
         </Card>
 
-        <CalibrationCard />
       </div>
     </div>
   );
@@ -225,58 +221,5 @@ function HotkeyRow({ label, value, mac, onChange }: { label: string; value: stri
         {capturing ? 'Cancel' : 'Change'}
       </button>
     </div>
-  );
-}
-
-function CalibrationCard() {
-  const settings = useApp((s) => s.settings);
-  const update = useApp((s) => s.updateSettings);
-  const cal = settings.leaderboardCalibration;
-  const setCal = (patch: Partial<Settings['leaderboardCalibration']>) => void update({ leaderboardCalibration: { ...cal, ...patch } });
-  const W = 288;
-  const H = 162;
-  return (
-    <Card
-      title="Leaderboard calibration"
-      className="tl-settings__cal"
-      extra={<Toggle checked={!!settings.leaderboardCalibrationMode} onChange={(v) => void update({ leaderboardCalibrationMode: v })} label="Show slots on overlay" />}
-    >
-      <p className="tl-muted tl-small">
-        Hover zones over the in-game leaderboard, in fractions of the game window height. Turn on “Show slots” and adjust until each box covers one hero.
-      </p>
-      <div className="tl-cal">
-        <div className="tl-cal__sliders">
-          <Slider label="Left (from centre)" value={cal.left} min={-1} max={-0.3} step={0.005} format={(v) => v.toFixed(3)} onChange={(v) => setCal({ left: v })} />
-          <Slider label="Top" value={cal.top} min={0} max={0.3} step={0.005} format={(v) => v.toFixed(3)} onChange={(v) => setCal({ top: v })} />
-          <Slider label="Width" value={cal.width} min={0.04} max={0.25} step={0.005} format={(v) => v.toFixed(3)} onChange={(v) => setCal({ width: v })} />
-          <Slider label="Slot height" value={cal.slotHeight} min={0.04} max={0.14} step={0.001} format={(v) => v.toFixed(3)} onChange={(v) => setCal({ slotHeight: v })} />
-          <Slider label="Gap" value={cal.gap} min={0} max={0.03} step={0.001} format={(v) => v.toFixed(3)} onChange={(v) => setCal({ gap: v })} />
-        </div>
-        <div className="tl-cal__preview">
-          <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}>
-            <rect x="0.5" y="0.5" width={W - 1} height={H - 1} rx="6" fill="#16110c" stroke="rgba(220,170,80,0.35)" />
-            <rect x={(W - H * 1.5) / 2} y="0.5" width={H * 1.5} height={H - 1} fill="rgba(120,92,60,0.15)" />
-            {Array.from({ length: 8 }, (_, i) => (
-              <rect
-                key={i}
-                x={W / 2 + cal.left * H}
-                y={(cal.top + i * (cal.slotHeight + cal.gap)) * H}
-                width={cal.width * H}
-                height={cal.slotHeight * H}
-                rx="2"
-                fill="rgba(242,193,78,0.14)"
-                stroke="#f2c14e"
-                strokeWidth="1"
-                strokeDasharray="3 2"
-              />
-            ))}
-          </svg>
-          <span className="tl-muted tl-small">16:9 game window preview</span>
-          <button className="tl-btn" onClick={() => void update({ leaderboardCalibration: DEFAULT_SETTINGS.leaderboardCalibration })}>
-            Reset to defaults
-          </button>
-        </div>
-      </div>
-    </Card>
   );
 }

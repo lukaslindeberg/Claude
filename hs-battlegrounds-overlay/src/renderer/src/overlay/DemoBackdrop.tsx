@@ -2,9 +2,18 @@ import { useMemo } from 'react';
 import { useApp } from '../store/appStore';
 import { useViewport } from '../hooks/useViewport';
 import { HeroPortrait } from '../components/HeroPortrait';
-import { CardArt } from '../components/CardArt';
+import { GameCard } from '../components/GameCard';
 import { MinionToken, type TokenMinion } from '../components/MinionToken';
-import { effectiveScale, heroPickCenters, leaderboardSlots, trinketPickLayout } from './layout';
+import { effectiveScale, heroPickCenters, trinketPickLayout, type Rect } from './layout';
+import type { Viewport } from '../hooks/useViewport';
+
+/** Where the game draws its leaderboard (fractions of the window height, x from the centre). */
+const LB = { left: -0.765, top: 0.115, width: 0.13, slotHeight: 0.094 };
+
+function leaderboardSlots(vp: Viewport, count: number): Rect[] {
+  const H = vp.height;
+  return Array.from({ length: count }, (_, i) => ({ left: vp.width / 2 + LB.left * H, top: (LB.top + i * LB.slotHeight) * H, width: LB.width * H, height: LB.slotHeight * H }));
+}
 
 /**
  * Browser-demo only: a dim stand-in for the Hearthstone game window so the
@@ -13,10 +22,9 @@ import { effectiveScale, heroPickCenters, leaderboardSlots, trinketPickLayout } 
 export function DemoBackdrop() {
   const game = useApp((s) => s.game);
   const db = useApp((s) => s.cardDb);
-  const cal = useApp((s) => s.settings.leaderboardCalibration);
   const vp = useViewport();
   const players = useMemo(() => [...(game?.players ?? [])].sort((a, b) => a.leaderboardPlace - b.leaderboardPlace), [game?.players]);
-  const slots = leaderboardSlots(cal, vp, players.length || 8);
+  const slots = leaderboardSlots(vp, players.length || 8);
   const H = vp.height;
   const local = players.find((p) => p.isLocal);
   const phase = game?.phase ?? 'idle';
@@ -107,17 +115,14 @@ export function DemoBackdrop() {
       {trinkets.length ? (
         // The game's trinket offer: a dimmed board with the trinket cards across the middle.
         <div className="tl-demo-bg__offer">
-          <div className="tl-demo-bg__caption" style={{ top: H * 0.3 }}>
+          <div className="tl-demo-bg__caption" style={{ top: H * 0.305 }}>
             Choose a Lesser Trinket
           </div>
           {trinketPickLayout(trinkets.length, vp, scale).centers.map((x, i) => {
-            const size = Math.round(H * 0.17);
+            const size = Math.round(H * 0.2);
             return (
-              <div key={trinkets[i].entityId} className="tl-demo-bg__trinket" style={{ left: x - size / 2, top: H * 0.38, width: size }}>
-                <span className="tl-demo-bg__trinketart" style={{ width: size, height: size }}>
-                  <CardArt cardId={trinkets[i].cardId} name={trinkets[i].name} />
-                </span>
-                <span>{trinkets[i].name}</span>
+              <div key={trinkets[i].entityId} className="tl-demo-bg__trinket" style={{ left: x - size / 2, top: H * 0.36 }}>
+                <GameCard cardId={trinkets[i].cardId} width={size} />
               </div>
             );
           })}

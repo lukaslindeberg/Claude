@@ -66,8 +66,19 @@ function sceneState(scene: string): BgGameState {
     }
     case 'trinketPick':
       return samples.trinketPickState();
-    case 'combat':
-      return samples.combatState();
+    case 'combat': {
+      // `&sim=ok|unreliable`: a fixed result instead of running the simulator (screenshots).
+      const sim = new URLSearchParams(window.location.search).get('sim');
+      const s = samples.combatState();
+      if (sim === 'ok' || sim === 'unreliable') {
+        s.battle = {
+          status: 'done',
+          turn: s.battle.turn,
+          result: { ...samples.SAMPLE_SIM_RESULT, ...(sim === 'ok' ? { unsupported: [] } : { win: 96.8, tie: 1.4, loss: 1.8, avgDamageDealt: 11.2, avgDamageTaken: 3.1, unsupported: ['BG36_102', 'BGDUO_112', 'BG36_511'] }) },
+        };
+      }
+      return s;
+    }
     case 'gameOver':
       return samples.gameOverState();
     case 'idle':
@@ -102,7 +113,6 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
   let settings = loadSettings();
   // Demo URL overrides (handy for screenshots).
   if (params.get('images') === '0') settings.cardImages = false;
-  if (params.get('calibrate') === '1') (settings as Settings & { leaderboardCalibrationMode?: boolean }).leaderboardCalibrationMode = true;
   if (params.get('scale')) settings.scale = Number(params.get('scale')) || 1;
   let history = params.get('history') === '0' ? [] : samples.sampleHistory();
   if (opts.scene === 'gameOver') history = [gameOverRecord(state), ...history];
@@ -258,7 +268,7 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
     },
   };
 
-  // Expose hotkey simulation for manual testing: window.__tlToggle('tierList')
+  // Expose hotkey simulation for manual testing: window.__tlToggle('opponentsPanel')
   (window as unknown as { __tlToggle: (w: WidgetId) => void }).__tlToggle = (w) => toggleE.emit(w);
   return bridge;
 }

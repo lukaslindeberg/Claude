@@ -15,12 +15,7 @@ import {
 } from '@shared/types';
 import type { TavernLensBridge } from '@shared/ipc';
 
-/**
- * UI-only settings extension. `leaderboardCalibrationMode` is not (yet) part of
- * the shared Settings contract; it is passed through setSettings so both
- * windows see it, and treated as false when absent.
- */
-export type UiSettings = Settings & { leaderboardCalibrationMode?: boolean };
+export type UiSettings = Settings;
 
 export interface SimRun {
   /** gameId:turn key of the battle input this run belongs to. */

@@ -8,12 +8,9 @@ import { effectiveScale } from './layout';
 import { DemoBackdrop } from './DemoBackdrop';
 import { HeroSelectionWidget } from './widgets/HeroSelection';
 import { OpponentsPanel } from './widgets/OpponentsPanel';
-import { LeaderboardHover } from './widgets/LeaderboardHover';
 import { BattleSimWidget } from './widgets/BattleSim';
-import { TierListWidget } from './widgets/TierList';
-import { LobbyInfoWidget } from './widgets/LobbyInfo';
+import { DockWidget } from './widgets/Dock';
 import { PostMatchWidget } from './widgets/PostMatch';
-import { SessionWidget } from './widgets/SessionWidget';
 import { TrinketPickWidget } from './widgets/TrinketPick';
 import '../styles/overlay.css';
 
@@ -61,14 +58,11 @@ export default function OverlayApp() {
       {settings.overlayEnabled ? (
         <>
           {/* Each widget has its own error boundary: one crash never blanks the overlay. */}
-          {on('leaderboardHover') || settings.leaderboardCalibrationMode ? <WidgetBoundary id="leaderboardHover"><LeaderboardHover /></WidgetBoundary> : null}
           {on('heroSelection') ? <WidgetBoundary id="heroSelection"><HeroSelectionWidget /></WidgetBoundary> : null}
-          {on('sessionStats') ? <WidgetBoundary id="sessionStats"><SessionWidget /></WidgetBoundary> : null}
-          {on('lobbyInfo') ? <WidgetBoundary id="lobbyInfo"><LobbyInfoWidget /></WidgetBoundary> : null}
+          {on('lobbyInfo') || on('sessionStats') ? <WidgetBoundary id="lobbyInfo"><DockWidget lobby={on('lobbyInfo')} session={on('sessionStats')} /></WidgetBoundary> : null}
           {on('opponentsPanel') ? <WidgetBoundary id="opponentsPanel"><OpponentsPanel /></WidgetBoundary> : null}
           {on('battleSim') ? <WidgetBoundary id="battleSim"><BattleSimWidget /></WidgetBoundary> : null}
           {on('trinketPick') ? <WidgetBoundary id="trinketPick"><TrinketPickWidget /></WidgetBoundary> : null}
-          {on('tierList') ? <WidgetBoundary id="tierList"><TierListWidget /></WidgetBoundary> : null}
           {on('postMatch') ? <WidgetBoundary id="postMatch"><PostMatchWidget /></WidgetBoundary> : null}
         </>
       ) : null}

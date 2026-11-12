@@ -615,9 +615,7 @@ export interface DiagnosticsExportResult {
 export type WidgetId =
   | 'heroSelection'
   | 'opponentsPanel'
-  | 'leaderboardHover'
   | 'battleSim'
-  | 'tierList'
   | 'sessionStats'
   | 'lobbyInfo'
   | 'postMatch'
@@ -645,16 +643,12 @@ export interface Settings {
   hearthstonePath?: string;
   /** Number of simulator iterations. */
   simIterations: number;
-  /** Leaderboard hover calibration (fractions of game-window height, relative to centre). */
-  leaderboardCalibration: { left: number; top: number; width: number; slotHeight: number; gap: number };
-  /** Outline the leaderboard hover zones on the overlay so they can be lined up with the game. */
-  leaderboardCalibrationMode?: boolean;
   /** Show card images from art.hearthstonejson.com (else text-only). */
   cardImages: boolean;
   /** Fetch community hero stats. */
   communityStats: boolean;
   /** Global hotkeys (Electron accelerators). */
-  hotkeys: { toggleOverlay: string; toggleTierList: string; toggleOpponents: string };
+  hotkeys: { toggleOverlay: string; toggleOpponents: string };
   /** Launch the app on system start-up. */
   launchOnStartup: boolean;
   /** Last known rating for the session tracker (manual entry). */
@@ -671,9 +665,7 @@ export const DEFAULT_SETTINGS: Settings = {
   widgets: {
     heroSelection: true,
     opponentsPanel: true,
-    leaderboardHover: true,
     battleSim: true,
-    tierList: true,
     sessionStats: true,
     lobbyInfo: true,
     postMatch: true,
@@ -684,12 +676,10 @@ export const DEFAULT_SETTINGS: Settings = {
   opacity: 0.92,
   hideWhenUnfocused: true,
   simIterations: 4000,
-  leaderboardCalibration: { left: -0.765, top: 0.115, width: 0.13, slotHeight: 0.094, gap: 0 },
   cardImages: true,
   communityStats: true,
   hotkeys: {
     toggleOverlay: 'CommandOrControl+Shift+H',
-    toggleTierList: 'CommandOrControl+Shift+T',
     toggleOpponents: 'CommandOrControl+Shift+O',
   },
   launchOnStartup: false,

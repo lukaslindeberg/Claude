@@ -1,4 +1,3 @@
-import type { Settings } from '@shared/types';
 import type { Viewport } from '../hooks/useViewport';
 
 export interface Rect {
@@ -6,25 +5,6 @@ export interface Rect {
   top: number;
   width: number;
   height: number;
-}
-
-/**
- * Leaderboard slot rectangles in window pixels. Calibration units are
- * fractions of the game window height; `left` is relative to the horizontal
- * centre (the in-game leaderboard scales with height and is anchored to the
- * centre of the board for wide aspect ratios).
- */
-export function leaderboardSlots(cal: Settings['leaderboardCalibration'], vp: Viewport, count: number): Rect[] {
-  const H = vp.height;
-  const left = vp.width / 2 + cal.left * H;
-  const width = cal.width * H;
-  const height = cal.slotHeight * H;
-  return Array.from({ length: count }, (_, i) => ({
-    left,
-    top: (cal.top + i * (cal.slotHeight + cal.gap)) * H,
-    width,
-    height,
-  }));
 }
 
 /** Horizontal centres of the offered heroes on the in-game hero picker (fraction of width). */
@@ -40,12 +20,12 @@ export function heroPickCenters(count: number, vp: Viewport): number[] {
 export const HERO_PICK_ART_TOP = 0.315;
 
 /** Unscaled widths of the pick cards (CSS px at scale 1). */
-export const PICK_CARD_WIDTH = { hero: 252, trinket: 226 };
+export const PICK_CARD_WIDTH = { hero: 300, trinket: 280 };
 
 /**
  * Trinket offers (lesser / greater) are dealt like a Discover: a row of cards across the
  * middle of the screen. Our stat cards sit above that row, centred over each card, and
- * keep clear of the tier bar (top-left) and the leaderboard panel (top-right).
+ * keep clear of the leaderboard panel (top-right).
  */
 export function trinketPickLayout(count: number, vp: Viewport, s: number): { centers: number[]; spacing: number; top: number; bottom: number } {
   const H = vp.height;
@@ -123,14 +103,9 @@ export function overlaps(a: Rect, b: Rect): boolean {
   return a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
 }
 
-/** Unscaled widths (CSS px at scale 1) of the widgets the battle plaque is placed around. */
-export const WIDGET_WIDTH = { tierBar: 290, oppPanel: 302, sim: 414, simCompact: 336, simFolded: 205 };
+/** Unscaled widths (CSS px at scale 1) of the widgets the layout is computed around. */
+export const WIDGET_WIDTH = { oppPanel: 302, sim: 268 };
 const EDGE = 10;
-
-/** Right edge of the widgets docked in the top-left corner (the tier bar). */
-function topLeftEdge(s: number, tierBar: boolean): number {
-  return tierBar ? EDGE + WIDGET_WIDTH.tierBar * s + EDGE : EDGE;
-}
 
 export interface SimPlacement {
   /** Right edge of the plaque in window px. */
@@ -138,32 +113,19 @@ export interface SimPlacement {
   top: number;
   /** Zoom for the plaque (≤ the overlay scale; smaller only when it would not fit). */
   scale: number;
-  /** Zoom for the folded badge. */
-  foldedScale: number;
-  /** Fold to the badge by default (the plaque does not fit). */
-  fold: boolean;
 }
 
 /**
- * Default spot of the battle plaque. Combat: top centre, just left of the opponent's
- * portrait and right of the tier bar. Shop ("last battle"): top right, between Bob's
- * freeze button and the leaderboard panel. When the space is too narrow at this
- * scale/aspect ratio, the plaque shrinks (and in the shop folds) instead of covering
- * the game's buttons.
+ * Default spot of the battle plaque: the top-left area, right-aligned against the game's
+ * own controls. Combat: just left of the opponent's portrait. Shop ("last battle"): just
+ * left of Bob's tier-up button. It shrinks instead of covering them in narrow windows.
  */
-export function battleSimPlacement(view: 'combat' | 'last', vp: Viewport, s: number, opts: { tierBar: boolean; oppPanel: boolean }): SimPlacement {
+export function battleSimPlacement(view: 'combat' | 'last', vp: Viewport, s: number): SimPlacement {
   const H = vp.height;
-  const top = Math.round(H * 0.012);
-  if (view === 'combat') {
-    const right = vp.width / 2 + HS_ZONES.oppHero.x0 * H - 8;
-    const avail = right - topLeftEdge(s, opts.tierBar);
-    return { right, top, scale: Math.min(s, Math.max(0.75, avail / WIDGET_WIDTH.sim)), foldedScale: s, fold: false };
-  }
-  const right = vp.width - (opts.oppPanel ? 6 + WIDGET_WIDTH.oppPanel * s + 12 : EDGE);
-  const avail = right - (vp.width / 2 + HS_ZONES.bob.x1 * H + 8);
-  const fit = avail / WIDGET_WIDTH.simCompact;
-  const foldedScale = Math.min(s, Math.max(0.7, avail / WIDGET_WIDTH.simFolded));
-  return { right, top, scale: Math.min(s, Math.max(0.75, fit)), foldedScale, fold: fit < Math.min(s, 0.85) };
+  const zone = view === 'combat' ? HS_ZONES.oppHero : HS_ZONES.bob;
+  const right = vp.width / 2 + zone.x0 * H - 8;
+  const avail = right - EDGE;
+  return { right, top: Math.round(H * 0.012), scale: Math.min(s, Math.max(0.6, avail / WIDGET_WIDTH.sim)) };
 }
 
 /** Widest a bottom-left widget may be (window px) without reaching into the hand. */

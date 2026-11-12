@@ -4,7 +4,7 @@ import type { BattleSimResult } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { useViewport } from '../../hooks/useViewport';
 import { HeroPortrait } from '../../components/HeroPortrait';
-import { MinionToken } from '../../components/MinionToken';
+import { BoardCards } from '../../components/GameCard';
 import { Gem, PlacementBadge, PlacementPips, TierTimeline } from '../../components/Bits';
 import { CheckIcon, CloseIcon, CrossIcon } from '../../components/Icons';
 import { duration, num, ordinal, placementColor } from '../../lib/format';
@@ -141,7 +141,7 @@ function PostMatchBody({ handle, hovered }: { handle: Parameters<typeof DragHand
           </header>
           <div className="tl-pm__board">
             {game.localBoard.length ? (
-              game.localBoard.map((m) => <MinionToken key={m.entityId} minion={m} size="md" showName />)
+              <BoardCards minions={game.localBoard} width={88} className="tl-pm__cards" />
             ) : (
               <span className="tl-muted">Board unknown</span>
             )}

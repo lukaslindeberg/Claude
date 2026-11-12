@@ -171,18 +171,18 @@ describe('writeDiagnosticsZip', () => {
 
 describe('diagnostic descriptions', () => {
   it('diffs settings by key, one level deep, positions summarised', () => {
-    const prev = { ...DEFAULT_SETTINGS, positions: { tierList: { x: 0.1, y: 0.2 } } };
+    const prev = { ...DEFAULT_SETTINGS, positions: { lobbyInfo: { x: 0.1, y: 0.2 } } };
     const next = {
       ...prev,
       overlayEnabled: false,
-      widgets: { ...prev.widgets, tierList: false },
-      positions: { tierList: { x: 0.3, y: 0.2 }, battleSim: { x: 0.5, y: 0.5 } },
+      widgets: { ...prev.widgets, lobbyInfo: false },
+      positions: { lobbyInfo: { x: 0.3, y: 0.2 }, battleSim: { x: 0.5, y: 0.5 } },
       hearthstonePath: 'D:\\Games\\Hearthstone',
     };
     expect(diffSettings(prev, next)).toEqual([
       'overlayEnabled: true -> false',
-      'widgets.tierList: true -> false',
-      'positions: moved tierList, battleSim',
+      'widgets.lobbyInfo: true -> false',
+      'positions: moved lobbyInfo, battleSim',
       'hearthstonePath: (unset) -> "D:\\\\Games\\\\Hearthstone"',
     ]);
     expect(diffSettings(next, { ...next, positions: {} })).toEqual(['positions: reset']);
