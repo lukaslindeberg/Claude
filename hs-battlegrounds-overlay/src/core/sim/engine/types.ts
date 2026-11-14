@@ -5,7 +5,7 @@
  * combat: `Battle` is created from the (immutable) `BattleSimInput` for every
  * Monte Carlo iteration, so handlers may freely mutate minions and sides.
  */
-import type { BattleSimInput, MinionSnapshot, Tribe } from '@shared/types';
+import type { BattleSimInput, MinionSnapshot, SimSide, Tribe } from '@shared/types';
 import type { CardDb } from '../../cards/cardDb';
 import type { Rng } from './rng';
 
@@ -162,7 +162,7 @@ export interface SideState {
   heroCardId: string;
   heroPowerCardId?: string;
   heroPowerUsed: boolean;
-  heroPowerData: { scriptData1?: number; scriptData2?: number };
+  heroPowerData: { scriptData1?: number; scriptData2?: number; scriptData3?: number };
   playerTags: Record<string, number>;
   heroTags: Record<string, number>;
   hand: HandMinion[];
@@ -206,6 +206,11 @@ export interface TeammateState {
   heroCardId: string;
   heroHealth: number;
   heroArmor: number;
+  /** The teammate's full input: their hero power, trinkets, rewards, hand and tags take over on join. */
+  source?: Omit<SimSide, 'teammate'>;
+  /** Stats given to the waiting teammate's Deity ("your team's Deities"), applied when they join. */
+  deityAttack?: number;
+  deityHealth?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +237,8 @@ export interface Battle {
   attacks: number;
   /** Optional debug log (only filled when enabled). */
   log: string[] | null;
+  /** Set by a handler's `init` to enable the `onFriendlyGainedAttack` event (off by default: `buff` is hot). */
+  watchAttackGain?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -285,6 +292,13 @@ export interface CardHandler {
   rally?(b: Battle, self: Minion, target: Minion): void;
   /** Whenever a friendly minion (including this one) attacks, before damage. Check `attacker !== self` for "another". */
   onFriendlyAttack?(b: Battle, self: Minion, attacker: Minion, target: Minion): void;
+  /** Whenever a friendly minion (including this one) is attacked, before damage. */
+  onFriendlyAttacked?(b: Battle, self: Minion, attacker: Minion, target: Minion): void;
+  /**
+   * Whenever a friendly minion (including this one) gains Attack through `buff`.
+   * Only dispatched when `b.watchAttackGain` is set (do that in `init`).
+   */
+  onFriendlyGainedAttack?(b: Battle, self: Minion, target: Minion, amount: number): void;
   /** After this minion attacked (only if it survived the damage step). */
   afterAttack?(b: Battle, self: Minion, info: AttackInfo): void;
   /** After any friendly minion (including this one) attacked. */
@@ -334,6 +348,9 @@ export interface EffectInstance {
   progress: number;
   scriptData1?: number;
   scriptData2?: number;
+  scriptData3?: number;
+  /** Hero powers: whether it was used this turn (undefined for other kinds / unknown). */
+  used?: boolean;
   /** Scratch space. */
   data: Record<string, number>;
   /** Minions remembered by the effect (e.g. Soul Fermenter). */

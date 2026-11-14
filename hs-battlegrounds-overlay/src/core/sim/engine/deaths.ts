@@ -30,6 +30,23 @@ export function deathrattleMultiplier(side: SideState): number {
   for (let i = 0; i < board.length; i++) {
     const m = board[i];
     if ((m.cardId === 'BG25_354' || m.cardId === 'BG25_354_G') && isAlive(m)) n += m.golden ? 2 : 1;
+    else if (isDeios(m) && isAlive(m)) n += m.golden ? 2 : 1;
+  }
+  return n;
+}
+
+/** Timewarped Deios: "Your Battlecries, Deathrattles, and Rallies trigger twice" (golden: three times). */
+export function isDeios(m: Minion): boolean {
+  return m.cardId === 'BG34_Giant_376' || m.cardId === 'BG34_Giant_376_G';
+}
+
+/** How many times this side's Rallies trigger (1 + Timewarped Deios). */
+export function rallyMultiplier(side: SideState): number {
+  let n = 1;
+  const board = side.board;
+  for (let i = 0; i < board.length; i++) {
+    const m = board[i];
+    if (isDeios(m) && isAlive(m)) n += m.golden ? 2 : 1;
   }
   return n;
 }

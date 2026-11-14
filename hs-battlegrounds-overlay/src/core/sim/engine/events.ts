@@ -22,6 +22,29 @@ export function emitFriendlyAttack(b: Battle, attacker: Minion, target: Minion):
   for (const e of side.effects.slice()) e.handler.onFriendlyAttack?.(b, e, attacker, target);
 }
 
+/** "Whenever a friendly minion is attacked": minions of the defending side. */
+export function emitFriendlyAttacked(b: Battle, attacker: Minion, target: Minion): void {
+  const board = target.side.board;
+  let any = false;
+  for (let i = 0; i < board.length; i++) {
+    if (board[i].handler?.onFriendlyAttacked) {
+      any = true;
+      break;
+    }
+  }
+  if (!any) return;
+  for (const m of listeners(target.side)) {
+    if (m.handler?.onFriendlyAttacked && isAlive(m)) m.handler.onFriendlyAttacked(b, m, attacker, target);
+  }
+}
+
+/** A minion gained Attack through `buff` (only called while `b.watchAttackGain` is set). */
+export function emitAttackGained(b: Battle, target: Minion, amount: number): void {
+  for (const m of listeners(target.side)) {
+    if (m.handler?.onFriendlyGainedAttack && isAlive(m)) m.handler.onFriendlyGainedAttack(b, m, target, amount);
+  }
+}
+
 export function emitAfterAttack(b: Battle, info: AttackInfo): void {
   const attacker = info.attacker;
   const side = attacker.side;

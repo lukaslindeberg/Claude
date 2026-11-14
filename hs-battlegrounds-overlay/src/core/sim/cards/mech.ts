@@ -13,7 +13,7 @@ import {
 import type { Battle, CardHandler, Minion } from '../engine/types';
 
 /** Mech handlers may react to a Magnetization made in combat (Glambot's Satellites). */
-interface MagnetHandler extends CardHandler {
+export interface MagnetHandler extends CardHandler {
   onMagnetize?(b: Battle, self: Minion, host: Minion): void;
 }
 
@@ -24,7 +24,7 @@ const BEATBOXER = 'BG26_149';
  * then "whenever you Magnetize" triggers run (Mechagnome Interpreter), then Polarizing
  * Beatboxer copies the Magnetization to itself (golden: twice). Echoes do not echo again.
  */
-function magnetize(b: Battle, host: Minion, attack: number, health: number, echo = true): void {
+export function magnetize(b: Battle, host: Minion, attack: number, health: number, echo = true): void {
   if (host.removed) return;
   buff(b, host, attack, health);
   for (const m of aliveMinions(host.side)) (m.handler as MagnetHandler | undefined)?.onMagnetize?.(b, m, host);

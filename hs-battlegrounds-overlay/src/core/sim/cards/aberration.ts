@@ -14,6 +14,7 @@ import {
   copyMinion,
   dealDamage,
   giveDeity,
+  giveTeamDeities,
   hasTribe,
   highestBy,
   sd,
@@ -49,7 +50,13 @@ export function cardsAddedToHand(b: Battle, side: SideState, n: number): number 
     const h = sd(b, m, 2, 5 * m.mult);
     for (let i = 0; i < k; i++) giveDeity(b, side, a, h);
   }
+  for (const m of aliveMinions(side)) (m.handler as HandAddHandler | undefined)?.onCardsAddedToHand?.(b, m, k);
   return k;
+}
+
+/** Minions reacting to cards added to the hand in combat (Timewarped Peggy) implement this extra hook. */
+export interface HandAddHandler extends CardHandler {
+  onCardsAddedToHand?(b: Battle, self: Minion, count: number): void;
 }
 
 /** Handler for "Deathrattle / Rally / Avenge: Get N card(s)" (golden: double): only notifies the hand. */
@@ -99,8 +106,8 @@ export function registerAberrations(): void {
 
   // C'Thrax Wrecker (T5, Duos): Battlecry, Deathrattle, and Rally: Give your team's Deities +4/+4.
   registerMinion('BGDUO_701', {
-    rally: (b, self) => giveDeity(b, self.side, sd(b, self, 1, 4 * self.mult), sd(b, self, 2, 4 * self.mult)),
-    deathrattle: (b, self, ctx) => giveDeity(b, self.side, sd(b, self, 1, 4 * ctx.mult), sd(b, self, 2, 4 * ctx.mult)),
+    rally: (b, self) => giveTeamDeities(b, self.side, sd(b, self, 1, 4 * self.mult), sd(b, self, 2, 4 * self.mult)),
+    deathrattle: (b, self, ctx) => giveTeamDeities(b, self.side, sd(b, self, 1, 4 * ctx.mult), sd(b, self, 2, 4 * ctx.mult)),
   });
 
   // De-volition-ist (T5): After this attacks, deal damage equal to this minion's Attack (golden:

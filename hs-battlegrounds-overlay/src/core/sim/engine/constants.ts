@@ -37,6 +37,8 @@ export const TAG = {
   /** "Your Tavern spells give an extra +X/+Y" totals. */
   SPELL_ATK: 'SIM_TAVERN_SPELL_ATTACK_BONUS',
   SPELL_HP: 'SIM_TAVERN_SPELL_HEALTH_BONUS',
+  /** Friendly Aberration deaths that awaken the Deity (from the player's Secret Deity entity). */
+  DEITY_THRESHOLD: 'SIM_DEITY_THRESHOLD',
   /** Elementals played this game (Flourishing Frostling). */
   ELEMENTALS_PLAYED: 'SIM_ELEMENTALS_PLAYED',
   /** Ancestral Automatons summoned this game. */

@@ -12,9 +12,12 @@
  */
 import { aliveCount, indexOf, isAlive, neighbours } from './board';
 import { dealDamage } from './actions';
-import { resolveDeaths } from './deaths';
-import { emitAfterAttack, emitFriendlyAttack, guarded } from './events';
+import { rallyMultiplier, resolveDeaths } from './deaths';
+import { emitAfterAttack, emitFriendlyAttack, emitFriendlyAttacked, guarded } from './events';
 import type { AttackInfo, Battle, Minion, SideState } from './types';
+
+/** `Minion.counters` key: "Immune while attacking" (takes no combat damage from the minion it attacks). */
+export const IMMUNE_WHILE_ATTACKING = 'immuneWhileAttacking';
 
 /** Short label used by the debug log: side:name#entityId. */
 export function label(m: Minion): string {
@@ -91,8 +94,12 @@ export function doAttack(b: Battle, attacker: Minion, opts: AttackOptions): void
 
   // "Whenever this attacks" / "Whenever a friendly minion attacks"
   const rally = attacker.handler?.rally;
-  if (rally) guarded(b, () => rally(b, attacker, target));
+  if (rally) {
+    const times = rallyMultiplier(side);
+    for (let i = 0; i < times; i++) guarded(b, () => attacker.handler?.rally?.(b, attacker, target));
+  }
   emitFriendlyAttack(b, attacker, target);
+  emitFriendlyAttacked(b, attacker, target);
   resolveDeaths(b);
   if (!isAlive(attacker) || !isAlive(target)) {
     if (opts.inTurn) side.lastAttacker = null;
@@ -117,7 +124,9 @@ export function doAttack(b: Battle, attacker: Minion, opts: AttackOptions): void
       if (r.killed) cleaveKills.push({ victim: n, excess: r.excess });
     }
   }
-  const back = dealDamage(b, target, attacker, tAtk, tVenom);
+  const back = attacker.counters?.[IMMUNE_WHILE_ATTACKING]
+    ? { dealt: 0, killed: false, excess: 0 }
+    : dealDamage(b, target, attacker, tAtk, tVenom);
   if (attackerDealt && attacker.venomous) attacker.venomous = false;
   if (back.dealt > 0 && target.venomous) target.venomous = false;
 

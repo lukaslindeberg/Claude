@@ -5,7 +5,15 @@
 import { LOBBY_TRIBES, type Tribe } from '@shared/types';
 import { recalcAuras } from './auras';
 import { aliveCount, aliveMinions, anchorIndex, endAnchor, insertAt, isAlive } from './board';
-import { emitDamageDealt, emitDivineShieldLost, emitFriendlyDamaged, emitSpellCast, emitSummon, guarded } from './events';
+import {
+  emitAttackGained,
+  emitDamageDealt,
+  emitDivineShieldLost,
+  emitFriendlyDamaged,
+  emitSpellCast,
+  emitSummon,
+  guarded,
+} from './events';
 import { hasTribe } from './minion';
 import { MAX_BOARD, type Battle, type Minion, type SideState, type SpaceSummon, type SummonAnchor } from './types';
 
@@ -25,6 +33,7 @@ export function buff(b: Battle, m: Minion, attack: number, health: number): void
     m.maxHealth += health;
   }
   if (m.handler?.onStatsChanged) m.handler.onStatsChanged(b, m);
+  if (b.watchAttackGain && attack > 0) emitAttackGained(b, m, attack);
 }
 
 /** Set stats ("Set to X/Y"): resets damage. */
@@ -299,5 +308,15 @@ export function giveDeity(b: Battle, side: SideState, attack: number, health: nu
   else if (!d.awakened) {
     d.attack += attack;
     d.health += health;
+  }
+}
+
+/** "Give your team's Deities +X/+Y" (Duos): this side's Deity and the waiting teammate's. */
+export function giveTeamDeities(b: Battle, side: SideState, attack: number, health: number): void {
+  giveDeity(b, side, attack, health);
+  const t = side.teammate;
+  if (t) {
+    t.deityAttack = (t.deityAttack ?? 0) + attack;
+    t.deityHealth = (t.deityHealth ?? 0) + health;
   }
 }

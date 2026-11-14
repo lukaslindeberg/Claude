@@ -187,9 +187,21 @@ export function copyMinion(b: Battle, src: Minion, side: SideState = src.side): 
   return m;
 }
 
+/** `Minion.counters` key: "This is Reborn with full Health and enchantments" (Timewarped Hag). */
+export const FULL_REBORN = 'fullReborn';
+
 /** The minion a Reborn minion comes back as: base card, 1 Health, no Reborn. */
 export function rebornCopy(b: Battle, dead: Minion): Minion {
   const card = b.db.get(dead.cardId);
+  if (dead.counters?.[FULL_REBORN]) {
+    // Keeps its stats, keywords and granted deathrattles; comes back at full Health.
+    const full = copyMinion(b, dead);
+    full.health = full.maxHealth;
+    full.reborn = false;
+    if (hasMech(card, 'DIVINE_SHIELD')) full.divineShield = true;
+    if (hasMech(card, 'VENOMOUS')) full.venomous = true;
+    return full;
+  }
   const m = minionFromCard(b, dead.side, dead.cardId, {
     golden: false, // cardId is already the golden id when golden
     tribes: card?.tribes?.length ? card.tribes : dead.tribes,

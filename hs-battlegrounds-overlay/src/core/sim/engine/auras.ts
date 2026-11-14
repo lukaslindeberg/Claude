@@ -10,6 +10,11 @@
 import { isAlive } from './board';
 import type { Battle, Minion } from './types';
 
+/** Aura bonus `target` currently receives from its board. */
+export function auraBonus(b: Battle, target: Minion): { attack: number; health: number } {
+  return computeBonus(b, target);
+}
+
 function computeBonus(b: Battle, target: Minion): { attack: number; health: number } {
   let attack = 0;
   let health = 0;

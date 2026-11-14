@@ -76,3 +76,15 @@ export function startOfCombat(b: Battle): void {
   processSpaceSummons(b);
   resolveDeaths(b);
 }
+
+/**
+ * Duos: Start of Combat of a board that joins mid-combat (hero power, quest rewards, trinkets,
+ * hand, then its minions left to right). The anomaly does not trigger again.
+ */
+export function startOfCombatForSide(b: Battle, side: SideState): void {
+  for (const kind of EFFECT_ORDER) if (kind !== 'anomaly') runEffects(b, side, kind);
+  runHand(b, side);
+  for (const m of side.board.filter((x) => x.handler?.startOfCombat)) runMinion(b, m);
+  processSpaceSummons(b);
+  resolveDeaths(b);
+}

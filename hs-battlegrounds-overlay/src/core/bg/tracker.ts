@@ -203,6 +203,9 @@ export function logTimeDiff(later: string, earlier: string): number {
   return d < 0 ? 0 : d;
 }
 
+/** Card id of the per-player "Secret Deity" objective of Aberration lobbies. */
+const DEITY_OBJECTIVE = 'BG_OldGod';
+
 /** GameEntity tags copied into every SimSide.playerTags (lobby-wide modifiers). */
 const GLOBAL_GAME_TAGS = [T.BACON_GLOBAL_OLD_GOD_DBID, T.BACON_GLOBAL_ANOMALY_DBID, T.BACON_COMBAT_DAMAGE_CAP];
 
@@ -1260,7 +1263,35 @@ export class BgTracker {
     }
     minions.sort((a, b) => (a.tags.get(T.ZONE_POSITION) ?? 0) - (b.tags.get(T.ZONE_POSITION) ?? 0) || a.id - b.id);
     hand.sort((a, b) => (a.tags.get(T.ZONE_POSITION) ?? 0) - (b.tags.get(T.ZONE_POSITION) ?? 0) || a.id - b.id);
-    return this.makeSide(hero, playerId, minions, hand, trinkets, rewards, heroPowers, s.get(playerInfo.entityId), enchants, true);
+    const built = this.makeSide(hero, playerId, minions, hand, trinkets, rewards, heroPowers, s.get(playerInfo.entityId), enchants, true, minId);
+    let deity: Entity | undefined;
+    for (const e of s.entities.values()) {
+      if (e.cardId !== DEITY_OBJECTIVE || e.tags.get(T.CONTROLLER) !== ctl || e.tags.get(T.ZONE) !== Zone.SECRET) continue;
+      if (!deity || e.id > deity.id) deity = e;
+    }
+    this.applyDeity(built, deity);
+    return built;
+  }
+
+  /**
+   * Aberration lobbies: every player owns a "Secret Deity" objective (BG_OldGod) carrying the
+   * number of friendly Aberration deaths that awaken the Deity (QUEST_PROGRESS_TOTAL; it differs
+   * from the card data in some patches) and the Deity's current stats (script data 2 / 3). Board
+   * templates (Duos teammates) have no Player entity, so this is their only source.
+   */
+  private applyDeity(side: Omit<SimSide, 'teammate'>, deity: Entity | undefined): void {
+    if (!deity) return;
+    const tags = side.playerTags;
+    const need = deity.tags.get(T.QUEST_PROGRESS_TOTAL) || deity.tags.get(T.TAG_SCRIPT_DATA_NUM_1) || 0;
+    if (need > 0) tags.SIM_DEITY_THRESHOLD = need;
+    const atk = deity.tags.get(T.TAG_SCRIPT_DATA_NUM_2);
+    const hp = deity.tags.get(T.TAG_SCRIPT_DATA_NUM_3);
+    const atkName = tagName(T.BACON_OLD_GOD_ATTACK);
+    const hpName = tagName(T.BACON_OLD_GOD_HEALTH);
+    if (tags[atkName] === undefined && atk !== undefined) tags[atkName] = atk;
+    if (tags[hpName] === undefined && hp !== undefined) tags[hpName] = hp;
+    const dbf = deity.tags.get(T.BACON_EVOLUTION_CARD_ID);
+    if (dbf && this.cardDb.getByDbfId(dbf)?.mechanics.includes('BACON_OLD_GOD')) tags[tagName(T.BACON_GLOBAL_OLD_GOD_DBID)] = dbf;
   }
 
   private makeSide(
@@ -1274,6 +1305,8 @@ export class BgTracker {
     playerEntity: Entity | undefined,
     enchants: Map<number, Entity[]>,
     livePositions: boolean,
+    /** Hero power entities older than this are leftovers of earlier combats (opponent side). */
+    minExtraHeroPowerId = 0,
   ): SimSide {
     const s = this.store;
     const db = this.cardDb;
@@ -1304,10 +1337,34 @@ export class BgTracker {
       side.heroPowerUsed = (hp.tags.get(T.EXHAUSTED) ?? 0) > 0 || (hp.tags.get(T.BACON_HERO_POWER_ACTIVATED) ?? 0) > 0;
       const d1 = hp.tags.get(T.TAG_SCRIPT_DATA_NUM_1);
       const d2 = hp.tags.get(T.TAG_SCRIPT_DATA_NUM_2);
-      if (d1 !== undefined || d2 !== undefined) {
+      const d3 = hp.tags.get(T.TAG_SCRIPT_DATA_NUM_3);
+      if (d1 !== undefined || d2 !== undefined || d3 !== undefined) {
         side.heroPowerData = {};
         if (d1 !== undefined) side.heroPowerData.scriptData1 = d1;
         if (d2 !== undefined) side.heroPowerData.scriptData2 = d2;
+        if (d3 !== undefined) side.heroPowerData.scriptData3 = d3;
+      }
+      // Second hero power (Reinvigorating Light...): the newest other hero power card in play.
+      const extras = new Map<string, Entity>();
+      for (const o of heroPowers) {
+        if (o === hp || o.cardId === hp.cardId || !o.cardId || o.id < minExtraHeroPowerId) continue;
+        const prev = extras.get(o.cardId);
+        if (!prev || o.id > prev.id) extras.set(o.cardId, o);
+      }
+      if (extras.size) {
+        side.extraHeroPowers = [...extras.values()].map((o) => {
+          const x: NonNullable<SimSide['extraHeroPowers']>[number] = {
+            cardId: o.cardId,
+            used: (o.tags.get(T.EXHAUSTED) ?? 0) > 0 || (o.tags.get(T.BACON_HERO_POWER_ACTIVATED) ?? 0) > 0,
+          };
+          const a = o.tags.get(T.TAG_SCRIPT_DATA_NUM_1);
+          const b2 = o.tags.get(T.TAG_SCRIPT_DATA_NUM_2);
+          const c3 = o.tags.get(T.TAG_SCRIPT_DATA_NUM_3);
+          if (a !== undefined) x.scriptData1 = a;
+          if (b2 !== undefined) x.scriptData2 = b2;
+          if (c3 !== undefined) x.scriptData3 = c3;
+          return x;
+        });
       }
     } else {
       const hpCard = db.getByDbfId(hero.tags.get(T.HERO_POWER))?.id ?? db.get(hero.cardId)?.heroPowerId;
@@ -1368,6 +1425,7 @@ export class BgTracker {
       enchantmentIndex(s),
       false,
     );
+    this.applyDeity(side, members.find((e) => e.cardId === DEITY_OBJECTIVE));
     return side;
   }
 

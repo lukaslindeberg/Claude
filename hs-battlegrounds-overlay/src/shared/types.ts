@@ -369,7 +369,9 @@ export interface SimSide {
   heroPowerCardId?: string;
   /** Whether the hero power was used this turn / is active, and its script data. */
   heroPowerUsed?: boolean;
-  heroPowerData?: { scriptData1?: number; scriptData2?: number };
+  heroPowerData?: { scriptData1?: number; scriptData2?: number; scriptData3?: number };
+  /** Additional hero powers in play (e.g. from Reinvigorating Light "Discover a second Hero Power"). */
+  extraHeroPowers?: { cardId: string; used?: boolean; scriptData1?: number; scriptData2?: number; scriptData3?: number }[];
   tavernTier: number;
   /** health incl. armor is NOT combined: health and armor separately. */
   health: number;
