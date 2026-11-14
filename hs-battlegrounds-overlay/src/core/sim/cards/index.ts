@@ -4,6 +4,7 @@
  */
 import { registerAberrations } from './aberration';
 import { registerAnomalies } from './anomalies';
+import { registerDarkGifts } from './darkGifts';
 import { registerBeasts } from './beast';
 import { registerDemons } from './demon';
 import { registerDragons } from './dragon';
@@ -16,6 +17,7 @@ import { registerNeutrals } from './neutral';
 import { registerPirates } from './pirate';
 import { registerQuestRewards } from './questRewards';
 import { registerQuilboar } from './quilboar';
+import { registerTimewarped } from './timewarped';
 import { registerTrinkets } from './trinkets';
 import { registerUndead } from './undead';
 
@@ -36,10 +38,12 @@ export function ensureCardsRegistered(): void {
   registerQuilboar();
   registerUndead();
   registerAberrations();
+  registerTimewarped();
   registerHeroPowers();
   registerTrinkets();
   registerQuestRewards();
   registerAnomalies();
+  registerDarkGifts();
 }
 
 export * from './registry';

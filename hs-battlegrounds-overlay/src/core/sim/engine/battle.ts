@@ -268,9 +268,17 @@ export function runBattle(b: Battle): BattleOutcome {
   let current = b.sides[b.firstSide];
   let tie = false;
   for (;;) {
-    if (p.board.length === 0) joinTeammate(b, p);
-    if (o.board.length === 0) joinTeammate(b, o);
+    let joined = false;
+    if (p.board.length === 0) joined = joinTeammate(b, p) || joined;
+    if (o.board.length === 0) joined = joinTeammate(b, o) || joined;
     if (aliveCount(p) === 0 || aliveCount(o) === 0) break;
+    if (joined) {
+      // Real Duos logs: after a board joins, the side with more minions attacks next (as at the
+      // start of combat; random when equal) instead of simply alternating.
+      const pn = aliveCount(p);
+      const on = aliveCount(o);
+      current = pn > on ? p : on > pn ? o : b.rng.chance(0.5) ? p : o;
+    }
     if (b.attacks >= LIMITS.maxAttacks) {
       tie = true;
       break;

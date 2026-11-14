@@ -6,7 +6,7 @@
  * friendly Aberrations died this combat. "Give your Deity +X/+Y" buffs the
  * pending stats, or the awakened minion.
  */
-import { registerMinion } from './registry';
+import { getMinionHandler, registerMinion } from './registry';
 import {
   aliveMinions,
   buff,
@@ -45,7 +45,7 @@ export function cardsAddedToHand(b: Battle, side: SideState, n: number): number 
   if (k <= 0) return 0;
   addedThisCombat.set(side, added + k);
   for (const m of aliveMinions(side)) {
-    if (m.handler !== SHADOW_OF_DOUBT) continue;
+    if (getMinionHandler(m.cardId, b.db) !== SHADOW_OF_DOUBT) continue;
     const a = sd(b, m, 1, 4 * m.mult);
     const h = sd(b, m, 2, 5 * m.mult);
     for (let i = 0; i < k; i++) giveDeity(b, side, a, h);

@@ -391,4 +391,9 @@ export interface EnchantmentHandler {
   deathrattle?: DeathrattleFn;
   /** Called when a minion carrying this enchantment is created. */
   init?(b: Battle, self: Minion): void;
+  /**
+   * Triggers the enchantment adds to its minion (Start of Combat, Rally, ...). Function hooks only;
+   * they run after the card's own hook of the same name (`init`, `aura` and `avenge` are not merged).
+   */
+  hooks?: Partial<CardHandler>;
 }

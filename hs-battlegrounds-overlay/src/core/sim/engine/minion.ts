@@ -4,7 +4,7 @@
  */
 import type { BgCard, MinionSnapshot, Tribe } from '@shared/types';
 import { getEnchantmentHandler, getMinionHandler } from '../cards/registry';
-import type { Battle, Minion, SideState } from './types';
+import type { Battle, Minion, SideState, CardHandler } from './types';
 
 const EMPTY_TAGS: Record<string, number> = Object.freeze({}) as Record<string, number>;
 
@@ -62,11 +62,42 @@ function blankMinion(b: Battle, side: SideState): Minion {
   };
 }
 
+/** base handler -> enchantment id -> handler with the enchantment's hooks merged in. */
+const mergedHandlers = new WeakMap<object, Map<string, CardHandler>>();
+const NO_HANDLER = {};
+const UNMERGED = new Set(['init', 'aura', 'avenge']);
+
+function withHooks(base: CardHandler | undefined, id: string, hooks: Partial<CardHandler>): CardHandler {
+  const key = base ?? NO_HANDLER;
+  let per = mergedHandlers.get(key);
+  if (!per) mergedHandlers.set(key, (per = new Map()));
+  let merged = per.get(id);
+  if (!merged) {
+    const out = { ...(base ?? {}) } as Record<string, unknown>;
+    for (const [name, add] of Object.entries(hooks)) {
+      if (typeof add !== 'function' || UNMERGED.has(name)) continue;
+      const prev = out[name];
+      const fn = add as (...args: unknown[]) => unknown;
+      out[name] =
+        typeof prev === 'function'
+          ? (...args: unknown[]) => {
+              (prev as (...a: unknown[]) => unknown)(...args);
+              return fn(...args);
+            }
+          : fn;
+    }
+    merged = out as CardHandler;
+    per.set(id, merged);
+  }
+  return merged;
+}
+
 function attachEnchantments(b: Battle, m: Minion, ids: readonly string[]): void {
   for (const id of ids) {
     const h = getEnchantmentHandler(id);
     if (!h) continue;
     if (h.deathrattle) m.extraDeathrattles.push({ sourceCardId: id, golden: false, fn: h.deathrattle });
+    if (h.hooks) m.handler = withHooks(m.handler, id, h.hooks);
     h.init?.(b, m);
   }
 }
