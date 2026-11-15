@@ -205,6 +205,18 @@ keywords and snapshot stats are still simulated. Counted by first tribe.
 | All-type | 3 | 3 | 0 | - |
 | **Total** | **111** | **189** | **2** | **0** |
 
+Timewarped minions (158, `cards/timewarped.ts`, not in the pool counts above):
+
+| Group | Combat handler | No combat effect | Keyword-only | Unsupported |
+|---|---:|---:|---:|---|
+| Timewarped | 80 | 72 | 0 | 6: Greenskeeper (triggers a Battlecry), Nellie's Ship (Discovered crew unknown), Bristler (Blood Gem count unknown), Festergut (Undead Creations), Magnanimoose (random opponent's warband), Stone Drake (stats sold this turn unknown) |
+
+Engine hooks added for them: `onFriendlyAttacked` (Arm), `onFriendlyGainedAttack` (Whelp Smuggler; enabled by
+`b.watchAttackGain`), `rallyMultiplier` / Deios in `deathrattleMultiplier`, `IMMUNE_WHILE_ATTACKING` (Viper) and
+`FULL_REBORN` (Hag) counters. Simplifications: copied Rallies/Deathrattles (Stoneshell, Whirl-O-Tron) use the
+source's script data but not its per-minion state; Astrogill (in-hand effect) and Jungle King's "improves" are
+ignored; Peggy only sees cards counted by `cardsAddedToHand`.
+
 Also implemented: 22 non-pool minions that appear through tokens/portraits/Ghastcoiler-style
 effects (Sewer Rat, Kaboom Bot, Scallywag, Fish of N'Zoth, Selfless Hero, Harvest Golem, Cave Hydra,
 Foe Reaper, Imp Gang Boss, Nest Swarmer, Runed Progenitor, Silky Shimmermoth, Impulsive Trickster,

@@ -120,6 +120,11 @@ export function registerDragons(): void {
     onSpellCast: (b, self) => buffAll(b, self.side, sd(b, self, 1, 1) * self.mult, 0),
   });
 
+  // Misfit Dragonling (T1, rotated out): Start of Combat: Gain stats equal to your Tier.
+  registerMinion('BG29_814', {
+    startOfCombat: (b, self) => buff(b, self, self.side.tavernTier * self.mult, self.side.tavernTier * self.mult),
+  });
+
   // Prized Promo-Drake: Start of Combat: Give your Dragons +4/+4.
   registerMinion('BG21_014', {
     startOfCombat: (b, self) => buffAll(b, self.side, sd(b, self, 1, 4 * self.mult), sd(b, self, 2, 4 * self.mult), isDragon),
