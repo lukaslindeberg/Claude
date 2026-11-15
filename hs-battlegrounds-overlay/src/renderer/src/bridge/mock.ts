@@ -55,6 +55,12 @@ function loadSettings(): Settings {
 }
 
 function sceneState(scene: string): BgGameState {
+  const s = sceneStateBase(scene);
+  if (new URLSearchParams(window.location.search).get('counters') === 'all' && s.active) s.counters = { ...samples.ALL_COUNTERS };
+  return s;
+}
+
+function sceneStateBase(scene: string): BgGameState {
   switch (scene) {
     case 'heroSelection': {
       const s = samples.heroSelectionState();

@@ -297,6 +297,24 @@ export interface BattleState {
   error?: string;
 }
 
+/**
+ * Local-player counters. Each field is present only when relevant: Blood Gem / Beetle
+ * stats when such cards are involved (or the value is above default), the others
+ * when non-zero.
+ */
+export interface BgCounters {
+  /** Stats one Blood Gem currently gives (base +1/+1 plus BACON_BLOODGEMBUFF*VALUE). */
+  bloodGem?: { attack: number; health: number };
+  /** Current stats of your Beetles (2/2 base). */
+  beetle?: { attack: number; health: number };
+  /** BACON_PLAYER_EXTRA_GOLD_NEXT_TURN. */
+  extraGoldNextTurn?: number;
+  /** BACON_PLAYER_OVERDRAWN_GOLD_NEXT_TURN (gold you will be missing next turn). */
+  overdrawnGoldNextTurn?: number;
+  /** BACON_FREE_REFRESH_COUNT (Refresh button / free-refresh player enchantment). */
+  freeRefreshes?: number;
+}
+
 export interface BgGameState {
   /** Unique id for this game (stable for the game's duration). */
   gameId: string;
@@ -339,6 +357,8 @@ export interface BgGameState {
   /** Local player's gold (RESOURCES - RESOURCES_USED + TEMP_RESOURCES). */
   gold?: number;
   maxGold?: number;
+  /** Small local-player counters (Blood Gems, Beetles, gold next turn, free refreshes). */
+  counters?: BgCounters;
   battle: BattleState;
   /** History of battles this game (newest last). */
   battles: BattleState[];

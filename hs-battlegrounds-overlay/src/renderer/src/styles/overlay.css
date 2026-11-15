@@ -911,6 +911,50 @@ body.tl-body--overlay {
   color: #fff;
 }
 
+.tl-dock__line.is-counters {
+  gap: 5px;
+  min-height: 18px;
+}
+.tl-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 6px 0 4px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: inset 0 0 0 1px var(--tl-border-soft);
+  color: var(--tl-text-2);
+}
+.tl-counter svg {
+  flex: none;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.6));
+}
+.tl-counter b {
+  font-family: var(--tl-display);
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 0 #000;
+  font-variant-numeric: tabular-nums;
+}
+.tl-counter.is-gem svg {
+  color: #e2483c;
+}
+.tl-counter.is-beetle svg {
+  color: #6fbf73;
+}
+.tl-counter.is-gold svg {
+  color: var(--gem-gold);
+}
+.tl-counter.is-neg b {
+  color: var(--tl-loss);
+}
+.tl-counter.is-refresh svg {
+  color: var(--tl-info);
+}
+
 /* ------------------------------------------------------------------ board as cards (hover) */
 .tl-boardtip {
   --tl-alpha: 0.96;

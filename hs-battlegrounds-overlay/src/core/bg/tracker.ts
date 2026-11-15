@@ -25,6 +25,7 @@ import { CardDb } from '../cards/cardDb';
 import { CardType, GameTag as T, PlayState, Zone } from '../log/enums';
 import { PowerLogParser, tagName, type Packet } from '../log/powerLogParser';
 import { EntityStore, type Entity } from '../game/entityStore';
+import { localCounters, type CounterRelevance } from './counters';
 import {
   displayName,
   enchantmentIndex,
@@ -127,6 +128,8 @@ interface Playback {
 
 interface GameCtx {
   playback: Playback;
+  /** Sticky relevance of the Blood Gem / Beetle counters for this game. */
+  counterSeen: CounterRelevance;
   /** Log timestamp at which the GameState stream reached each GameEntity TURN. */
   turnTs: Map<number, string>;
   /** Log timestamp at which the GameState stream ended the local player's game. */
@@ -548,6 +551,7 @@ export class BgTracker {
     const startedAt = this.now();
     this.g = {
       playback: freshPlayback(),
+      counterSeen: { bloodGem: false, beetle: false },
       turnTs: new Map(),
       gameId: `bg-${seed || 0}-${startedAt}`,
       isBg: false,
@@ -1768,6 +1772,10 @@ export class BgTracker {
     if (lp && gold !== undefined && turn > 0) {
       state.gold = Math.max(0, gold);
       state.maxGold = resources;
+    }
+    if (lp && turn > 0) {
+      const counters = localCounters(s, db, lctl, lp.entityId, g.localHeroId, g.counterSeen);
+      if (counters) state.counters = counters;
     }
     const placement = g.ended && !g.matchRecord ? (this.currentPlacement(g) ?? g.finalPlacement) : g.finalPlacement;
     if (placement !== undefined) state.finalPlacement = placement;

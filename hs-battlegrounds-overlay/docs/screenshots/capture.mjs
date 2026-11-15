@@ -29,6 +29,10 @@ const shots = [
   }],
   ['overlay-trinket-pick', '/overlay.html?scene=trinketPick', overlay],
   ['overlay-recruit', '/overlay.html?scene=recruit', overlay],
+  // Counter chips on the lobby plaque (Blood Gems, Beetles, overdrawn gold, free refreshes).
+  ['overlay-counters', '/overlay.html?scene=recruit&counters=all', overlay, async (p) => {
+    await p.hover('.tl-counter.is-gem');
+  }, 600],
   ['overlay-recruit-1440p', '/overlay.html?scene=recruit', { width: 2560, height: 1440 }],
   ['overlay-opponent-hover', '/overlay.html?scene=recruit', overlay, async (p) => {
     await p.hover('.tl-opp__row:nth-child(3) .tl-opp__board');

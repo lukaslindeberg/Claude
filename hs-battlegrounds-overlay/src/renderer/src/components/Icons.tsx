@@ -166,6 +166,63 @@ export const TripleIcon = ({ size, className, title }: P) =>
 export const ClockIcon = ({ size, className }: P) =>
   svg(size, className, <path d="M8 2a6 6 0 1 1 0 12A6 6 0 0 1 8 2Zm0 2.8V8l2.2 1.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />);
 
+/** Blood Gem: a faceted gem (Quilboar). */
+export const BloodGemIcon = ({ size, className, title }: P) =>
+  svg(
+    size,
+    className,
+    <g>
+      <path d="M8 1.4 13.4 6 8 14.6 2.6 6 8 1.4Z" fill="currentColor" />
+      <path d="M8 1.4 10.4 6H5.6L8 1.4ZM5.6 6 8 14.6 10.4 6" fill="none" stroke="rgba(0,0,0,.35)" strokeWidth=".8" strokeLinejoin="round" />
+      <path d="M5.4 3.6 6.9 2.3 6.2 5.2Z" fill="#fff" opacity=".55" />
+    </g>,
+    undefined,
+    title,
+  );
+
+/** Beetle: round shell split down the middle, with legs and antennae. */
+export const BeetleIcon = ({ size, className, title }: P) =>
+  svg(
+    size,
+    className,
+    <g>
+      <path d="M5.2 2.4 6.6 4M10.8 2.4 9.4 4M3 7.2l-1.6-1M13 7.2l1.6-1M3 9.8H1.2M13 9.8h1.8M3.6 12.2l-1.4 1.4M12.4 12.2l1.4 1.4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+      <ellipse cx="8" cy="5" rx="2.3" ry="1.6" fill="currentColor" />
+      <path d="M8 5.4c2.9 0 4.8 2 4.8 4.6 0 2.7-2.2 4.6-4.8 4.6S3.2 12.7 3.2 10c0-2.6 1.9-4.6 4.8-4.6Z" fill="currentColor" />
+      <path d="M8 5.6v8.8" stroke="rgba(0,0,0,.45)" strokeWidth=".9" />
+      <path d="M5.1 8.2c.5-.8 1.2-1.2 1.9-1.4" stroke="#fff" strokeWidth=".8" strokeLinecap="round" opacity=".5" fill="none" />
+    </g>,
+    undefined,
+    title,
+  );
+
+/** Gold coin. */
+export const CoinIcon = ({ size, className, title }: P) =>
+  svg(
+    size,
+    className,
+    <g>
+      <circle cx="8" cy="8" r="6.4" fill="currentColor" />
+      <circle cx="8" cy="8" r="4.4" fill="none" stroke="rgba(0,0,0,.3)" strokeWidth="1" />
+      <path d="M6.6 4.9 7.4 4.3" stroke="#fff" strokeWidth="1" strokeLinecap="round" opacity=".6" />
+    </g>,
+    undefined,
+    title,
+  );
+
+/** Refresh: circular arrow. */
+export const RefreshIcon = ({ size, className, title }: P) =>
+  svg(
+    size,
+    className,
+    <g>
+      <path d="M12.6 6.4A4.9 4.9 0 1 0 12.9 9.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M14.4 2.6v4.6H9.8l4.6-4.6Z" fill="currentColor" />
+    </g>,
+    undefined,
+    title,
+  );
+
 export const PlayIcon = ({ size, className }: P) => svg(size, className, <path d="M4.5 2.8v10.4L13 8 4.5 2.8Z" fill="currentColor" />);
 export const StopIcon = ({ size, className }: P) => svg(size, className, <rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor" />);
 

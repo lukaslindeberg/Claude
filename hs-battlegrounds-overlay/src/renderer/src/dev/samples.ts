@@ -457,6 +457,7 @@ function baseState(): BgGameState {
     localHand: [],
     gold: 10,
     maxGold: 10,
+    counters: { extraGoldNextTurn: 2, freeRefreshes: 2 },
     battle: { status: 'idle', turn: 9 },
     battles: [],
     startedAt: Date.now() - 14 * 60_000,
@@ -502,6 +503,14 @@ function pastBattles(upToTurn: number): BattleState[] {
 // ---------------------------------------------------------------------------
 // Scenes
 // ---------------------------------------------------------------------------
+
+/** Every counter chip (Blood Gems, Beetles, overdrawn gold, free refreshes): `?counters=all`. */
+export const ALL_COUNTERS: NonNullable<BgGameState['counters']> = {
+  bloodGem: { attack: 3, health: 4 },
+  beetle: { attack: 6, health: 6 },
+  overdrawnGoldNextTurn: 1,
+  freeRefreshes: 1,
+};
 
 export function heroSelectionState(): BgGameState {
   const s = baseState();
