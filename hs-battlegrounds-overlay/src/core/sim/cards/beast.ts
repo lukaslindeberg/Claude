@@ -230,7 +230,6 @@ export function registerBeasts(): void {
       'BG27_084', // Sprightly Scarab
       'BG36_204', // Headhunter Gryphon (Rally: get a card)
       'BG36_206', // Snarky Shark
-      'BG26_801', // Rylak Metalhead (deathrattle triggers a Battlecry: shop effects)
       'BGDUO31_203', // Shifty Snake (deathrattle: teammate gets a card)
     ],
     { noCombatEffect: true },

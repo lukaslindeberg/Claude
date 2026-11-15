@@ -1,6 +1,7 @@
 /** Quest rewards with combat effects (side-level effects). */
 import { registerEffect } from './registry';
 import {
+  destroy,
   aliveMinions,
   attackImmediately,
   buff,
@@ -75,10 +76,21 @@ export function registerQuestRewards(): void {
   // Cycle of Energy: Avenge (3): Get a random Tavern spell (only the hand count matters in combat).
   registerEffect('BG28_Reward_504', { avenge: 3, onAvenge: (b, e) => void cardsAddedToHand(b, e.side, 1) });
 
+  // Volatile Venom: Your minions have +7/+7. After they attack, they die. Horribly.
+  // Snapshot stats include the +7/+7; minions summoned in combat get it on summon.
+  registerEffect('BG24_Reward_364', {
+    init: (_b, e) => void e.side.summonBuffs.push({ attack: 7, health: 7 }),
+    afterFriendlyAttack: (b, _e, info) => {
+      if (!info.attacker.removed) destroy(b, info.attacker);
+    },
+  });
+
   registerEffect(
     [
       'BG24_Reward_113', // Ritual Dagger (permanent stats on dead minions)
       'BG33_Reward_004', // Grim Freshener (free Refresh)
+      'BG24_Reward_138', // Victim's Specter (after combat: get a copy)
+      'BG24_Reward_708', // Blood Goblet (end of turn: Attack on the right-most minion, in the snapshot)
     ],
     { noCombatEffect: true },
   );

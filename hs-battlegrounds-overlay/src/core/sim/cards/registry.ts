@@ -49,6 +49,11 @@ function normalCandidates(cardId: string, db?: CardDb): string[] {
   return out;
 }
 
+/** The handler registered under exactly this id (no golden/normal resolution). */
+export function registeredMinionHandler(cardId: string): CardHandler | undefined {
+  return minionHandlers.get(cardId);
+}
+
 export function getMinionHandler(cardId: string, db?: CardDb): CardHandler | undefined {
   const cached = resolvedMinion.get(cardId);
   if (cached !== undefined) return cached ?? undefined;

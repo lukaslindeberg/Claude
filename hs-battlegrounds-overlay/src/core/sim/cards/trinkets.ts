@@ -18,6 +18,7 @@ import {
   leftMost,
   minionFromCard,
   minionFromSnapshot,
+  bloodGemStats,
   playBloodGem,
   queueSpaceSummon,
   randomFriendlies,
@@ -574,6 +575,45 @@ export function registerTrinkets(): void {
     },
   });
 
+  // Blood Golem Sticker: Whenever a friendly Quilboar dies, summon a Golem with stats equal to its
+  // Blood Gems (the stats it got from Blood Gems, see `bloodGemStats`), in its slot.
+  registerEffect('BG30_MagicItem_442', {
+    onFriendlyDeath: (b, e, dead) => {
+      if (!hasTribe(dead, 'QUILBOAR')) return;
+      const gems = bloodGemStats(dead);
+      if (gems.health <= 0) return;
+      const anchor = e.side.pendingRecords.find((r) => r.minion === dead) ?? endAnchor(e.side);
+      summon(b, e.side, minionFromCard(b, e.side, 'BG30_MagicItem_442t', { attack: Math.max(0, gems.attack), health: gems.health }), anchor);
+    },
+  });
+  // Jar o' Gems: After a friendly Quilboar attacks each combat, this plays a Blood Gem on all your
+  // Quilboar. The card carries no numbers: every friendly Quilboar attack triggers it, unless the
+  // trinket's script data 2 (the usual "every N" value of counting trinkets) says otherwise.
+  registerEffect('BG30_MagicItem_546', {
+    afterFriendlyAttack: (b, e, info) => {
+      if (!hasTribe(info.attacker, 'QUILBOAR')) return;
+      const period = e.scriptData2 && e.scriptData2 > 0 ? e.scriptData2 : 1;
+      e.data.attacks = (e.data.attacks ?? 0) + 1;
+      if (e.data.attacks % period !== 0) return;
+      for (const m of aliveMinions(e.side)) if (hasTribe(m, 'QUILBOAR')) playBloodGem(b, m);
+    },
+  });
+  // Artisanal Urn: Your Undead have +3 Attack (greater: +20). Snapshot stats include the aura; Undead
+  // summoned in combat get it on summon.
+  registerEffect(['BG30_MagicItem_989', 'BG30_MagicItem_989t'], {
+    init: (b, e) => {
+      const a = esd(b, e, 1, e.cardId.endsWith('t') ? 20 : 3);
+      e.side.summonBuffs.push({ tribe: 'UNDEAD', attack: a, health: 0 });
+    },
+  });
+  // Snarky Portrait: Whenever a Fishbait dies, give your Beasts +4/+4 (current values in script data
+  // 1/2) and improve this (the improvement within the same combat is not simulated).
+  const snarky = (b: Battle, e: EffectInstance, dead: Minion) => {
+    if (dead.cardId !== 'BG36_205' && dead.cardId !== 'BG36_205_G') return;
+    buffAll(b, e.side, esd(b, e, 1, 4), esd(b, e, 2, 4), isBeast);
+  };
+  registerEffect('BG36_MagicItem_450', { onFriendlyDeath: snarky, onEnemyDeath: snarky });
+
   // Trinkets without combat effects that mention combat words.
   registerEffect(
     [
@@ -588,6 +628,8 @@ export function registerTrinkets(): void {
       'BG35_MagicItem_434', // Jewelry Box
       'BG36_MagicItem_362', // Cyclist Portrait
       'BG35_MagicItem_310', // Radio Star Portrait
+      'BG30_MagicItem_868', // Rewinder Portrait (Soul Rewinders react to hero damage, which only happens outside combat)
+      'BG36_MagicItem_214', // Insurrectionist's Blade (end of turn: its Rallies resolve in the shop, results are in the snapshot)
     ],
     { noCombatEffect: true },
   );

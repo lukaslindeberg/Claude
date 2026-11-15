@@ -228,6 +228,38 @@ export function hasRoom(side: SideState): boolean {
 // Blood Gems, spells, Deity
 // ---------------------------------------------------------------------------
 
+/** Enchantment holding the stats a minion got from Blood Gems (script data 1/2 = Attack/Health). */
+export const BLOOD_GEMS_ENCHANTMENT = 'BG20_GEMe2';
+const GEM_ATTACK = 'gemAttack';
+const GEM_HEALTH = 'gemHealth';
+
+/**
+ * Stats a minion got from Blood Gems ("its Blood Gems": Blood Golem Sticker, Timewarped Bristler):
+ * the snapshot's `BG20_GEMe2` enchantments plus the gems played on it in this combat.
+ */
+export function bloodGemStats(m: Minion): { attack: number; health: number } {
+  const c = (m.counters ??= {});
+  if (!(GEM_ATTACK in c)) {
+    let a = 0;
+    let h = 0;
+    for (const e of m.snapshot?.enchantments ?? []) {
+      if (e.cardId !== BLOOD_GEMS_ENCHANTMENT) continue;
+      a += e.scriptData1 ?? 0;
+      h += e.scriptData2 ?? 0;
+    }
+    c[GEM_ATTACK] = a;
+    c[GEM_HEALTH] = h;
+  }
+  return { attack: c[GEM_ATTACK], health: c[GEM_HEALTH] };
+}
+
+/** Record Blood Gem stats given to `m` (played gems, or gems handed over by Timewarped Bristler). */
+export function addBloodGemStats(m: Minion, attack: number, health: number): void {
+  bloodGemStats(m);
+  m.counters![GEM_ATTACK] += attack;
+  m.counters![GEM_HEALTH] += health;
+}
+
 /** Play `count` Blood Gems on `target` (respects the side's Blood Gem values). */
 export function playBloodGem(b: Battle, target: Minion, count = 1): void {
   for (let i = 0; i < count; i++) {
@@ -235,6 +267,7 @@ export function playBloodGem(b: Battle, target: Minion, count = 1): void {
     const side = target.side;
     const ok = guarded(b, () => {
       buff(b, target, side.bloodGemAttack, side.bloodGemHealth);
+      addBloodGemStats(target, side.bloodGemAttack, side.bloodGemHealth);
       target.handler?.onBloodGem?.(b, target);
     });
     if (!ok) return;

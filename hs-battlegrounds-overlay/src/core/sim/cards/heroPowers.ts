@@ -2,6 +2,7 @@
  * Hero powers with combat effects (side-level effects, see EffectHandler), and
  * the enchantments some of them put on minions.
  */
+import { LOBBY_TRIBES } from '@shared/types';
 import { registerEffect, registerEnchantment } from './registry';
 import {
   aliveMinions,
@@ -14,6 +15,7 @@ import {
   giveDivineShield,
   giveTaunt,
   giveWindfury,
+  hasTribe,
   highestBy,
   leftMost,
   lowestBy,
@@ -246,6 +248,25 @@ export function registerHeroPowers(): void {
       queueSpaceSummon(e.side, { remaining: 1, make: () => copy });
     },
   });
+
+  // Wax Warband (Queen Wagtoggle, passive): Start of Combat: Give a friendly minion of each type +X/+X.
+  // X = hero power script data 3 (improves after spending 10 Gold); a minion is picked for one type only.
+  registerEffect('TB_BaconShop_HP_037a', {
+    startOfCombat: (b, e) => {
+      const x = e.scriptData3 && e.scriptData3 > 0 ? e.scriptData3 : (b.db.get(e.cardId)?.tags?.TAG_SCRIPT_DATA_NUM_3 ?? 1);
+      const used = new Set<Minion>();
+      for (const tribe of LOBBY_TRIBES) {
+        const t = b.rng.pick(aliveMinions(e.side).filter((m) => !used.has(m) && m.tribes.length > 0 && hasTribe(m, tribe)));
+        if (!t) continue;
+        used.add(t);
+        buff(b, t, x, x);
+      }
+    },
+  });
+  // Lock and Load (Tavish Stormpike): Remove a minion in the Tavern. When you have space next combat,
+  // fire it at a random enemy minion. Which minion was removed is not in the input: still reported
+  // when the hero power was used this turn (or its state is unknown); otherwise it does nothing.
+  registerEffect('BG22_HERO_000p_Alt', { unsupportedWhen: ({ used }) => used !== false });
 
   // Passive hero powers whose effect is already reflected in the board snapshot.
   registerEffect(

@@ -7,12 +7,9 @@
  * Timewarped Deios is handled by the engine (deathrattle / rally multipliers, like Titus).
  *
  * Deliberately NOT registered (reported as unsupported, see README):
- *   BG34_Giant_041  Timewarped Greenskeeper  - triggers a Battlecry in combat (battlecries are not simulated)
- *   BG34_Giant_074t Timewarped Nellie's Ship - the Discovered Pirate crew is not in the input
- *   BG34_Giant_104  Timewarped Bristler      - the number of Blood Gems on a minion is not in the input
- *   BG34_Giant_590  Timewarped Festergut     - "Undead Creations" are custom-built minions
- *   BG34_Giant_619  Timewarped Magnanimoose  - copies a minion of a random (unknown) opponent's warband
- *   BG34_Giant_675  Timewarped Stone Drake   - the stats of the minions sold this turn are not in the input
+ *   BG34_Giant_590  Timewarped Festergut     - "Undead Creations" are custom-built minions whose parts
+ *                                              are not in the card data
+ * Timewarped Greenskeeper is registered in battlecries.ts (it triggers a Battlecry).
  */
 import { LOBBY_TRIBES, type Tribe } from '@shared/types';
 import { registerMinion } from './registry';
@@ -47,6 +44,10 @@ import {
   summonFromHand,
   tribeFilter,
   triggerDeathrattlesArtificially,
+  addBloodGemStats,
+  bloodGemStats,
+  minionFromSnapshot,
+  summon,
 } from './helpers';
 import { avengeGetsCards, cardsAddedToHand, getsCards, type HandAddHandler } from './aberration';
 import { magnetize, type MagnetHandler } from './mech';
@@ -230,6 +231,64 @@ export function registerTimewarped(): void {
         if (!card || !summonForDeath(b, self, ctx, card.id, 1).length) break;
       }
       cardsAddedToHand(b, self.side, n);
+    },
+  });
+
+  // Timewarped Nellie's Ship (T3): At the start of each turn, Discover a Pirate to crew the ship.
+  // Deathrattle: Summon and get that Pirate (golden: 2). Which Pirate was Discovered is not in the input:
+  // modelled as a random Pirate of the owner's Tavern Tier or lower.
+  registerMinion('BG34_Giant_074t', {
+    deathrattle: (b, self, ctx) => {
+      const tier = self.side.tavernTier || 6;
+      for (let i = 0; i < ctx.mult; i++) {
+        const card = randomPoolMinion(b, `pirate<=${tier}`, (c) => c.tribes.includes('PIRATE') && (c.tier ?? 1) <= tier);
+        if (card) summonForDeath(b, self, ctx, card.id, 1);
+      }
+      cardsAddedToHand(b, self.side, ctx.mult);
+    },
+  });
+
+  // Timewarped Bristler (T5): Deathrattle: Give this minion's Blood Gems to 2 different friendly Quilboar
+  // (golden: twice). "Its Blood Gems" = the stats it got from Blood Gems (BG20_GEMe2 + gems this combat);
+  // they are given as stats (no "when a Blood Gem is played" triggers).
+  registerMinion('BG34_Giant_104', {
+    deathrattle: (b, self, ctx) => {
+      const gems = bloodGemStats(self);
+      if (gems.attack <= 0 && gems.health <= 0) return;
+      const n = sd(b, self, 1, 2);
+      for (let i = 0; i < ctx.mult; i++) {
+        for (const t of randomFriendlies(b, self.side, n, (m) => m !== self && hasTribe(m, 'QUILBOAR'))) {
+          buff(b, t, gems.attack, gems.health);
+          addBloodGemStats(t, gems.attack, gems.health);
+        }
+      }
+    },
+  });
+
+  // Timewarped Magnanimoose (T5): Deathrattle: Summon and get a minion from a random opponent's warband
+  // (golden: twice). Only the current opponent's warband is known: a random minion of its board at the
+  // start of combat (snapshot stats).
+  registerMinion('BG34_Giant_619', {
+    deathrattle: (b, self, ctx) => {
+      const opp = self.side.index === 0 ? b.input.opponent : b.input.player;
+      const pool = (opp?.minions ?? []).filter((s) => s.cardId !== 'BG34_Giant_619' && s.cardId !== 'BG34_Giant_619_G');
+      for (let i = 0; i < ctx.mult; i++) {
+        const snap = b.rng.pick(pool);
+        if (!snap) break;
+        const m = minionFromSnapshot(b, self.side, { ...snap, entityId: b.nextEntityId++ });
+        summon(b, self.side, m, ctx.anchor);
+      }
+      cardsAddedToHand(b, self.side, Math.min(ctx.mult, pool.length));
+    },
+  });
+
+  // Timewarped Stone Drake (T5): Start of Combat: Gain the stats of all the minions you sold this turn
+  // (golden: double). The shown (X/X) is the minion's script data 1/2 (assumed to include the doubling).
+  registerMinion('BG34_Giant_675', {
+    startOfCombat: (b, self) => {
+      const a = sd(b, self, 1, 0);
+      const h = sd(b, self, 2, 0);
+      if (a > 0 || h > 0) buff(b, self, a, h);
     },
   });
 

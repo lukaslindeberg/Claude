@@ -5,6 +5,7 @@
 import { registerAberrations } from './aberration';
 import { registerAnomalies } from './anomalies';
 import { registerDarkGifts } from './darkGifts';
+import { registerBattlecries } from './battlecries';
 import { registerBeasts } from './beast';
 import { registerDemons } from './demon';
 import { registerDragons } from './dragon';
@@ -44,6 +45,7 @@ export function ensureCardsRegistered(): void {
   registerQuestRewards();
   registerAnomalies();
   registerDarkGifts();
+  registerBattlecries(); // last: adds Battlecry hooks to the handlers registered above
 }
 
 export * from './registry';

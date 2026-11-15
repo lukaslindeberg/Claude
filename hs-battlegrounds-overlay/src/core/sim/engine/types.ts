@@ -330,6 +330,11 @@ export interface CardHandler {
   onStatsChanged?(b: Battle, self: Minion): void;
   /** Whenever its owner casts a (Tavern) spell in combat. */
   onSpellCast?(b: Battle, self: Minion, spellId: string, target: Minion | null): void;
+  /**
+   * Its Battlecry, when triggered in combat (Timewarped Greenskeeper, Rylak Metalhead, Battle Horn).
+   * Only battlecries with an effect on the combat need one; see `cards/battlecries.ts`.
+   */
+  battlecry?(b: Battle, self: Minion): void;
   /** Static aura: bonus this minion grants to `target` (recomputed on board changes). */
   aura?(b: Battle, self: Minion, target: Minion): { attack: number; health: number } | null;
   /** Set when the card has no combat effect beyond keywords (prevents "unsupported" flags). */
@@ -383,6 +388,11 @@ export interface EffectHandler {
   /** Its owner cast a (Tavern) spell in combat (`target` = the minion it was cast on, if any). */
   onSpellCast?(b: Battle, e: EffectInstance, spellId: string, target: Minion | null): void;
   noCombatEffect?: boolean;
+  /**
+   * Still reported as unsupported when this returns true for the owner's input (an effect that
+   * is only partly simulated, e.g. Lock and Load after the hero power was used this turn).
+   */
+  unsupportedWhen?(ctx: { side: SimSide; cardId: string; used?: boolean }): boolean;
 }
 
 /** Handler for an enchantment card id found on a minion snapshot. */
