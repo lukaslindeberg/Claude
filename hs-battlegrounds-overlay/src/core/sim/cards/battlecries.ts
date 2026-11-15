@@ -189,6 +189,7 @@ const GET_CARDS: Record<string, number> = {
   BG36_520: 1, // Bilgewater Breakout
   BGS_020: 1, // Primalfin Lookout
   BGS_123: 1, // Tavern Tempest
+  TB_BaconShop_HERO_18_Buddy: 1, // Tuskarr Raider: a random Bounty
 };
 
 function attach(id: string, fn: (b: Battle, self: Minion) => void): void {

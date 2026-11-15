@@ -44,12 +44,7 @@ const COMBAT_MECHANICS = ['DEATHRATTLE', 'START_OF_COMBAT', 'AVENGE', 'BACON_RAL
 
 /** Not simulated on purpose (see the header of cards/timewarped.ts): they must stay flagged. */
 const UNSUPPORTED = [
-  'BG34_Giant_041', // Greenskeeper - triggers a Battlecry in combat
-  'BG34_Giant_074t', // Nellie's Ship - Discovered crew unknown
-  'BG34_Giant_104', // Bristler - Blood Gem count unknown
-  'BG34_Giant_590', // Festergut - Undead Creations
-  'BG34_Giant_619', // Magnanimoose - random opponent's warband
-  'BG34_Giant_675', // Stone Drake - stats sold this turn unknown
+  'BG34_Giant_590', // Festergut - Undead Creations (their parts are not in the card data)
 ];
 
 describe('Timewarped coverage', () => {

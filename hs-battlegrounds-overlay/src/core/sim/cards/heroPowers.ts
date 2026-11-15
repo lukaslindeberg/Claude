@@ -267,6 +267,9 @@ export function registerHeroPowers(): void {
   // fire it at a random enemy minion. Which minion was removed is not in the input: still reported
   // when the hero power was used this turn (or its state is unknown); otherwise it does nothing.
   registerEffect('BG22_HERO_000p_Alt', { unsupportedWhen: ({ used }) => used !== false });
+  // Deadeye ("Take aim!"): Start of Combat: Deal 99 damage to your target. The chosen target is not in
+  // the input: reported only when the hero power was used this turn (or its state is unknown).
+  registerEffect('BG22_HERO_000p', { unsupportedWhen: ({ used }) => used !== false });
 
   // Passive hero powers whose effect is already reflected in the board snapshot.
   registerEffect(

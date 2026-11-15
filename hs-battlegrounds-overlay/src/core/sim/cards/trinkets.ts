@@ -614,6 +614,33 @@ export function registerTrinkets(): void {
   };
   registerEffect('BG36_MagicItem_450', { onFriendlyDeath: snarky, onEnemyDeath: snarky });
 
+  // Dazzling Dagger: Your minions have +1 Attack (improved by spells cast; current value in script
+  // data 2). Snapshot stats include it; minions summoned in combat get it on summon.
+  registerEffect('BG32_MagicItem_934', {
+    init: (b, e) => void e.side.summonBuffs.push({ attack: esd(b, e, 2, 1), health: 0 }),
+  });
+  // Feral Talisman: Your minions have +2/+1 (greater +8/+5); Horde Keychain (greater): Your minions
+  // from Tier 3 or lower have +7/+5. Snapshot stats include the aura; summoned minions get it on summon.
+  const statAura = (attack: number, health: number, maxTier?: number) => ({
+    init: (_b: Battle, e: EffectInstance) => void e.side.summonBuffs.push({ attack, health, maxTier }),
+  });
+  registerEffect('BG30_MagicItem_880', statAura(2, 1));
+  registerEffect('BG30_MagicItem_880t', statAura(8, 5));
+  registerEffect('BG30_MagicItem_843t', statAura(7, 5, 3));
+  // Flagbearer Portrait: Your Sky Pirates have +6 Attack (Sky Pirates summoned in combat, e.g. by Powder Keg).
+  registerEffect('BG30_MagicItem_921', {
+    onFriendlySummon: (b, _e, m) => {
+      if (m.cardId === 'BGS_061t' || m.cardId === 'BGS_061t_G') buff(b, m, 6, 0);
+    },
+  });
+  // Tide Raiser Portrait: After you cast a spell in combat, get a copy of the spell (3 times per combat;
+  // only the hand count matters).
+  registerEffect('BG35_MagicItem_922', {
+    onSpellCast: (b, e) => {
+      if (perCombat(e, 'copies', esd(b, e, 2, 3))) cardsAddedToHand(b, e.side, 1);
+    },
+  });
+
   // Trinkets without combat effects that mention combat words.
   registerEffect(
     [
@@ -629,6 +656,7 @@ export function registerTrinkets(): void {
       'BG36_MagicItem_362', // Cyclist Portrait
       'BG35_MagicItem_310', // Radio Star Portrait
       'BG30_MagicItem_868', // Rewinder Portrait (Soul Rewinders react to hero damage, which only happens outside combat)
+      'BG30_MagicItem_869', // Felblood Portrait (Felbloods buff the Tavern)
       'BG36_MagicItem_214', // Insurrectionist's Blade (end of turn: its Rallies resolve in the shop, results are in the snapshot)
     ],
     { noCombatEffect: true },

@@ -125,6 +125,8 @@ export interface SpaceSummon {
 export interface SummonBuff {
   /** Only minions of this tribe (undefined = all). */
   tribe?: Tribe;
+  /** Only minions of this Tavern Tier or lower (undefined = all). */
+  maxTier?: number;
   attack: number;
   health: number;
   taunt?: boolean;

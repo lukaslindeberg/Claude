@@ -14,9 +14,10 @@ const result = simulateBattle(input, { iterations: 4000, maxDurationMs: 1500, se
 - `simulateBattle(input, options?, cardDb?)` is pure and synchronous, deterministic for a given
   `options.seed`, stops at `iterations` (default 4000) or `maxDurationMs` (default 1500), and never
   throws: an iteration that crashes counts as a tie.
-- `unsupported` lists card ids in the input (minions, hero powers, trinkets, quest rewards,
-  anomaly) that have combat-relevant mechanics/text but no handler. Unknown cards fight as vanilla
-  minions.
+- `unsupported` lists card ids in the input (minions, hero powers incl. second hero powers, trinkets,
+  quest rewards, anomaly, and the Duos teammate's) that have combat-relevant mechanics/text but no
+  handler, or whose handler says the effect is only partly modelled for this input
+  (`EffectHandler.unsupportedWhen`). Unknown cards fight as vanilla minions. See "Unsupported detection".
 - `damageDistribution`: key = signed damage (`"7"` = we deal 7, `"-4"` = we take 4, `"0"` = tie),
   value = probability.
 - Worker: `src/core/sim/worker.ts` takes `{ id, input, options? }` and answers `{ id, result }` or
@@ -52,6 +53,9 @@ sim/
     neutral.ts beast.ts demon.ts dragon.ts elemental.ts mech.ts murloc.ts naga.ts
     pirate.ts quilboar.ts undead.ts aberration.ts
     heroPowers.ts trinkets.ts questRewards.ts anomalies.ts
+    timewarped.ts     Timewarped minions
+    buddies.ts        hero Buddies and hero-power tokens (Protoss, Zerg, Sneed's Shredder)
+    battlecries.ts    Battlecries triggered in combat (Greenskeeper, Rylak, Battle Horn), Brann/Dragon's Eye
     index.ts          ensureCardsRegistered(): registers everything (add new files here)
 ```
 
@@ -152,12 +156,16 @@ registerEnchantment('BG22_HERO_001p_t1e', { deathrattle: EARTH_DR });
 | `onStatsChanged(b, self)` | after `buff` / `setStats` |
 | `onSpellCast(b, self, spellId, target)` | owner cast a Tavern spell in combat (`target === self`: "on this") |
 | `aura(b, self, target)` | static aura bonus `{attack, health}` for `target`, recomputed on board changes |
+| `battlecry(b, self)` | its Battlecry when another effect triggers it in combat (`triggerBattlecry` applies Brann / Deios / Dragon's Eye) |
 
 `EffectHandler` (side-level) has `init`, `startOfCombat`, `avenge`/`onAvenge`, `onFriendlyDeath`,
 `onFriendlyAttack`, `afterFriendlyAttack`, `onFriendlySummon`, `afterFriendlySummon`,
 `onFriendlyReborn`, `onDeathrattleTriggered`, `onBoardEmpty`, `onDeityAwakened`, `onEnemyDeath`,
 `onFriendlyDamaged`, `onFriendlyDivineShieldLost`, `onSpellCast`; `e.side`,
-`e.scriptData1/2` (trinket / hero power script data), `e.data` scratch.
+`e.scriptData1/2/3` (trinket / hero power script data), `e.data` scratch, and
+`unsupportedWhen({ side, cardId, used })` for effects that stay reported in some inputs (Lock and Load
+and Deadeye after the hero power was used). `side.summonBuffs` (`{ tribe?, maxTier?, attack, health }`)
+gives minions summoned in combat an aura that the snapshot stats already include for the starting board.
 
 Useful helpers (`cards/helpers.ts`): `summonForDeath`, `summonRightOf`, `summonTokens`, `summon`,
 `buff`, `buffAll`, `dealDamage`, `destroy`, `giveDivineShield`, `giveReborn`, `giveTaunt`,
@@ -165,7 +173,8 @@ Useful helpers (`cards/helpers.ts`): `summonForDeath`, `summonRightOf`, `summonT
 `triggerDeathrattlesArtificially`, `queueSpaceSummon`, `randomFriendly(ies)`, `randomPoolMinion`,
 `highestBy`, `leftMost`, `rightMost`, `neighbours`, `highestInHand`, `summonFromHand`,
 `summonBeetles`, `improveBeetles`, `improveUndeadAttack`, `counter`/`setCounter` (per-combat
-counters), `sd`. Debug: set `battle.log = []` before `runBattle` to get an attack/death/summon log.
+counters), `sd`, `bloodGemStats` / `addBloodGemStats` (stats a minion got from Blood Gems: the
+snapshot's `BG20_GEMe2` enchantment script data 1/2 plus gems played on it in combat). Debug: set `battle.log = []` before `runBattle` to get an attack/death/summon log.
 
 ### Player tags read from `SimSide.playerTags` (or `heroTags`)
 
@@ -209,7 +218,7 @@ Timewarped minions (158, `cards/timewarped.ts`, not in the pool counts above):
 
 | Group | Combat handler | No combat effect | Keyword-only | Unsupported |
 |---|---:|---:|---:|---|
-| Timewarped | 80 | 72 | 0 | 6: Greenskeeper (triggers a Battlecry), Nellie's Ship (Discovered crew unknown), Bristler (Blood Gem count unknown), Festergut (Undead Creations), Magnanimoose (random opponent's warband), Stone Drake (stats sold this turn unknown) |
+| Timewarped | 85 | 72 | 0 | 1: Festergut (random "Undead Creation": its parts are not in the card data) |
 
 Engine hooks added for them: `onFriendlyAttacked` (Arm), `onFriendlyGainedAttack` (Whelp Smuggler; enabled by
 `b.watchAttackGain`), `rallyMultiplier` / Deios in `deathrattleMultiplier`, `IMMUNE_WHILE_ATTACKING` (Viper) and
@@ -217,12 +226,24 @@ Engine hooks added for them: `onFriendlyAttacked` (Arm), `onFriendlyGainedAttack
 source's script data but not its per-minion state; Astrogill (in-hand effect) and Jungle King's "improves" are
 ignored; Peggy only sees cards counted by `cardsAddedToHand`.
 
+Battlecries (`cards/battlecries.ts`): 16 pool/Timewarped/Duos Battlecries with a combat effect get a
+`battlecry` hook (Hackerfin, Captain Sanders, Disguised Graverobber, Joyous, Forest Rover, ...); 24
+"Get a card" Battlecries count as cards added to hand; all other Battlecries do nothing in combat.
+They run when Timewarped Greenskeeper, Rylak Metalhead, Rylak Portrait or Battle Horn trigger them.
+
+Non-pool minions that current games can produce were found by following token ids, minion names in
+card text and `BACON_EVOLUTION_CARD_ID` from the pool, Timewarped minions, the heroes (hero powers,
+Buddies) and trinkets in play (community stats, patch 37.0.2): 174 reachable. 104 have no combat
+effect beyond keywords/stats; 66 are handled (45 Buddies / hero-power tokens added in
+`cards/buddies.ts`, the rest already elsewhere); 3 stay reported (Festergut, Mishmash and Titanic Guardian: they copy other
+minions' stat gains, for which the engine has no event).
+
 Also implemented: 22 non-pool minions that appear through tokens/portraits/Ghastcoiler-style
 effects (Sewer Rat, Kaboom Bot, Scallywag, Fish of N'Zoth, Selfless Hero, Harvest Golem, Cave Hydra,
 Foe Reaper, Imp Gang Boss, Nest Swarmer, Runed Progenitor, Silky Shimmermoth, Impulsive Trickster,
 Prized Promo-Drake, Bassgill, Stomping Stegodon, Fishbait, Ancestral Automaton, Flourishing
-Frostling, Timewarped Nest Swarmer, C'Thun and Y'Shaarj Deities); 25 hero powers, 82 trinket ids (incl. greater versions), 9
-quest rewards, 4 anomalies. Dark Paradox is handled per Dark Gift variant (`BG36_360t*`).
+Frostling, Timewarped Nest Swarmer, C'Thun and Y'Shaarj Deities); 26 hero powers (+2 reported only
+after use), 100 trinket ids (incl. greater versions), 12 quest rewards, 4 anomalies. Dark Paradox is handled per Dark Gift variant (`BG36_360t*`).
 
 ## Known simplifications
 
@@ -245,8 +266,40 @@ quest rewards, 4 anomalies. Dark Paradox is handled per Dark Gift variant (`BG36
   copy from `SimSide.teammate` (they do nothing without it).
 - "Make Golden" in combat (Stolen Gold, Yu'lon Sticker, Golden Sandy) adds the card's base stats and
   switches to the golden card's script data.
-- Unsupported (reported): Lock and Load (Deadeye; how the removed minion is "fired" is unclear),
-  Wax Warband (its +X/+X lives in hero power script data 3, which the input does not carry),
-  Battle Horn, Rylak/Assembler Portraits (battlecries / Auto Assembler not simulated). Dark Gift
+- Unsupported (reported): Lock and Load and Deadeye when the hero power was used this turn or its
+  state is unknown (the removed minion / chosen target is not in the input; unused, they do nothing),
+  Assembler Portrait (Auto Assembler not simulated), Festergut, Mishmash, Titanic Guardian. Dark Gift
   enchantments from the "Dark Gifts!" anomaly (Toreth's Blessing, Golemancy, ...) are ignored
   (which enchantment id carries the effect is unknown).
+- Battlecries triggered in combat pick random valid targets ("Give a Pirate", "Destroy a friendly
+  Undead"); Brann and Timewarped Deios do not stack (the highest applies), Dragon's Eye adds one
+  trigger per copy for Dragons.
+- Assumptions where the input lacks a value: Wax Warband's X is hero power script data 3 (card
+  default 1); Timewarped Stone Drake's shown (X/X) = its script data 1/2, golden doubling included;
+  Timewarped Nellie's Ship summons a random Pirate of the owner's Tier or lower (the Discovered crew is
+  unknown); Timewarped Magnanimoose copies a random minion of the current opponent's starting board
+  (other opponents' warbands are unknown); Timewarped Bristler hands over its Blood Gem stats as
+  plain stats (no "Blood Gem played" triggers); Jar o' Gems triggers after every friendly Quilboar
+  attack (the card has no numbers; trinket script data 2, when set, is read as "every N attacks");
+  Spirit Raptor calls upon the Elements of its `BG22_HERO_001_Buddy_e1..e4` enchantments.
+- "Improve this" inside one combat is not simulated for Snarky Portrait and Carrier (values come
+  from script data at combat start).
+- End-of-turn effects (Insurrectionist's Blade, Blood Goblet) and hero-damage effects (Rewinder
+  Portrait, Unearthed Underling) resolve in the shop: their results are in the snapshot.
+
+## Unsupported detection (`findUnsupportedCards`)
+
+A card without a handler is reported when it can change a combat:
+
+- minions: a combat mechanic (Deathrattle, Start of Combat, Avenge, Rally, Overkill) or a triggered /
+  aura text with combat wording (attacks, kills, dies, takes damage, summon, is Reborn, gains
+  Health/stats, ...);
+- hero powers / trinkets / rewards / anomalies: Start of Combat / Avenge mechanics or wording, or a
+  persistent trigger with combat wording that is not shop-only ("after each combat", "end of your
+  turn", "your hero takes damage", "in the Tavern", "you buy/sell/play", ...). For these, "attack" only
+  counts as the lower-case verb (the "+2 Attack" stat is not a trigger); stat auras ("have +X")
+  count because they also reach summoned minions.
+
+`test/sim/unsupported.test.ts` and `test/sim/cards-gaps.test.ts` pin both directions;
+`test/sim/calibration.test.ts` fails if a fixture combat ended with a result predicted under 5% while
+nothing was reported.

@@ -152,6 +152,7 @@ export function summon(b: Battle, side: SideState, m: Minion, anchor: SummonAnch
   for (let i = 0; i < buffs.length; i++) {
     const sb = buffs[i];
     if (sb.tribe && !hasTribe(m, sb.tribe)) continue;
+    if (sb.maxTier !== undefined && m.tier > sb.maxTier) continue;
     m.attack += sb.attack;
     m.health += sb.health;
     m.maxHealth += sb.health;

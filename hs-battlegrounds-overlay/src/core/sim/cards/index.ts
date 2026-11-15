@@ -7,6 +7,7 @@ import { registerAnomalies } from './anomalies';
 import { registerDarkGifts } from './darkGifts';
 import { registerBattlecries } from './battlecries';
 import { registerBeasts } from './beast';
+import { registerBuddies } from './buddies';
 import { registerDemons } from './demon';
 import { registerDragons } from './dragon';
 import { registerElementals } from './elemental';
@@ -40,6 +41,7 @@ export function ensureCardsRegistered(): void {
   registerUndead();
   registerAberrations();
   registerTimewarped();
+  registerBuddies(); // after timewarped.ts: some Buddies reuse Timewarped handlers
   registerHeroPowers();
   registerTrinkets();
   registerQuestRewards();

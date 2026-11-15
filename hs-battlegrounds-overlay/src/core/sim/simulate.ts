@@ -21,10 +21,15 @@ const now: () => number =
 
 const COMBAT_MECHANICS = ['DEATHRATTLE', 'START_OF_COMBAT', 'AVENGE', 'BACON_RALLY', 'OVERKILL'];
 const COMBAT_TEXT =
-  /start of combat|in combat|this combat|attacks?\b|dies|died|takes damage|deals? damage|is reborn|summon|divine shield|deathrattle|avenge|rally/i;
+  /start of combat|in combat|this combat|attacks?\b|attacked|kills?\b|dies|died|takes damage|deals? damage|is reborn|summon|divine shield|deathrattle|avenge|rally|immune while attacking|gains? (?:health|stats)|enters your warband/i;
+/**
+ * "attack(s)" as the lower-case verb ("whenever this attacks"). For side-level effects the capitalised
+ * stat ("+2 Attack", "30 total Attack") says nothing about when the effect happens.
+ */
+const ATTACK_VERB = /\battacks?\b|\battacked\b|\bgains? Attack\b/;
 
 function stripText(t: string | undefined): string {
-  return (t ?? '').replace(/<[^>]+>/g, ' ');
+  return (t ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 }
 
 /** Whether a minion card has effects beyond keywords that matter in combat. */
@@ -40,20 +45,30 @@ function minionNeedsHandler(card: BgCard | undefined, snap: MinionSnapshot): boo
 
 /** Wording of persistent hero power / trinket / reward effects that can change a combat. */
 const EFFECT_COMBAT_TEXT =
-  /start of combat|in combat|this combat|attacks?\b|dies|died|takes damage|deals? damage|kills?\b|is reborn|summon|doesn't fit|divine shield|venomous|deathrattle|avenge|rally/i;
+  /start of combat|in combat|this combat|dies|died|takes damage|deals? damage|kills?\b|is reborn|summon|doesn't fit|divine shield|venomous|deathrattle|avenge|rally/i;
 /** Effects whose outcome only happens in the shop (or in the hand) even if a combat event triggers them. */
 const SHOP_ONLY_TEXT =
-  /tavern is refreshed|refresh|you buy|you sell|you play|minion you play|played from your hand|spend \d+ gold|gold next turn|spellcraft|start of each turn|outside combat|passes|cast a tavern spell|replace this with|get a random|get a triple reward|lucky egg/i;
+  /tavern is refreshed|refresh|you buy|you sell|you play|minion you play|played from your hand|spend \d+ gold|gold next turn|spellcraft|start of each turn|end of your turn|after each combat|outside combat|your hero takes damage|use your hero power|in the tavern have|minions in the tavern|warband reaches|passes|cast a tavern spell|replace this with|get a random|get a triple reward|lucky egg/i;
+/** "Your Undead have +3 Attack": auras also reach minions summoned in combat. */
+const STAT_AURA_TEXT = /\bhave \+\d/i;
 
 function effectNeedsHandler(card: BgCard | undefined): boolean {
   if (!card) return false;
   if (card.mechanics.includes('START_OF_COMBAT') || card.mechanics.includes('AVENGE')) return true;
   const text = stripText(card.text);
-  if (/start of combat|in combat|this combat|avenge|attacks|dies|reborn/i.test(text)) return true;
+  if (/start of combat|in combat|this combat|avenge|dies|reborn/i.test(text) || /\battacks\b/.test(text)) return true;
   // Persistent triggers / auras (e.g. "Whenever a friendly minion loses Venomous...",
   // "Your Kaboom Bots' Deathrattles deal 10 extra damage") change combats too.
   const persistent = card.mechanics.includes('TRIGGER_VISUAL') || card.mechanics.includes('AURA');
-  return persistent && EFFECT_COMBAT_TEXT.test(text) && !SHOP_ONLY_TEXT.test(text);
+  if (!persistent || SHOP_ONLY_TEXT.test(text)) return false;
+  if (EFFECT_COMBAT_TEXT.test(text) || ATTACK_VERB.test(text)) return true;
+  return card.mechanics.includes('AURA') && STAT_AURA_TEXT.test(text);
+}
+
+function effectUnsupported(db: CardDb, side: SimSide, cardId: string, used?: boolean): boolean {
+  const h = getEffectHandler(cardId, db);
+  if (h) return !!h.unsupportedWhen?.({ side, cardId, used });
+  return effectNeedsHandler(db.get(cardId));
 }
 
 function collectSide(side: SimSide | undefined, db: CardDb, out: Set<string>): void {
@@ -64,13 +79,14 @@ function collectSide(side: SimSide | undefined, db: CardDb, out: Set<string>): v
     if (h) continue;
     if (minionNeedsHandler(db.get(m.cardId), m)) out.add(m.cardId);
   }
-  const effects: string[] = [];
-  if (side.heroPowerCardId) effects.push(side.heroPowerCardId);
-  for (const t of side.trinkets ?? []) effects.push(t.cardId);
-  for (const q of side.questRewards ?? []) effects.push(q);
-  for (const id of effects) {
-    if (!getEffectHandler(id, db) && effectNeedsHandler(db.get(id))) out.add(id);
-  }
+  const effects: { id: string; used?: boolean }[] = [];
+  if (side.heroPowerCardId) effects.push({ id: side.heroPowerCardId, used: side.heroPowerUsed });
+  for (const x of side.extraHeroPowers ?? []) effects.push({ id: x.cardId, used: x.used });
+  for (const t of side.trinkets ?? []) effects.push({ id: t.cardId });
+  for (const q of side.questRewards ?? []) effects.push({ id: q });
+  for (const { id, used } of effects) if (effectUnsupported(db, side, id, used)) out.add(id);
+  // Duos: the teammate's hero power, trinkets and rewards take over when its board joins.
+  if (side.teammate) collectSide(side.teammate as SimSide, db, out);
 }
 
 /** Card ids in the input whose combat effects the simulator does not implement. */
@@ -79,9 +95,7 @@ export function findUnsupportedCards(input: BattleSimInput, db: CardDb = CardDb.
   const out = new Set<string>();
   collectSide(input.player, db, out);
   collectSide(input.opponent, db, out);
-  if (input.anomalyCardId && !getEffectHandler(input.anomalyCardId, db) && effectNeedsHandler(db.get(input.anomalyCardId))) {
-    out.add(input.anomalyCardId);
-  }
+  if (input.anomalyCardId && effectUnsupported(db, input.player, input.anomalyCardId)) out.add(input.anomalyCardId);
   return [...out].sort();
 }
 
