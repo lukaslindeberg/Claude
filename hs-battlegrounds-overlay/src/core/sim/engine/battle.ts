@@ -73,6 +73,55 @@ function addEffect(b: Battle, side: SideState, cardId: string, kind: EffectKind,
   return e;
 }
 
+/**
+ * "Your Undead have +X Attack this game": every Undead (board and hand) carries the Undead Army
+ * enchantment (`BG25_011e2`, created by Nerubian Deathswarmer / Plaguerunner / Forsaken Weaver's player
+ * enchantment) whose script data 1 is the current bonus.
+ */
+function undeadAttackFromEnchantments(s: Omit<SimSide, 'teammate'>, minions: MinionSnapshot[]): number | undefined {
+  let best: number | undefined;
+  for (const m of [...minions, ...(s.hand ?? [])]) {
+    for (const e of m.enchantments ?? []) {
+      if (e.cardId === 'BG25_011e2' && typeof e.scriptData1 === 'number' && (best === undefined || e.scriptData1 > best)) best = e.scriptData1;
+    }
+  }
+  return best;
+}
+
+/**
+ * Eternal Knights that died this game: an Eternal Knight's "Eternal Legion" enchantment (`BG25_008_e`)
+ * holds its current bonus (script data 1 = Attack); divided by the per-death Attack (the knight's
+ * script data 1: 4, golden 8) it gives the count.
+ */
+function eternalKnightsDeadFromEnchantments(s: Omit<SimSide, 'teammate'>, minions: MinionSnapshot[]): number | undefined {
+  let best: number | undefined;
+  for (const m of [...minions, ...(s.hand ?? [])]) {
+    if (!m.cardId.startsWith('BG25_008')) continue;
+    const per = m.tags?.[TAG.SD1] || (m.golden || m.cardId.endsWith('_G') ? 8 : 4);
+    for (const e of m.enchantments ?? []) {
+      if (e.cardId !== 'BG25_008_e' || typeof e.scriptData1 !== 'number' || per <= 0) continue;
+      const n = Math.round(e.scriptData1 / per);
+      if (best === undefined || n > best) best = n;
+    }
+  }
+  return best;
+}
+
+/**
+ * Times Tasty Lobsters were improved: player tag 4803, else from a Lobster's script data 1
+ * (= 2 x (improves + 1), golden doubled).
+ */
+function tastyLobsterImproves(s: Omit<SimSide, 'teammate'>, minions: MinionSnapshot[]): number {
+  let best = tag(s, TAG.TASTY_LOBSTER_IMPROVES) ?? 0;
+  for (const m of [...minions, ...(s.hand ?? [])]) {
+    if (!m.cardId.startsWith('BG36_202')) continue;
+    const v = m.tags?.[TAG.SD1];
+    const mult = m.golden || m.cardId.endsWith('_G') ? 2 : 1;
+    if (typeof v === 'number' && v > 0) best = Math.max(best, Math.round(v / (2 * mult)) - 1);
+  }
+  return best;
+}
+
 /** Player-level state derived from one player's input (also used when a Duos teammate takes over). */
 function playerFields(b: Battle, s: Omit<SimSide, 'teammate'>, minions: MinionSnapshot[]) {
   return {
@@ -106,8 +155,9 @@ function playerFields(b: Battle, s: Omit<SimSide, 'teammate'>, minions: MinionSn
     spellHealthBonus: tag(s, TAG.SPELL_HP) ?? tag(s, TAG.SPELL_HP_REAL) ?? 0,
     beetleAttack: tag(s, TAG.BEETLE_ATK) ?? maxScriptData(minions, BEETLE_CARDS, TAG.SD1) ?? 2,
     beetleHealth: tag(s, TAG.BEETLE_HP) ?? maxScriptData(minions, BEETLE_CARDS, TAG.SD2) ?? 2,
-    undeadAttackBonus: tag(s, TAG.UNDEAD_ATK) ?? 0,
-    eternalKnightsDead: tag(s, TAG.ETERNAL_KNIGHTS_DEAD) ?? 0,
+    undeadAttackBonus: tag(s, TAG.UNDEAD_ATK) ?? undeadAttackFromEnchantments(s, minions) ?? 0,
+    eternalKnightsDead: tag(s, TAG.ETERNAL_KNIGHTS_DEAD) ?? eternalKnightsDeadFromEnchantments(s, minions) ?? 0,
+    tastyLobsterImproves: tastyLobsterImproves(s, minions),
     deathrattlesTriggered: 0,
     spellsCastThisCombat: 0,
     deity: makeDeity(b, s),

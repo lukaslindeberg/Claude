@@ -182,9 +182,10 @@ snapshot's `BG20_GEMe2` enchantment script data 1/2 plus gems played on it in co
 |---|---|
 | `BACON_BLOODGEMBUFFATKVALUE` / `BACON_BLOODGEMBUFFHEALTHVALUE` | extra Blood Gem stats (a gem gives 1 + value) |
 | `BACON_GLOBAL_OLD_GOD_DBID`, `BACON_OLD_GOD_ATTACK`, `BACON_OLD_GOD_HEALTH` | the Deity and its stats |
-| `SIM_UNDEAD_ATTACK_BONUS` | "your Undead have +X Attack this game" (0) - applied to Undead summoned in combat |
+| `SIM_UNDEAD_ATTACK_BONUS` | "your Undead have +X Attack this game" - applied to Undead summoned / Reborn in combat (else the highest script data 1 of the side's Undead Army `BG25_011e2` enchantments, board and hand; else 0) |
 | `SIM_BEETLE_ATTACK` / `SIM_BEETLE_HEALTH` | Beetle stats (else from Beetle cards' script data, else 2/2) |
-| `SIM_ETERNAL_KNIGHTS_DEAD` | Eternal Knights that died this game (0) |
+| `SIM_ETERNAL_KNIGHTS_DEAD` | Eternal Knights that died this game (else an Eternal Knight's Eternal Legion `BG25_008_e` script data 1 / its per-death Attack, script data 1 of the knight; else 0) |
+| `4803` | times Tasty Lobsters were improved (else from a Lobster's script data 1 = 2 x (n + 1), golden doubled; else 0) |
 | `SIM_TAVERN_SPELL_ATTACK_BONUS` / `SIM_TAVERN_SPELL_HEALTH_BONUS` | extra stats of Tavern spells cast in combat (0) |
 | `SIM_ELEMENTALS_PLAYED`, `SIM_AUTOMATONS_SUMMONED` | Flourishing Frostling / Ancestral Automaton tokens (0) |
 
@@ -253,7 +254,15 @@ after use), 100 trinket ids (incl. greater versions), 12 quest rewards, 4 anomal
 - Hand buffs in combat (Murcules, Winterfinner, Tidehunter, Tidecaller) carry over to minions summoned
   from hand later in the same combat (Diremuck Forager, Bassgill).
 - "Improve this permanently" parts are not simulated within a combat (Lurking Leviathan, The Last
-  One Standing, Tasty Lobster's future lobsters); current values come from snapshot script data.
+  One Standing); current values come from snapshot script data. Tasty Lobster is the exception: every
+  trigger (Titus, Deathstrider included) gives 2/1 x (improves + 1) and improves the next one, as the
+  Power.log shows (player tag 4803 goes up by one per trigger).
+- Eternal Knights (summoned or Reborn) get the knights-dead bonus; a Reborn knight comes back with
+  1 + its Health bonus (the bonus is "wherever this is", so it applies after Reborn's 1 Health; not
+  confirmed in a log).
+- Duos teammate inputs carry almost no player tags and can have stale minion script data (seen in a
+  real game: a teammate's golden Tasty Lobster showed 4/2 while the game used 292/146), so values
+  derived from them (Tasty Lobster improvements, ...) can be too low for the teammate's board.
 - Start of Combat minion order alternates between sides; hero powers/trinkets before minions.
 - Reborn minions return as the base card (1 Health) plus "this game" bonuses; summoned "copies"
   keep current stats and granted deathrattles.

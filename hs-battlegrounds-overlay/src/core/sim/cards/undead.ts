@@ -23,6 +23,7 @@ import {
 } from './helpers';
 import { avengeGetsCards, cardsAddedToHand } from './aberration';
 import type { Minion } from '../engine/types';
+import { REBORN_HEALTH_BONUS } from '../engine/minion';
 
 const isUndead = tribeFilter('UNDEAD');
 const SKELETON = 'BG_ICC_026t';
@@ -60,9 +61,11 @@ export function registerUndead(): void {
     init: (b, self) => {
       if (self.snapshot) return; // snapshot stats already include the bonus
       const n = self.side.eternalKnightsDead;
+      const health = sd(b, self, 2, 2 * self.mult) * n;
       self.attack += sd(b, self, 1, 4 * self.mult) * n;
-      self.health += sd(b, self, 2, 2 * self.mult) * n;
+      self.health += health;
       self.maxHealth = self.health;
+      setCounter(self, REBORN_HEALTH_BONUS, health);
     },
     onSelfDeath: (_b, self) => {
       self.side.eternalKnightsDead++;

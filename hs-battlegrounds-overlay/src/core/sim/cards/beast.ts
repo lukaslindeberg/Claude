@@ -96,11 +96,15 @@ export function registerBeasts(): void {
     },
   });
 
-  // Tasty Lobster (T3): Deathrattle: Give a random friendly Beast +2/+1.
+  // Tasty Lobster (T3): Deathrattle: Give a random friendly Beast +2/+1. Improve your future Tasty
+  // Lobsters. The shown +X/+Y is 2/1 x (improves + 1) (golden doubled); every trigger (Titus,
+  // Deathstrider included) improves all of the player's Lobsters at once (Power.log: player tag 4803
+  // goes up by one per trigger and the next buff is one step larger).
   registerMinion('BG36_202', {
     deathrattle: (b, self, ctx) => {
+      const k = ++self.side.tastyLobsterImproves;
       const t = randomFriendly(b, self.side, isBeast, self);
-      if (t) buff(b, t, sd(b, self, 1, 2 * ctx.mult), sd(b, self, 2, 1 * ctx.mult));
+      if (t) buff(b, t, 2 * ctx.mult * k, ctx.mult * k);
     },
   });
 

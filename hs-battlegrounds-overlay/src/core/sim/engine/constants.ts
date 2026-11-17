@@ -25,6 +25,8 @@ export const TAG = {
   /** Player-entity tags for "your Tavern spells give an extra +X/+Y" (used when the SIM_* keys are absent). */
   SPELL_ATK_REAL: 'TAVERN_SPELL_ATTACK_INCREASE',
   SPELL_HP_REAL: 'TAVERN_SPELL_HEALTH_INCREASE',
+  /** Player tag 4803: times Tasty Lobsters were improved this game (a Lobster gives (this + 1) x 2/1). */
+  TASTY_LOBSTER_IMPROVES: '4803',
 
   // Simulator-specific keys (optional; see README "Player tags")
   /** "Your Undead have +X Attack this game" total. */

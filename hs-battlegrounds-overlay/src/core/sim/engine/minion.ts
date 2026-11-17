@@ -221,6 +221,12 @@ export function copyMinion(b: Battle, src: Minion, side: SideState = src.side): 
 /** `Minion.counters` key: "This is Reborn with full Health and enchantments" (Timewarped Hag). */
 export const FULL_REBORN = 'fullReborn';
 
+/**
+ * `Minion.counters` key: Health a fresh copy of this card gets from a "wherever this is" bonus (Eternal
+ * Knight's Eternal Legion). Such bonuses apply after Reborn's 1 Health, so they are kept on Reborn.
+ */
+export const REBORN_HEALTH_BONUS = 'rebornHealthBonus';
+
 /** The minion a Reborn minion comes back as: base card, 1 Health, no Reborn. */
 export function rebornCopy(b: Battle, dead: Minion): Minion {
   const card = b.db.get(dead.cardId);
@@ -243,7 +249,7 @@ export function rebornCopy(b: Battle, dead: Minion): Minion {
   });
   m.golden = dead.golden;
   m.mult = dead.mult;
-  m.health = 1;
+  m.health = Math.min(m.maxHealth, 1 + (m.counters?.[REBORN_HEALTH_BONUS] ?? 0));
   m.reborn = false;
   // Sim-added keywords that the base card normally has are already set by minionFromCard.
   return m;

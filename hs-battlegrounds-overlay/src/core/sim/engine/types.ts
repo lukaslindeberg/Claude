@@ -187,6 +187,8 @@ export interface SideState {
   beetleHealth: number;
   undeadAttackBonus: number;
   eternalKnightsDead: number;
+  /** Times this player's Tasty Lobsters were improved (each Lobster Deathrattle improves them by one). */
+  tastyLobsterImproves: number;
   deathrattlesTriggered: number;
   spellsCastThisCombat: number;
   deity: DeityState | null;
