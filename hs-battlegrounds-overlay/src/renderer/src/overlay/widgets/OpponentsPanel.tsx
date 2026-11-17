@@ -352,7 +352,7 @@ function TeamBlock({ game, team, expanded, onToggle }: { game: BgGameState; team
   const lead = a;
   const label = team.local ? (b ? `You & ${b.heroName}` : 'You') : team.members.map((p) => p.heroName || 'Unknown hero').join(' & ');
   // Our combats against this team (recorded against either member), latest first.
-  const combats = team.members.flatMap((p) => p.combatsAgainst).sort((x, y) => x.turn - y.turn);
+  const combats = team.local ? [] : team.members.flatMap((p) => p.combatsAgainst).sort((x, y) => x.turn - y.turn);
   const last = combats[combats.length - 1];
   const hasBoards = team.members.some((p) => boardFor(game, p)?.length);
   return (

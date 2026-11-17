@@ -403,6 +403,8 @@ export interface SimSide {
   hand: MinionSnapshot[];
   trinkets: { cardId: string; scriptData1?: number; scriptData2?: number }[];
   questRewards: string[];
+  /** Secrets in play (Akazamzarak's TB_Bacon_Secrets_*), card ids. */
+  secrets?: string[];
   /** Tags of the Player entity (e.g. blood gem buffs, undead attack bonus counters). */
   playerTags: Record<string, number>;
   /** Tags of the hero entity. */

@@ -181,6 +181,14 @@ interface GameCtx {
   placeSeq: Map<number, number>;
   /** Duos: PLAYER_IDs seen fighting on the same side of a combat (pid -> teammate pid). */
   pairs: Map<number, number>;
+  /**
+   * Duos: Player entity tags last seen while each PLAYER_ID was fighting. A teammate who
+   * fights second only exists as a SETASIDE template at combat start, and the template's
+   * player enchant (Bacon_TagTransferPlayerE: Tasty Lobster count, Undead bonuses, ...) is
+   * hidden; its tags are transferred to the Player entity only when that player joins the
+   * fight. This is the best known value for the next combat.
+   */
+  playerTagCache: Map<number, Map<number, number>>;
 }
 
 const EMPTY_BATTLE: BattleState = { status: 'idle', turn: 0 };
@@ -593,6 +601,7 @@ export class BgTracker {
       hpSeq: new Map(),
       placeSeq: new Map(),
       pairs: new Map(),
+      playerTagCache: new Map(),
     };
   }
 
@@ -1062,6 +1071,7 @@ export class BgTracker {
         c.installDepth = this.depth;
       }
       if (c.installed && !c.captured) this.captureCombat(g);
+      if (c.captured && this.mode(g) === 'duos') this.cacheFighterTags(g);
       const id = s.resolve(pk.entity);
       const e = s.get(id);
       if (e && e.tags.get(T.CARDTYPE) === CardType.HERO && e.tags.get(T.ZONE) === Zone.PLAY && c.captured) {
@@ -1359,6 +1369,14 @@ export class BgTracker {
       if (!deity || e.id > deity.id) deity = e;
     }
     this.applyDeity(built, deity);
+    // Secrets (The Great Akazamzarak's hero power) sit in the SECRET zone.
+    const secrets: string[] = [];
+    for (const e of s.entities.values()) {
+      if (e.tags.get(T.CONTROLLER) !== ctl || e.tags.get(T.ZONE) !== Zone.SECRET || !/Bacon_Secrets/.test(e.cardId)) continue;
+      if (side === 'opp' && e.id <= minId) continue;
+      secrets.push(e.cardId);
+    }
+    if (secrets.length) built.secrets = secrets;
     return built;
   }
 
@@ -1466,8 +1484,24 @@ export class BgTracker {
    * All tags of the Player entity (blood gem / tavern spell / Old God counters...), plus the
    * lobby-wide GameEntity tags the simulator reads from playerTags (e.g. BACON_GLOBAL_OLD_GOD_DBID).
    */
-  private playerTagsOf(playerEntity: Entity | undefined): Record<string, number> {
-    const out = playerEntity ? tagsRecord(playerEntity) : {};
+  /** Duos: remember both Player entities' tags under the PLAYER_ID currently fighting for them. */
+  private cacheFighterTags(g: GameCtx): void {
+    const s = this.store;
+    for (const pl of [s.localPlayer, s.dummyPlayer]) {
+      if (!pl) continue;
+      const pid = s.tag(pl.entityId, T.BACON_CURRENT_COMBAT_PLAYER_ID);
+      const e = s.get(pl.entityId);
+      if (pid <= 0 || !e) continue;
+      // A Kel'Thuzad ghost fights with the dummy's own tags, not the dead player's.
+      if (pl === s.dummyPlayer && /KelThuzad/.test(s.get(s.tag(pl.entityId, T.HERO_ENTITY))?.cardId ?? '')) continue;
+      g.playerTagCache.set(pid, new Map(e.tags));
+    }
+  }
+
+  private playerTagsOf(playerEntity: Entity | undefined, cached?: Map<number, number>): Record<string, number> {
+    const out: Record<string, number> = {};
+    if (playerEntity) Object.assign(out, tagsRecord(playerEntity));
+    else if (cached) for (const [k, v] of cached) out[tagName(k)] = v;
     const ge = this.store.game;
     if (ge) {
       for (const t of GLOBAL_GAME_TAGS) {
@@ -1514,6 +1548,12 @@ export class BgTracker {
       enchantmentIndex(s),
       false,
     );
+    // The template's own player enchant is hidden: use the tags last seen while this player fought.
+    const cached = this.g?.playerTagCache.get(t.playerId);
+    if (cached) {
+      side.playerTags = this.playerTagsOf(undefined, cached);
+      side.playerTags[tagName(T.PLAYER_ID)] = t.playerId;
+    }
     this.applyDeity(side, members.find((e) => e.cardId === DEITY_OBJECTIVE));
     return side;
   }

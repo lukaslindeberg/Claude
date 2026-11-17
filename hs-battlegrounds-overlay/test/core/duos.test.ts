@@ -116,4 +116,39 @@ describe('Duos teams', () => {
     const rec = ofType(tracker.flush(), 'gameEnd')[0]?.record ?? tracker.getMatchRecord();
     expect(rec?.lobby.find((l) => l.playerId === 6)?.name).toBe('Fighter6#1006');
   });
+
+  it('a teammate fighting second gets the player tags last seen while it fought (its template enchant is hidden)', () => {
+    for (const file of DUOS) {
+      const tracker = new BgTracker({ now: () => 1 });
+      const fought = new Set<number>();
+      let checked = 0;
+      for (const line of fixtureLines(file)) {
+        for (const e of tracker.feedLine(line)) {
+          if (e.type !== 'combatStart') continue;
+          const { player, opponent } = e.input;
+          for (const side of [player.teammate!, opponent.teammate!]) {
+            if (!fought.has(side.playerId) || /KelThuzad/.test(opponent.heroCardId)) continue;
+            // a full Player entity tag set, not just the lobby-wide tags
+            expect(Object.keys(side.playerTags).length, `t${e.input.turn} p${side.playerId}`).toBeGreaterThan(30);
+            expect(side.playerTags.PLAYER_ID).toBe(side.playerId);
+            checked++;
+          }
+          // everyone in this combat may fight (first fighters surely do)
+          fought.add(player.playerId).add(opponent.playerId);
+        }
+      }
+      expect(checked).toBeGreaterThan(8);
+    }
+  });
+});
+
+describe('Secrets', () => {
+  it('Akazamzarak secrets in the SECRET zone reach the sim input', () => {
+    const tracker = new BgTracker({ now: () => 1 });
+    const got: string[] = [];
+    for (const line of fixtureLines('bg_async_gameover.power.log.gz')) {
+      for (const e of tracker.feedLine(line)) if (e.type === 'combatStart') got.push(`${e.input.turn}:${(e.input.player.secrets ?? []).join(',')}`);
+    }
+    expect(got.slice(10, 13)).toEqual(['11:', '12:TB_Bacon_Secrets_12', '13:TB_Bacon_Secrets_12']);
+  });
 });

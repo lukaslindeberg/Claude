@@ -49,6 +49,13 @@ const shots = [
     await p.hover('.tl-sim__warn');
   }, 800],
   ['overlay-game-over', '/overlay.html?scene=gameOver', overlay],
+  // Duos: the leaderboard grouped by team (shared health, team place, both boards); the
+  // panel starts collapsed in Duos, so expand it and hover the next opposing team.
+  ['overlay-duos', '/overlay.html?scene=recruit&mode=duos', overlay, async (p) => {
+    if (await p.locator('.tl-opp.is-collapsed').count()) await p.click('.tl-opp__toggle');
+    await p.hover('.tl-opp__team.is-next .tl-opp__main');
+  }, 1500],
+  ['overlay-duos-combat', '/overlay.html?scene=combat&mode=duos&sim=ok&actualDelay=1500', overlay, null, 2500],
   ['overlay-replay', '/overlay.html?scene=replay&speed=400&until=combat@6', overlay, null, 14000],
   ['companion-overview', '/settings.html?scene=recruit#overview', companion],
   ['companion-matches', '/settings.html?scene=recruit#matches', companion],

@@ -379,8 +379,8 @@ body.tl-body--overlay {
   margin-top: 9px;
 }
 .tl-opp__member {
-  margin: 4px -2px 0 15px;
-  padding: 3px 4px 3px 5px;
+  margin: 4px -3px 0 -2px;
+  padding: 3px 2px 3px 3px;
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.16);
   border: 1px solid rgba(0, 0, 0, 0.3);
@@ -398,6 +398,7 @@ body.tl-body--overlay {
   border-color: rgba(220, 170, 80, 0.4);
 }
 .tl-opp__member .tl-opp__board {
+  gap: 2px;
   margin-top: 4px;
   min-height: 44px;
 }
