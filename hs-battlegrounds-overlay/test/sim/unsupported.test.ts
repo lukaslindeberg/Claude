@@ -24,3 +24,10 @@ describe('unsupported effect detection', () => {
     expect(findUnsupportedCards(withTrinket(cardId))).not.toContain(cardId);
   });
 });
+
+describe('secrets', () => {
+  it('flags secrets on either side', () => {
+    const b = battle(side([vanilla(2, 2)]), side([vanilla(2, 2)], { secrets: ['TB_Bacon_Secrets_01'] }));
+    expect(findUnsupportedCards(b)).toContain('TB_Bacon_Secrets_01');
+  });
+});

@@ -85,6 +85,8 @@ function collectSide(side: SimSide | undefined, db: CardDb, out: Set<string>): v
   for (const t of side.trinkets ?? []) effects.push({ id: t.cardId });
   for (const q of side.questRewards ?? []) effects.push({ id: q });
   for (const { id, used } of effects) if (effectUnsupported(db, side, id, used)) out.add(id);
+  // Secrets (e.g. from Akazamzarak) can change a combat and are not simulated.
+  for (const id of side.secrets ?? []) out.add(id);
   // Duos: the teammate's hero power, trinkets and rewards take over when its board joins.
   if (side.teammate) collectSide(side.teammate as SimSide, db, out);
 }

@@ -110,6 +110,17 @@ lines in any chunk sizes gives identical events and state (tested).
   SETASIDE, the teammate copy becomes the local `HERO_ENTITY` and the local Player entity's tags
   (tier, gold...) temporarily become the teammate's. `input.player` is the first fighter of our
   team (`teammate` = the other one), `input.opponent` likewise. Teams share health.
+- Duos teammate player tags: a template's player enchant is hidden; its tags (Tasty Lobster count
+  4803, Undead bonuses...) reach a Player entity (via a `Bacon_TagTransferPlayerE`) only when that
+  player joins the fight. The tracker caches each Player entity's tags under the
+  `BACON_CURRENT_COMBAT_PLAYER_ID` fighting for it (at every ATTACK) and gives a template side the
+  tags last seen for its PLAYER_ID (empty before that player first fought).
+- Duos teams: teammates share health/armor/place, but the client updates their two leaderboard
+  heroes one after the other (up to a turn apart), so the state uses the most recently changed
+  one for both. Teams come from `BACON_DUO_TEAM_ID`, `BACON_DUO_TEAMMATE_PLAYER_ID`,
+  `NEXT_OPPONENT_TEAMMATE_PLAYER_ID` and the combat sides. In combat the dummy keeps the FIRST
+  enemy fighter's name until the end (also while the teammate fights): names are voted for it only.
+- Secrets (Akazamzarak, `TB_Bacon_Secrets_*`, SECRET zone) go to `SimSide.secrets`.
 - `playerTags` = all tags of the Player entity (dummy during combat for the opponent, which then
   carries the opponent's transferred tags) + lobby-wide GameEntity tags
   (`BACON_GLOBAL_OLD_GOD_DBID`, anomaly, damage cap). `heroTags` = all tags of the hero entity.
