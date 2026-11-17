@@ -620,6 +620,69 @@ export function combatState(): BgGameState {
   return s;
 }
 
+/**
+ * Duos variant of a live scene (`?mode=duos`): the same eight heroes in four teams of two
+ * sharing one health pool and one place; we team up with Rokara (p4) and the next / current
+ * opponents are Sire Denathrius (p6) + Queen Azshara (p2).
+ */
+const DUO_TEAMS: [number, number][] = [
+  [3, 4],
+  [6, 2],
+  [7, 1],
+  [8, 5],
+];
+
+export function duosState(src: BgGameState): BgGameState {
+  const s: BgGameState = JSON.parse(JSON.stringify(src));
+  s.mode = 'duos';
+  s.gameType = 'GT_BATTLEGROUNDS_DUO';
+  const byPid = new Map(s.players.map((p) => [p.playerId, p]));
+  // Team place from the shared health (the dead team last).
+  const order = DUO_TEAMS.map(([a]) => byPid.get(a)!).sort((x, y) => Number(x.dead) - Number(y.dead) || y.health + y.armor - (x.health + x.armor));
+  DUO_TEAMS.forEach(([a, b], i) => {
+    const lead = byPid.get(a)!;
+    const place = order.indexOf(lead) + 1;
+    for (const pid of [a, b]) {
+      const p = byPid.get(pid)!;
+      p.teamId = i + 1;
+      p.health = lead.health;
+      p.armor = lead.armor;
+      p.dead = lead.dead;
+      p.diedOnTurn = lead.diedOnTurn;
+      p.healthHistory = lead.healthHistory;
+      p.leaderboardPlace = place;
+      if (pid === 4) p.isTeammate = true;
+    }
+  });
+  if (s.nextOpponentPlayerId === 6) s.nextOpponentTeammatePlayerId = 2;
+  // In Duos we see both boards of the other team every combat, and our teammate's board.
+  const mate = byPid.get(4)!;
+  if (mate.lastBoard) mate.lastBoard = { ...mate.lastBoard, turn: s.turn };
+  if (s.phase === 'combat') {
+    const azshara = byPid.get(2)!;
+    if (azshara.lastBoard) azshara.lastBoard = { ...azshara.lastBoard, turn: s.turn };
+    if (s.battle.input) s.battle.input = duosCombatInput();
+  }
+  if (s.finalPlacement !== undefined) s.finalPlacement = byPid.get(3)!.leaderboardPlace;
+  return s;
+}
+
+/** Duos combat: Drest'agath + Rokara vs Sire Denathrius + Queen Azshara. */
+export function duosCombatInput(): BattleSimInput {
+  const solo = combatInput();
+  const spec = (pid: number) => PLAYERS.find((p) => p.playerId === pid)!;
+  const side = (pid: number, health: number, armor: number): SimSide => {
+    const p = spec(pid);
+    return { ...solo.player, playerId: pid, heroCardId: p.hero, heroPowerCardId: db.get(p.hero)?.heroPowerId, tavernTier: p.tier, health, armor, minions: boardOf(p.board?.specs ?? []) };
+  };
+  return {
+    ...solo,
+    mode: 'duos',
+    player: { ...solo.player, teammate: side(4, solo.player.health, solo.player.armor) },
+    opponent: { ...solo.opponent, teammate: side(2, solo.opponent.health, solo.opponent.armor) },
+  };
+}
+
 export function gameOverState(): BgGameState {
   const s = baseState();
   s.phase = 'gameOver';

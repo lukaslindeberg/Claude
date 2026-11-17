@@ -4,6 +4,7 @@
  *
  * Scenes (URL `?scene=`): heroSelection | trinketPick | recruit | combat | gameOver | idle | replay
  * `?scene=heroSelection&tribes=inferred` shows hero selection with the lobby's tribes known.
+ * `&mode=duos` turns the recruit / combat / gameOver scenes into a Duos lobby (four teams).
  */
 import type { TavernLensBridge, Unsubscribe } from '@shared/ipc';
 import {
@@ -55,7 +56,9 @@ function loadSettings(): Settings {
 }
 
 function sceneState(scene: string): BgGameState {
-  const s = sceneStateBase(scene);
+  let s = sceneStateBase(scene);
+  // `&mode=duos`: the same lobby as four teams of two (recruit, combat, gameOver).
+  if (new URLSearchParams(window.location.search).get('mode') === 'duos' && s.active && s.players.length) s = samples.duosState(s);
   if (new URLSearchParams(window.location.search).get('counters') === 'all' && s.active) s.counters = { ...samples.ALL_COUNTERS };
   return s;
 }

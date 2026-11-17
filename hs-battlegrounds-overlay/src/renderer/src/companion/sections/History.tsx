@@ -136,7 +136,9 @@ function MatchRow({ m, open, onToggle }: { m: MatchRecord; open: boolean; onTogg
 function MatchDetail({ m }: { m: MatchRecord }) {
   const db = useApp((s) => s.cardDb);
   const anomaly = db.get(m.anomalyCardId);
-  const lobby = [...m.lobby].sort((a, b) => a.place - b.place);
+  const lobby = [...m.lobby].sort((a, b) => a.place - b.place || (a.teamId ?? 0) - (b.teamId ?? 0));
+  const duos = m.mode === 'duos';
+  const myTeam = duos ? m.lobby.find((p) => p.heroCardId === m.heroCardId && p.place === m.placement)?.teamId : undefined;
   const predicted = m.combats.filter((c) => c.prediction);
   const correct = predicted.filter((c) => predictedOutcome(c.prediction!) === c.result).length;
   return (
@@ -174,11 +176,12 @@ function MatchDetail({ m }: { m: MatchRecord }) {
           <div className="tl-hist__lobby">
             {lobby.map((p) => (
               <div key={p.playerId} className={clsx('tl-hist__lobbyrow', p.heroCardId === m.heroCardId && p.place === m.placement && 'is-me')}>
-                <span className="tl-hist__lobbyplace" style={{ color: placementColor(p.place) }}>
+                <span className="tl-hist__lobbyplace" style={{ color: placementColor(p.place, duos) }}>
                   {ordinal(p.place)}
                 </span>
                 <HeroPortrait cardId={p.heroCardId} size={22} />
                 <span className="tl-hist__lobbyname">{db.name(p.heroCardId)}</span>
+                {myTeam !== undefined && p.teamId === myTeam && p.heroCardId !== m.heroCardId ? <span className="tl-hist__mate">Mate</span> : null}
                 <span className="tl-muted tl-small">{p.name?.split('#')[0]}</span>
               </div>
             ))}

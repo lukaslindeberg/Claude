@@ -172,6 +172,15 @@ interface GameCtx {
   /** Trinkets / quest rewards seen in the local player's PLAY zone (card ids, first seen first). */
   ownedTrinkets: string[];
   ownedRewards: string[];
+  /**
+   * Duos: order (packet sequence) of the latest HEALTH/DAMAGE/ARMOR and PLAYER_LEADERBOARD_PLACE
+   * change per hero entity. Teammates share one health pool and one place, but the client
+   * updates the two leaderboard heroes one after the other: the freshest one is right.
+   */
+  hpSeq: Map<number, number>;
+  placeSeq: Map<number, number>;
+  /** Duos: PLAYER_IDs seen fighting on the same side of a combat (pid -> teammate pid). */
+  pairs: Map<number, number>;
 }
 
 const EMPTY_BATTLE: BattleState = { status: 'idle', turn: 0 };
@@ -230,6 +239,8 @@ export class BgTracker {
   private prevGame?: GameCtx;
   private pendingNewGame = false;
   private depth = 0;
+  /** Counter for GameCtx.hpSeq / placeSeq. */
+  private tagSeq = 0;
   private events: BgEvent[] = [];
   private packets: Packet[] = [];
   private spectating = false;
@@ -545,6 +556,9 @@ export class BgTracker {
       this.g = prev;
       prev.combat = undefined;
       prev.playback = freshPlayback();
+      // New entity ids: the freshness order restarts.
+      prev.hpSeq.clear();
+      prev.placeSeq.clear();
       this.bump();
       return;
     }
@@ -576,6 +590,9 @@ export class BgTracker {
       trinketPicks: [],
       ownedTrinkets: [],
       ownedRewards: [],
+      hpSeq: new Map(),
+      placeSeq: new Map(),
+      pairs: new Map(),
     };
   }
 
@@ -640,6 +657,58 @@ export class BgTracker {
   private teammatePid(): number {
     const lp = this.store.localPlayer;
     return lp ? this.store.tag(lp.entityId, T.BACON_DUO_TEAMMATE_PLAYER_ID) : 0;
+  }
+
+  /** BACON_DUO_TEAM_ID of a leaderboard hero (the local one may only have it on the Player entity). */
+  private teamIdOf(g: GameCtx, pid: number, e: Entity): number {
+    const team = e.tags.get(T.BACON_DUO_TEAM_ID) ?? 0;
+    if (team) return team;
+    const lp = this.store.localPlayer;
+    return lp && pid === this.localPid(g) ? this.store.tag(lp.entityId, T.BACON_DUO_TEAM_ID) : 0;
+  }
+
+  /**
+   * Duos: PLAYER_ID -> teammate's PLAYER_ID, from BACON_DUO_TEAM_ID, our
+   * BACON_DUO_TEAMMATE_PLAYER_ID, NEXT_OPPONENT(_TEAMMATE)_PLAYER_ID and the sides of the
+   * combats seen so far.
+   */
+  private partners(g: GameCtx, heroes: Map<number, Entity>): Map<number, number> {
+    const out = new Map<number, number>();
+    const link = (a: number, b: number) => {
+      if (a > 0 && b > 0 && a !== b && !out.has(a) && !out.has(b)) {
+        out.set(a, b);
+        out.set(b, a);
+      }
+    };
+    const s = this.store;
+    const lp = s.localPlayer;
+    link(this.localPid(g), this.teammatePid());
+    const byTeam = new Map<number, number[]>();
+    for (const [pid, e] of heroes) {
+      const team = this.teamIdOf(g, pid, e);
+      if (!team) continue;
+      const l = byTeam.get(team) ?? [];
+      l.push(pid);
+      byTeam.set(team, l);
+    }
+    for (const l of byTeam.values()) if (l.length === 2) link(l[0], l[1]);
+    if (lp) link(s.tag(lp.entityId, T.NEXT_OPPONENT_PLAYER_ID), s.tag(lp.entityId, T.NEXT_OPPONENT_TEAMMATE_PLAYER_ID));
+    for (const [a, b] of g.pairs) link(a, b);
+    return out;
+  }
+
+  /** Of a player's and their teammate's leaderboard heroes, the one changed last in `seq`. */
+  private freshestOf(heroes: Map<number, Entity>, pid: number, mate: number | undefined, seq: Map<number, number>): Entity | undefined {
+    const a = heroes.get(pid);
+    const b = mate ? heroes.get(mate) : undefined;
+    if (!a || !b) return a ?? b;
+    return (seq.get(b.id) ?? 0) > (seq.get(a.id) ?? 0) ? b : a;
+  }
+
+  /** health+armor of a player; in duos the team's shared pool (freshest teammate hero). */
+  private sharedHp(g: GameCtx, pid: number, heroes: Map<number, Entity>, partners?: Map<number, number>): number {
+    const e = this.freshestOf(heroes, pid, partners?.get(pid), g.hpSeq);
+    return e ? this.heroHp(e) : 0;
   }
 
   /** Is `e` the local player's real hero (not a placeholder / duos teammate copy)? */
@@ -749,6 +818,8 @@ export class BgTracker {
     }
     const ct = e.tags.get(T.CARDTYPE);
     if (ct === CardType.HERO) {
+      if (tag === T.HEALTH || tag === T.DAMAGE || tag === T.ARMOR) g.hpSeq.set(e.id, ++this.tagSeq);
+      else if (tag === T.PLAYER_LEADERBOARD_PLACE) g.placeSeq.set(e.id, ++this.tagSeq);
       if (g.combat && !g.combat.ended && (tag === T.DAMAGE || tag === T.ARMOR)) this.onCombatHeroHp(g, e, tag, prev, value);
       if (tag === T.PLAYER_TECH_LEVEL || tag === T.DAMAGE || tag === T.HEALTH) this.onLeaderboardTag(g, e, tag, value);
       if (tag === T.ZONE && e.id === g.localHeroId) {
@@ -1128,6 +1199,18 @@ export class BgTracker {
     const cap = this.damageCap(g);
     if (cap) input.damageCap = cap;
     c.input = input;
+    if (mode === 'duos') {
+      const pair = (a: SimSide) => {
+        const b = a.teammate?.playerId ?? 0;
+        if (a.playerId > 0 && b > 0 && a.playerId !== b && !g.pairs.has(a.playerId) && !g.pairs.has(b)) {
+          g.pairs.set(a.playerId, b);
+          g.pairs.set(b, a.playerId);
+        }
+      };
+      pair(player);
+      // A ghost (Kel'Thuzad) carries a dead player's PLAYER_ID: not evidence of a team.
+      if (!/KelThuzad/.test(opp.heroCardId)) pair(opp);
+    }
 
     // Opponent boards seen
     const now = this.now();
@@ -1215,10 +1298,12 @@ export class BgTracker {
     if (t) t.combatsAgainst.push(rec);
     g.battle.actual = { result, damage };
     if (g.battle.status === 'idle') g.battle.status = 'waiting';
-    // Health snapshot of everyone after this combat.
-    for (const [pid, e] of this.syncPlayers(g)) {
+    // Health snapshot of everyone after this combat (duos: the team's shared pool).
+    const heroesAfter = this.syncPlayers(g);
+    const partnersAfter = this.mode(g) === 'duos' ? this.partners(g, heroesAfter) : undefined;
+    for (const pid of heroesAfter.keys()) {
       const tr = g.players.get(pid)!;
-      const value = Math.max(0, this.heroHp(e));
+      const value = Math.max(0, this.sharedHp(g, pid, heroesAfter, partnersAfter));
       const last = tr.healthHistory[tr.healthHistory.length - 1];
       if (last && last.turn === c.turn) last.value = value;
       else tr.healthHistory.push({ turn: c.turn, value });
@@ -1448,9 +1533,10 @@ export class BgTracker {
     g.endedTs = this.logTs;
     const heroes = this.syncPlayers(g);
     const turn = this.bgTurn();
-    for (const [pid, e] of heroes) {
+    const partners = this.mode(g) === 'duos' ? this.partners(g, heroes) : undefined;
+    for (const pid of heroes.keys()) {
       const tr = g.players.get(pid)!;
-      const value = Math.max(0, this.heroHp(e));
+      const value = Math.max(0, this.sharedHp(g, pid, heroes, partners));
       const last = tr.healthHistory[tr.healthHistory.length - 1];
       if (!last || last.value !== value) {
         if (last && last.turn === turn) last.value = value;
@@ -1504,12 +1590,13 @@ export class BgTracker {
       combats: g.combats.slice(),
       healthHistory: local?.healthHistory ?? [],
       lobby: state.players.map((p) => {
-        const o: { playerId: number; heroCardId: string; place: number; name?: string } = {
+        const o: MatchRecord['lobby'][number] = {
           playerId: p.playerId,
           heroCardId: p.heroCardId,
           place: p.leaderboardPlace,
         };
         if (p.name) o.name = p.name;
+        if (p.teamId !== undefined) o.teamId = p.teamId;
         return o;
       }),
     };
@@ -1705,20 +1792,12 @@ export class BgTracker {
         }
       }
       if (mode === 'duos') {
-        const team = e.tags.get(T.BACON_DUO_TEAM_ID) || (isLocal && lp ? s.tag(lp.entityId, T.BACON_DUO_TEAM_ID) : 0);
+        const team = this.teamIdOf(g, pid, e);
         if (team) p.teamId = team;
-        if (pid === teammate) p.isTeammate = true;
-        if (isLocal) p.isTeammate = false;
       }
       players.push(p);
     }
-    // Local teammate's team id (duos): if missing, copy from local.
-    if (mode === 'duos') {
-      const loc = players.find((p) => p.isLocal);
-      const tm = players.find((p) => p.isTeammate);
-      if (loc && tm && loc.teamId === undefined && tm.teamId !== undefined) loc.teamId = tm.teamId;
-      if (loc && tm && tm.teamId === undefined && loc.teamId !== undefined) tm.teamId = loc.teamId;
-    }
+    const partners = mode === 'duos' ? this.mergeTeams(g, players, heroes, teammate) : undefined;
     players.sort((a, b) => (a.leaderboardPlace || 99) - (b.leaderboardPlace || 99) || a.playerId - b.playerId);
 
     let currentOpponentPlayerId: number | undefined;
@@ -1763,6 +1842,8 @@ export class BgTracker {
     const trinketOptions = this.trinketOptions(g);
     if (trinketOptions) state.trinketOptions = trinketOptions;
     if (nextOpp) state.nextOpponentPlayerId = nextOpp;
+    const nextMate = partners && nextOpp ? (lp ? s.tag(lp.entityId, T.NEXT_OPPONENT_TEAMMATE_PLAYER_ID) : 0) || partners.get(nextOpp) || 0 : 0;
+    if (nextMate && nextMate !== nextOpp) state.nextOpponentTeammatePlayerId = nextMate;
     if (currentOpponentPlayerId) state.currentOpponentPlayerId = currentOpponentPlayerId;
     const anomaly = this.anomalyCardId();
     if (anomaly) state.anomalyCardId = anomaly;
@@ -1818,9 +1899,14 @@ export class BgTracker {
     if (!s.isDummy(entityId)) return;
     const c = g.combat;
     if (c && c.captured && !c.ended) {
+      // A Kel'Thuzad ghost is printed as "Kel'Thuzad", not as the dead player.
+      if (c.input && /KelThuzad/.test(c.input.opponent.heroCardId)) return;
       const dp = s.dummyPlayer!;
       const hero = s.get(s.tag(dp.entityId, T.HERO_ENTITY));
+      // Duos: the dummy keeps the FIRST enemy fighter's name for the whole combat, also
+      // while their teammate fights.
       const pid =
+        (this.mode(g) === 'duos' ? c.input?.opponent.playerId || 0 : 0) ||
         s.tag(dp.entityId, T.BACON_CURRENT_COMBAT_PLAYER_ID) ||
         (hero && !g.bobIds.has(hero.id) ? (hero.tags.get(T.PLAYER_ID) ?? 0) : 0) ||
         c.input?.opponent.playerId ||
@@ -1841,6 +1927,42 @@ export class BgTracker {
       }
     }
     return best;
+  }
+
+  /**
+   * Duos: teammates share one health pool, one leaderboard place and die together, but the
+   * client updates their two leaderboard heroes one after the other (sometimes a turn
+   * apart): use the freshest values for both, and complete team ids / the teammate flag.
+   */
+  private mergeTeams(g: GameCtx, players: PlayerState[], heroes: Map<number, Entity>, teammatePid: number): Map<number, number> {
+    const partners = this.partners(g, heroes);
+    const local = players.find((p) => p.isLocal);
+    const mateOfLocal = teammatePid > 0 ? teammatePid : local ? (partners.get(local.playerId) ?? 0) : 0;
+    const byPid = new Map(players.map((p) => [p.playerId, p]));
+    const raw = new Map(players.map((p) => [p.playerId, { dead: p.dead, diedOnTurn: p.diedOnTurn, teamId: p.teamId }]));
+    for (const p of players) {
+      if (p.playerId === mateOfLocal && !p.isLocal) p.isTeammate = true;
+      else if (p.isTeammate) delete p.isTeammate;
+      const mate = partners.get(p.playerId);
+      const q = mate ? byPid.get(mate) : undefined;
+      if (!q) continue;
+      const hpHero = this.freshestOf(heroes, p.playerId, mate, g.hpSeq);
+      if (hpHero) {
+        p.health = (hpHero.tags.get(T.HEALTH) ?? 0) - (hpHero.tags.get(T.DAMAGE) ?? 0);
+        p.armor = hpHero.tags.get(T.ARMOR) ?? 0;
+        p.maxHealth = hpHero.tags.get(T.HEALTH) ?? p.maxHealth;
+      }
+      const placeHero = this.freshestOf(heroes, p.playerId, mate, g.placeSeq);
+      const place = placeHero?.tags.get(T.PLAYER_LEADERBOARD_PLACE) ?? 0;
+      if (place > 0) p.leaderboardPlace = place;
+      const rq = raw.get(q.playerId)!;
+      const rp = raw.get(p.playerId)!;
+      p.dead = rp.dead || rq.dead || ((hpHero?.tags.get(T.HEALTH) ?? 0) > 0 && p.health <= 0);
+      const died = [rp.diedOnTurn, rq.diedOnTurn].filter((t): t is number => t !== undefined);
+      if (died.length) p.diedOnTurn = Math.min(...died);
+      if (rp.teamId === undefined) p.teamId = rq.teamId ?? 100 + Math.min(p.playerId, q.playerId);
+    }
+    return partners;
   }
 
   /** Last resolved match record (after gameEnd). */

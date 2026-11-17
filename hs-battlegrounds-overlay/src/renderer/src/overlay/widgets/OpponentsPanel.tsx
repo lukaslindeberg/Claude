@@ -6,7 +6,7 @@ import { useInteractive } from '../../hooks/useInteractive';
 import { useViewport } from '../../hooks/useViewport';
 import { HeroPortrait } from '../../components/HeroPortrait';
 import { MinionToken } from '../../components/MinionToken';
-import { HealthBar, ResultChip, Sparkline, StatGem, TierTimeline, TriplesBadge } from '../../components/Bits';
+import { HealthBar, ResultChip, Sparkline, StatGem, TierBadge, TierTimeline, TriplesBadge } from '../../components/Bits';
 import { ChevronIcon } from '../../components/Icons';
 import { ordinal } from '../../lib/format';
 import { Tooltip } from '../../components/Tooltip';
@@ -41,7 +41,44 @@ export function boardFor(game: BgGameState, p: PlayerState): MinionSnapshot[] | 
   return p.lastBoard?.minions;
 }
 
-/** Right-edge panel: every player by leaderboard place, with their last-seen board. */
+/** Duos: a team of two sharing one health pool and one place. */
+export interface DuoTeam {
+  teamId: number;
+  /** Local player first, else the next / current opponent first, else by PLAYER_ID. */
+  members: PlayerState[];
+  place: number;
+  dead: boolean;
+  local: boolean;
+  next: boolean;
+  fighting: boolean;
+}
+
+/** Groups a Duos lobby into teams by `teamId`; undefined when the teams are not known (yet). */
+export function duoTeams(game: BgGameState): DuoTeam[] | undefined {
+  if (game.mode !== 'duos' || !game.players.length || game.players.some((p) => p.teamId === undefined)) return undefined;
+  const by = new Map<number, PlayerState[]>();
+  for (const p of game.players) by.set(p.teamId!, [...(by.get(p.teamId!) ?? []), p]);
+  if ([...by.values()].some((l) => l.length > 2)) return undefined;
+  const fightingPid = game.phase === 'combat' ? game.currentOpponentPlayerId : undefined;
+  const rank = (p: PlayerState) => (p.isLocal ? 0 : p.playerId === fightingPid ? 1 : p.playerId === game.nextOpponentPlayerId ? 2 : 3);
+  return [...by.entries()]
+    .map(([teamId, l]) => {
+      const members = [...l].sort((a, b) => rank(a) - rank(b) || a.playerId - b.playerId);
+      const fighting = members.some((p) => p.playerId === fightingPid);
+      return {
+        teamId,
+        members,
+        place: Math.min(...members.map((p) => p.leaderboardPlace || 99)),
+        dead: members.every((p) => p.dead),
+        local: members.some((p) => p.isLocal),
+        next: !fighting && members.some((p) => p.isNextOpponent || p.playerId === game.nextOpponentPlayerId || p.playerId === game.nextOpponentTeammatePlayerId),
+        fighting,
+      };
+    })
+    .sort((a, b) => a.place - b.place || a.teamId - b.teamId);
+}
+
+/** Right-edge panel: every player by leaderboard place, with their last-seen board (Duos: by team). */
 export function OpponentsPanel() {
   const game = useApp((s) => s.game);
   const pulse = useApp((s) => s.togglePulse.opponentsPanel ?? 0);
@@ -69,8 +106,9 @@ export function OpponentsPanel() {
     () => [...(game?.players ?? [])].sort((a, b) => a.leaderboardPlace - b.leaderboardPlace || a.playerId - b.playerId),
     [game?.players],
   );
+  const teams = useMemo(() => (game ? duoTeams(game) : undefined), [game]);
   if (!game || (game.phase !== 'recruit' && game.phase !== 'combat') || players.length === 0) return null;
-  const alive = players.filter((p) => !p.dead).length;
+  const alive = teams ? teams.filter((t) => !t.dead).length : players.filter((p) => !p.dead).length;
   const top = Math.round(vp.height * 0.07);
   // Ends above the game's menu gear (bottom-right corner).
   const maxHeight = vp.height - top - bottomReserve(vp);
@@ -84,7 +122,7 @@ export function OpponentsPanel() {
               <>
                 <span className="tl-plate">Leaderboard</span>
                 <span className="tl-opp__meta">
-                  Turn {game.turn} · {alive} alive
+                  Turn {game.turn} · {teams ? `${alive} ${alive === 1 ? 'team' : 'teams'} alive` : `${alive} alive`}
                 </span>
               </>
             )}
@@ -93,7 +131,15 @@ export function OpponentsPanel() {
             </button>
           </div>
           <div className="tl-opp__list tl-scroll">
-            {players.map((p) =>
+            {teams
+              ? teams.map((t) =>
+                  collapsed ? (
+                    <CollapsedTeam key={t.teamId} game={game} team={t} />
+                  ) : (
+                    <TeamBlock key={t.teamId} game={game} team={t} expanded={expanded} onToggle={(pid) => setExpanded(expanded === pid ? null : pid)} />
+                  ),
+                )
+              : players.map((p) =>
               collapsed ? (
                 <CollapsedRow key={p.playerId} game={game} p={p} />
               ) : (
@@ -266,6 +312,167 @@ function OpponentDetail({ p, board }: { game: BgGameState; p: PlayerState; board
           </span>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Duos: one plank per team (shared health and place), a sub-row per player
+// ---------------------------------------------------------------------------
+
+/** Both members' boards, side by side in one tooltip. */
+function TeamBoardsTip({ game, team }: { game: BgGameState; team: DuoTeam }) {
+  return (
+    <div className="tl-panel tl-boardtip tl-boardtip--team">
+      {team.members.map((p) => {
+        const board = boardFor(game, p);
+        const seen = seenAgo(game, p);
+        return (
+          <div key={p.playerId} className="tl-boardtip__member">
+            <div className="tl-boardtip__head">
+              <span className="tl-boardtip__name">{p.isLocal ? 'Your board' : `${p.heroName}${p.isTeammate ? ' (teammate)' : ''}`}</span>
+              {seen && !p.isLocal ? <span className="tl-boardtip__seen">{seen}</span> : null}
+            </div>
+            {board?.length ? <BoardCards minions={board} width={board.length > 5 ? 112 : 128} /> : <div className="tl-opp__noboard">{p.lastBoard || p.isLocal ? 'Empty board' : 'Board not seen yet'}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function teamGlow(team: DuoTeam, p: PlayerState, game: BgGameState): 'fighting' | 'next' | 'local' | undefined {
+  if (game.phase === 'combat' && game.currentOpponentPlayerId === p.playerId) return 'fighting';
+  if (team.next) return 'next';
+  return team.local ? 'local' : undefined;
+}
+
+function TeamBlock({ game, team, expanded, onToggle }: { game: BgGameState; team: DuoTeam; expanded: number | null; onToggle: (pid: number) => void }) {
+  const [a, b] = team.members;
+  const lead = a;
+  const label = team.local ? (b ? `You & ${b.heroName}` : 'You') : team.members.map((p) => p.heroName || 'Unknown hero').join(' & ');
+  // Our combats against this team (recorded against either member), latest first.
+  const combats = team.members.flatMap((p) => p.combatsAgainst).sort((x, y) => x.turn - y.turn);
+  const last = combats[combats.length - 1];
+  const hasBoards = team.members.some((p) => boardFor(game, p)?.length);
+  return (
+    <div className={clsx('tl-opp__row tl-opp__team', team.dead && 'is-dead', team.next && 'is-next', team.fighting && 'is-fighting', team.local && 'is-local')}>
+      <Tooltip as="div" placement="left" delay={220} tipClassName="tl-tooltip--card" disabled={!hasBoards} content={() => <TeamBoardsTip game={game} team={team} />}>
+        <div className="tl-opp__main">
+          <span className={clsx('tl-opp__place', team.place === 1 && 'is-first')}>{team.place < 99 ? team.place : ''}</span>
+          <span className="tl-opp__duo">
+            {team.members.map((p) => (
+              <HeroPortrait key={p.playerId} cardId={p.heroCardId} name={p.heroName} size={28} dead={p.dead} shape="rounded" glow={teamGlow(team, p, game)} />
+            ))}
+          </span>
+          <div className="tl-opp__info">
+            <div className="tl-opp__line">
+              <span className="tl-opp__hero" title={label}>
+                {label}
+              </span>
+              {team.next ? <span className="tl-tag is-next">Next</span> : null}
+              {team.fighting ? <span className="tl-tag is-fighting">Fighting</span> : null}
+              {!team.next && !team.fighting && last ? <ResultChip result={last.result} damage={last.damage} size="sm" /> : null}
+            </div>
+            {team.dead ? (
+              <div className="tl-opp__dead">
+                Eliminated{lead.diedOnTurn ? ` T${lead.diedOnTurn}` : ''} · <b>{ordinal(team.place)}</b>
+              </div>
+            ) : (
+              <div className="tl-opp__line">
+                <HealthBar health={lead.health} maxHealth={lead.maxHealth} armor={lead.armor} compact />
+              </div>
+            )}
+          </div>
+        </div>
+      </Tooltip>
+      {team.members.map((p) => (
+        <MemberRow key={p.playerId} game={game} team={team} p={p} expanded={expanded === p.playerId} onToggle={() => onToggle(p.playerId)} />
+      ))}
+    </div>
+  );
+}
+
+function MemberRow({ game, team, p, expanded, onToggle }: { game: BgGameState; team: DuoTeam; p: PlayerState; expanded: boolean; onToggle: () => void }) {
+  const fighting = game.phase === 'combat' && game.currentOpponentPlayerId === p.playerId;
+  const board = boardFor(game, p);
+  const seen = seenAgo(game, p);
+  // Your own board and eliminated teams stay one line unless expanded.
+  const compactRow = p.isLocal || team.dead;
+  const db = useApp((s) => s.cardDb);
+  const tip = tipFor(db, p.heroCardId);
+  return (
+    <div
+      className={clsx('tl-opp__member', p.isLocal && 'is-local', fighting && 'is-fighting', expanded && 'is-expanded')}
+      onClick={onToggle}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onToggle()}
+    >
+      <Tooltip
+        as="div"
+        placement="left"
+        delay={220}
+        tipClassName="tl-tooltip--card"
+        disabled={!board?.length && !tip}
+        content={() => (
+          <div className="tl-panel tl-boardtip">
+            <div className="tl-boardtip__head">
+              <span className="tl-boardtip__name">{p.isLocal ? 'Your board' : `${p.heroName}'s board`}</span>
+              {seen && !p.isLocal ? <span className="tl-boardtip__seen">{seen}</span> : null}
+            </div>
+            {board?.length ? <BoardCards minions={board} width={board.length > 5 ? 128 : 150} /> : null}
+            {tip && !p.isLocal ? (
+              <div className="tl-boardtip__tip tl-parchment">
+                <b>{p.heroName}:</b> {tip.tip}
+              </div>
+            ) : null}
+          </div>
+        )}
+      >
+        <div className="tl-opp__mline">
+          <TierBadge tier={p.tavernTier} size={15} />
+          <span className="tl-opp__mname" title={p.heroName}>
+            {p.isLocal ? 'You' : p.heroName || 'Unknown hero'}
+          </span>
+          {p.isTeammate ? <span className="tl-tag is-mate">Mate</span> : null}
+          {fighting ? <span className="tl-tag is-fighting">Fighting</span> : null}
+          <TriplesBadge count={p.triples} />
+          {seen && !p.isLocal && !(compactRow && !expanded) ? (
+            <span className="tl-opp__mseen" title={p.lastBoard ? `Turn ${p.lastBoard.turn}` : undefined}>
+              {seen.replace('Seen ', '')}
+            </span>
+          ) : null}
+        </div>
+        {compactRow && !expanded ? null : board && board.length ? (
+          <div className="tl-opp__board">
+            {board.map((m) => (
+              <MinionToken key={m.entityId} minion={m} size="sm" tooltip={false} />
+            ))}
+          </div>
+        ) : (
+          <div className="tl-opp__noboard">{p.isLocal || p.lastBoard ? 'Empty board' : 'Board not seen yet'}</div>
+        )}
+      </Tooltip>
+      {expanded ? <OpponentDetail game={game} p={p} board={board} /> : null}
+    </div>
+  );
+}
+
+function CollapsedTeam({ game, team }: { game: BgGameState; team: DuoTeam }) {
+  const lead = team.members[0];
+  return (
+    <div
+      className={clsx('tl-opp__mini tl-opp__mini--duo', team.dead && 'is-dead', team.next && 'is-next', team.fighting && 'is-fighting', team.local && 'is-local')}
+      title={`${team.members.map((p) => (p.isLocal ? 'You' : p.heroName)).join(' & ')} · ${lead.health + lead.armor} hp`}
+    >
+      <span className="tl-opp__mini-place">{team.place < 99 ? team.place : ''}</span>
+      <span className="tl-opp__mini-duo">
+        {team.members.map((p) => (
+          <HeroPortrait key={p.playerId} cardId={p.heroCardId} name={p.heroName} size={25} dead={p.dead} shape="rounded" glow={teamGlow(team, p, game)} />
+        ))}
+      </span>
+      {team.dead ? <span className="tl-opp__mini-dead">Out</span> : <StatGem kind="hp" value={lead.health + lead.armor} size={19} className="tl-opp__mini-hp" />}
     </div>
   );
 }

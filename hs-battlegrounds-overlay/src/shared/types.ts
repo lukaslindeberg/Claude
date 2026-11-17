@@ -227,7 +227,7 @@ export interface PlayerState {
   isTeammate?: boolean;
   /** Duos: team id (players sharing a team have the same value). */
   teamId?: number;
-  /** HEALTH - DAMAGE of the hero (does not include armor). */
+  /** HEALTH - DAMAGE of the hero (does not include armor). Duos: the team's shared health. */
   health: number;
   maxHealth: number;
   armor: number;
@@ -338,6 +338,8 @@ export interface BgGameState {
   chosenHeroCardId?: string;
   players: PlayerState[];
   nextOpponentPlayerId?: number;
+  /** Duos: the next opponent's teammate (NEXT_OPPONENT_TEAMMATE_PLAYER_ID): you fight both. */
+  nextOpponentTeammatePlayerId?: number;
   /** During combat: PLAYER_ID of the current opponent. */
   currentOpponentPlayerId?: number;
   /** Tribes known to be in the lobby. */
@@ -482,7 +484,7 @@ export interface MatchRecord {
   /** Quest rewards the local player earned (card ids). */
   questRewards?: string[];
   /** Players in the lobby (hero ids + final places). */
-  lobby: { playerId: number; heroCardId: string; place: number; name?: string }[];
+  lobby: { playerId: number; heroCardId: string; place: number; name?: string; /** Duos: team id (shared with the teammate). */ teamId?: number }[];
   /** Optional rating info if the user entered/imported it. */
   ratingBefore?: number;
   ratingAfter?: number;

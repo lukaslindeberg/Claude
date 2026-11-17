@@ -57,6 +57,9 @@ interface BattleInfo {
   error?: string;
   oppHero?: string;
   oppName?: string;
+  /** Duos: the other member of the opposing team (fights after / before `oppHero`). */
+  oppMateHero?: string;
+  oppMateName?: string;
 }
 
 function useBattleInfo(game: BgGameState): BattleInfo {
@@ -70,6 +73,16 @@ function useBattleInfo(game: BgGameState): BattleInfo {
     game.players.find((p) => p.playerId === oppId) ??
     (game.phase !== 'combat' ? game.players.find((p) => p.combatsAgainst.some((c) => c.turn === battle.turn)) : undefined);
   const oppHero = opp?.heroCardId ?? battle.input?.opponent.heroCardId;
+  // Duos: you fight both members of the other team; the sim input carries the second board.
+  let oppMateHero: string | undefined;
+  let oppMateName: string | undefined;
+  if (game.mode === 'duos') {
+    const mateId = opp?.teamId !== undefined ? game.players.find((p) => p.teamId === opp.teamId && p.playerId !== opp.playerId)?.playerId : undefined;
+    const inputMate = battle.input?.opponent.playerId === oppId ? battle.input?.opponent.teammate : battle.input?.opponent;
+    const mate = game.players.find((p) => p.playerId === (mateId ?? inputMate?.playerId));
+    oppMateHero = mate?.heroCardId ?? inputMate?.heroCardId;
+    oppMateName = mate?.heroName ?? (oppMateHero ? db.name(oppMateHero) : undefined);
+  }
   return {
     battle,
     result,
@@ -78,6 +91,8 @@ function useBattleInfo(game: BgGameState): BattleInfo {
     error: run?.error ?? battle.error,
     oppHero,
     oppName: opp?.heroName ?? (oppHero ? db.name(oppHero) : undefined),
+    oppMateHero,
+    oppMateName,
   };
 }
 
@@ -92,10 +107,11 @@ const whole = (v: number) => `${v > 0 && v < 1 ? '<1' : v > 99 && v < 100 ? '>99
 function BattlePlaque({ handle, view }: { handle: HandleProps; view: 'combat' | 'last' }) {
   const game = useApp((s) => s.game)!;
   const db = useApp((s) => s.cardDb);
-  const { battle, result, status, preliminary, error, oppHero, oppName } = useBattleInfo(game);
+  const { battle, result, status, preliminary, error, oppHero, oppName, oppMateHero, oppMateName } = useBattleInfo(game);
+  const title = oppName && oppMateName ? `${oppName} & ${oppMateName}` : oppName;
   // Names come from card data; cards missing from it (older patches) fall back to the name in the log.
   const logNames = new Map<string, string>();
-  for (const side of [battle.input?.player, battle.input?.opponent]) {
+  for (const side of [battle.input?.player, battle.input?.opponent, battle.input?.player.teammate, battle.input?.opponent.teammate]) {
     for (const m of [...(side?.minions ?? []), ...(side?.hand ?? [])]) if (m.name) logNames.set(m.cardId, m.name);
   }
   const unsupported = result?.unsupported?.length ? [...new Set(result.unsupported.map((id) => db.name(db.normalOf(id), logNames.get(id))))] : [];
@@ -120,9 +136,14 @@ function BattlePlaque({ handle, view }: { handle: HandleProps; view: 'combat' | 
     <div className={clsx('tl-panel tl-sim', unreliable && 'is-unreliable', status === 'running' && 'is-running')}>
       <div className="tl-sim__head">
         <DragHandle handle={handle} />
-        {oppHero ? <HeroPortrait cardId={oppHero} size={26} /> : null}
-        <span className="tl-sim__title" title={oppName}>
-          {view === 'last' ? 'Last battle' : oppName ? `vs ${oppName}` : 'Battle'}
+        {oppHero ? (
+          <span className={clsx('tl-sim__heroes', oppMateHero && 'is-duo')}>
+            <HeroPortrait cardId={oppHero} size={oppMateHero ? 22 : 26} />
+            {oppMateHero ? <HeroPortrait cardId={oppMateHero} size={22} /> : null}
+          </span>
+        ) : null}
+        <span className="tl-sim__title" title={title}>
+          {view === 'last' ? 'Last battle' : title ? `vs ${title}` : 'Battle'}
         </span>
         <span className="tl-sim__turn" title={note === 'Simulator error' ? error : undefined}>
           {note ?? `Turn ${battle.turn || game.turn}`}

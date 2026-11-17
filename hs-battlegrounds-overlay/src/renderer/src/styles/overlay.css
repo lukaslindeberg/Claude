@@ -366,6 +366,94 @@ body.tl-body--overlay {
   color: var(--tl-muted);
 }
 
+/* Duos: one plank per team, a sub-row per teammate. */
+.tl-opp__team {
+  cursor: default;
+}
+.tl-opp__duo {
+  display: inline-flex;
+  flex: none;
+}
+.tl-opp__duo .tl-hero + .tl-hero {
+  margin-left: -7px;
+  margin-top: 9px;
+}
+.tl-opp__member {
+  margin: 4px -2px 0 15px;
+  padding: 3px 4px 3px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  outline: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.tl-opp__member:hover {
+  background: rgba(255, 220, 160, 0.07);
+}
+.tl-opp__member.is-fighting {
+  border-color: rgba(226, 90, 74, 0.7);
+}
+.tl-opp__member.is-expanded {
+  border-color: rgba(220, 170, 80, 0.4);
+}
+.tl-opp__member .tl-opp__board {
+  margin-top: 4px;
+  min-height: 44px;
+}
+.tl-opp__member .tl-opp__noboard {
+  margin-top: 2px;
+}
+.tl-opp__mline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.tl-opp__mname {
+  min-width: 0;
+  font-family: var(--tl-display);
+  font-weight: 700;
+  font-size: 11.5px;
+  color: #f3e3c2;
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-opp__mseen {
+  margin-left: auto;
+  flex: none;
+  font-size: 10px;
+  color: var(--tl-text-2);
+}
+.tl-opp__mini--duo {
+  padding-top: 6px;
+}
+.tl-opp__mini.is-local {
+  background: rgba(110, 220, 140, 0.08);
+}
+.tl-opp__mini-duo {
+  display: flex;
+  gap: 1px;
+}
+.tl-opp__mini-duo .tl-hero + .tl-hero {
+  margin-top: 6px;
+}
+.tl-sim__heroes {
+  display: inline-flex;
+  flex: none;
+}
+.tl-sim__heroes.is-duo .tl-hero + .tl-hero {
+  margin-left: -6px;
+  margin-top: 6px;
+}
+.tl-boardtip--team {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* ------------------------------------------------------------------ pick cards (heroes, trinkets) */
 .tl-heropick {
   position: absolute;

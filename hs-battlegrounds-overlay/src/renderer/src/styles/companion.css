@@ -879,6 +879,17 @@ body.tl-body--companion #root {
   text-overflow: ellipsis;
   font-weight: 650;
 }
+.tl-hist__mate {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #08202a;
+  background: linear-gradient(180deg, #a8e8ff, #4fa9d6);
+}
 .tl-hist__facts {
   display: flex;
   flex-direction: column;
