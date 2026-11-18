@@ -8,7 +8,7 @@
  */
 import { LIMITS } from './constants';
 import { isAlive } from './board';
-import type { AttackInfo, Battle, Minion, SideState } from './types';
+import type { AttackInfo, Battle, HandMinion, Minion, SideState } from './types';
 
 function listeners(side: SideState): Minion[] {
   return side.board.slice();
@@ -43,6 +43,25 @@ export function emitAttackGained(b: Battle, target: Minion, amount: number): voi
   for (const m of listeners(target.side)) {
     if (m.handler?.onFriendlyGainedAttack && isAlive(m)) m.handler.onFriendlyGainedAttack(b, m, target, amount);
   }
+}
+
+/** A minion gained stats through `buff` (only called while `b.watchStatGain` is set). */
+export function emitStatsGained(b: Battle, target: Minion, attack: number, health: number): void {
+  for (const m of listeners(target.side)) {
+    if (m.handler?.onFriendlyGainedStats && isAlive(m)) m.handler.onFriendlyGainedStats(b, m, target, attack, health);
+  }
+}
+
+/** A card in `side`'s hand gained stats in combat (only called while `b.watchStatGain` is set). */
+export function emitHandStatsGained(b: Battle, side: SideState, card: HandMinion, attack: number, health: number): void {
+  for (const m of listeners(side)) {
+    if (m.handler?.onFriendlyHandGainedStats && isAlive(m)) m.handler.onFriendlyHandGainedStats(b, m, card, attack, health);
+  }
+}
+
+/** A minion lost Venomous (side-level effects only). */
+export function emitVenomousLost(b: Battle, m: Minion): void {
+  for (const e of m.side.effects.slice()) e.handler.onFriendlyVenomousLost?.(b, e, m);
 }
 
 export function emitAfterAttack(b: Battle, info: AttackInfo): void {

@@ -3,6 +3,7 @@ import { registerMinion } from './registry';
 import {
   buff,
   buffAll,
+  buffHandCard,
   endAnchor,
   giveVenomous,
   handMinions,
@@ -20,21 +21,10 @@ import type { Battle, HandMinion, SideState } from '../engine/types';
 
 const isMurloc = tribeFilter('MURLOC');
 
-/**
- * Buff a card in hand during combat. The snapshot is replaced too (never mutated: it belongs to
- * the input), so hand minions summoned later this combat (Diremuck Forager, Bassgill, Flighty
- * Scout) carry the bonus.
- */
-function buffHandCard(h: HandMinion, attack: number, health: number): void {
-  h.attack += attack;
-  h.health += health;
-  h.snapshot = { ...h.snapshot, attack: h.attack, health: h.health, maxHealth: h.health };
-}
-
 /** "Give a minion in your hand +X/+Y": a random minion card in hand. */
 function buffRandomHandMinion(b: Battle, side: SideState, attack: number, health: number): void {
   const h = b.rng.pick(handMinions(b, side));
-  if (h) buffHandCard(h, attack, health);
+  if (h) buffHandCard(b, side, h, attack, health);
 }
 
 export function registerMurlocs(): void {
@@ -108,7 +98,7 @@ export function registerMurlocs(): void {
       const a = sd(b, self, 1, 3 * self.mult);
       const h = sd(b, self, 2, 4 * self.mult);
       buffAll(b, self.side, a, h, isMurloc);
-      for (const c of handMinions(b, self.side)) if (hasTribe(c, 'MURLOC')) buffHandCard(c, a, h);
+      for (const c of handMinions(b, self.side)) if (hasTribe(c, 'MURLOC')) buffHandCard(b, self.side, c, a, h);
     },
   });
 
@@ -129,7 +119,7 @@ export function registerMurlocs(): void {
     onSpellCast: (b, self, _spell, target) => {
       if (target !== self) return;
       const h = handMinions(b, self.side)[0];
-      if (h) buffHandCard(h, sd(b, self, 1, 9 * self.mult), sd(b, self, 2, 9 * self.mult));
+      if (h) buffHandCard(b, self.side, h, sd(b, self, 1, 9 * self.mult), sd(b, self, 2, 9 * self.mult));
     },
   });
 

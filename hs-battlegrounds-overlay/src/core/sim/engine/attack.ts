@@ -13,7 +13,7 @@
 import { aliveCount, indexOf, isAlive, neighbours } from './board';
 import { dealDamage } from './actions';
 import { rallyMultiplier, resolveDeaths } from './deaths';
-import { emitAfterAttack, emitFriendlyAttack, emitFriendlyAttacked, guarded } from './events';
+import { emitAfterAttack, emitFriendlyAttack, emitFriendlyAttacked, emitVenomousLost, guarded } from './events';
 import type { AttackInfo, Battle, Minion, SideState } from './types';
 
 /** `Minion.counters` key: "Immune while attacking" (takes no combat damage from the minion it attacks). */
@@ -127,8 +127,14 @@ export function doAttack(b: Battle, attacker: Minion, opts: AttackOptions): void
   const back = attacker.counters?.[IMMUNE_WHILE_ATTACKING]
     ? { dealt: 0, killed: false, excess: 0 }
     : dealDamage(b, target, attacker, tAtk, tVenom);
-  if (attackerDealt && attacker.venomous) attacker.venomous = false;
-  if (back.dealt > 0 && target.venomous) target.venomous = false;
+  if (attackerDealt && attacker.venomous) {
+    attacker.venomous = false;
+    if (attacker.side.effects.length) emitVenomousLost(b, attacker);
+  }
+  if (back.dealt > 0 && target.venomous) {
+    target.venomous = false;
+    if (target.side.effects.length) emitVenomousLost(b, target);
+  }
 
   // Kill / overkill triggers
   const onKill = attacker.handler?.onKill;

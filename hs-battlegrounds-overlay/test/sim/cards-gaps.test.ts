@@ -209,10 +209,8 @@ describe('Buddies and hero-power tokens', () => {
     }
   });
 
-  it('effects the engine cannot model stay reported', () => {
-    for (const id of ['BG25_HERO_100_Buddy', 'TB_BaconShop_HERO_33_Buddy', 'TB_BaconShop_HERO_39_Buddy']) {
-      expect(flagged(solo(side([minion(id)])))).toEqual([id]);
-    }
+  it('effects the engine cannot model stay reported (Festergut; Mishmash / Titanic Guardian: cards-legacy.test.ts)', () => {
+    expect(flagged(solo(side([minion('BG25_HERO_100_Buddy')])))).toEqual(['BG25_HERO_100_Buddy']);
   });
 
   it('Elementium Squirrel Bomb hits once per friendly Mech that died this combat', () => {
@@ -269,8 +267,8 @@ describe('unsupported detection: false alarms and real gaps', () => {
   it('checks second hero powers and the Duos teammate\'s effects too', () => {
     const extra = side([vanilla(1, 1)], { extraHeroPowers: [{ cardId: 'BG22_HERO_000p_Alt', used: true }] });
     expect(flagged(solo(extra))).toEqual(['BG22_HERO_000p_Alt']);
-    const mate = side([vanilla(1, 1)], { trinkets: [{ cardId: 'BG30_MagicItem_803' }] });
-    expect(flagged(solo(side([vanilla(1, 1)], { teammate: mate })))).toEqual(['BG30_MagicItem_803']);
+    const mate = side([vanilla(1, 1)], { trinkets: [{ cardId: 'BG36_MagicItem_841' }] });
+    expect(flagged(solo(side([vanilla(1, 1)], { teammate: mate })))).toEqual(['BG36_MagicItem_841']);
   });
 
   it('still flags unhandled minions whose trigger is about stats or kills', () => {
