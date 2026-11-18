@@ -155,16 +155,22 @@ export function registerHeroPowers(): void {
   });
 
   // Ragnaros - DIE, INSECTS!: Deal 8 damage to two random enemy minions.
+  // Hero powers that cost Gold only act at Start of Combat if they were used this turn.
   registerEffect('TB_BaconShop_HP_019', {
-    startOfCombat: (b, e) => hitRandomEnemies(b, e.side, 2, 8, false),
+    startOfCombat: (b, e) => {
+      if (e.side.heroPowerUsed) hitRandomEnemies(b, e.side, 2, 8, false);
+    },
   });
   // Fire the Cannons!: Deal 4 damage to two random enemy minions.
   registerEffect('TB_BaconShop_HP_027', {
-    startOfCombat: (b, e) => hitRandomEnemies(b, e.side, 2, 4, false),
+    startOfCombat: (b, e) => {
+      if (e.side.heroPowerUsed) hitRandomEnemies(b, e.side, 2, 4, false);
+    },
   });
   // Nefarian - Nefarious Fire: Deal 1 damage to all enemy minions.
   registerEffect('TB_BaconShop_HP_043', {
     startOfCombat: (b, e) => {
+      if (!e.side.heroPowerUsed) return;
       for (const m of aliveMinions(e.side.opponent)) dealDamage(b, null, m, 1);
     },
   });
@@ -198,6 +204,7 @@ export function registerHeroPowers(): void {
   // Embrace Your Rage: Start of Combat: Summon (and get) a minion of your Tier.
   registerEffect('TB_BaconShop_HP_103', {
     startOfCombat: (b, e) => {
+      if (!e.side.heroPowerUsed) return;
       const tier = Math.min(6, e.side.tavernTier);
       const card = randomPoolMinion(b, `tier-${tier}`, (c) => c.tier === tier);
       if (!card) return;

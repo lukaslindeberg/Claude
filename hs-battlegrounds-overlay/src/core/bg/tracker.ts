@@ -148,6 +148,8 @@ interface GameCtx {
   finalPlacement?: number;
   heroOptionIds: number[];
   heroChoiceId?: number;
+  /** Hero options seen in hand before the choice entry: published at the end of the batch. */
+  earlyOptions?: boolean;
   lastHeroOptionsKey: string;
   chosenHeroCardId?: string;
   localHeroId?: number;
@@ -308,6 +310,16 @@ export class BgTracker {
     for (const l of lines) {
       const ev = this.feedLine(l);
       if (ev.length) out.push(...ev);
+    }
+    const g = this.g;
+    if (g?.earlyOptions) {
+      g.earlyOptions = false;
+      if (g.heroChoiceId === undefined && !g.chosenHeroCardId && g.heroOptionIds.length) {
+        this.events = [];
+        this.emitHeroOptions(g, false);
+        this._version++;
+        out.push(...this.events);
+      }
     }
     return out;
   }
@@ -801,6 +813,8 @@ export class BgTracker {
     const g = this.g;
     if (!g || !g.isBg) return;
     const s = this.store;
+    // The game shuffles the offered heroes in hand: republish early options in screen order.
+    if (tag === T.ZONE_POSITION && g.heroChoiceId === undefined && g.heroOptionIds.includes(e.id)) g.earlyOptions = true;
     if (e.id === s.gameEntityId) {
       if (tag === T.STATE && value === 3) {
         this.finishGame(g);
@@ -896,13 +910,30 @@ export class BgTracker {
     if (!ids.length) return;
     g.heroOptionIds = ids;
     g.heroChoiceId = pk.choiceId;
+    g.earlyOptions = false;
     this.emitHeroOptions(g, true);
+  }
+
+  /**
+   * The offered heroes are created in the local player's hand when the game starts; the
+   * "choose a hero" choice entry can follow seconds later. Show them as soon as they exist.
+   */
+  private earlyHeroOption(g: GameCtx, e: Entity): void {
+    if (g.heroChoiceId !== undefined || g.chosenHeroCardId || !e.cardId) return;
+    if (e.tags.get(T.CARDTYPE) !== CardType.HERO || e.tags.get(T.ZONE) !== Zone.HAND) return;
+    const ctl = this.localController;
+    if (ctl <= 0 || e.tags.get(T.CONTROLLER) !== ctl || g.heroOptionIds.includes(e.id)) return;
+    g.heroOptionIds = [...g.heroOptionIds, e.id];
+    g.earlyOptions = true;
   }
 
   private heroOptions(g: GameCtx): HeroOption[] {
     const s = this.store;
     const db = this.cardDb;
-    return g.heroOptionIds.map((id) => {
+    // Before the choice entry: order by hand position (left to right on screen), as the choice lists them.
+    const pos = (id: number) => s.tag(id, T.ZONE_POSITION) || 99;
+    const ids = g.heroChoiceId === undefined ? [...g.heroOptionIds].sort((a, b) => pos(a) - pos(b)) : g.heroOptionIds;
+    return ids.map((id) => {
       const e = s.get(id);
       const cardId = e?.cardId ?? '';
       const card = db.get(cardId);
@@ -1041,6 +1072,7 @@ export class BgTracker {
 
   private onFullEntity(g: GameCtx, e: Entity): void {
     this.inferTribe(g, e);
+    this.earlyHeroOption(g, e);
     const lp = this.store.localPlayer;
     if (lp && e.id === this.store.tag(lp.entityId, T.HERO_ENTITY)) this.refreshLocalHero(g);
     const c = g.combat;
@@ -1077,7 +1109,7 @@ export class BgTracker {
       const id = s.resolve(pk.entity);
       const e = s.get(id);
       if (e && e.tags.get(T.CARDTYPE) === CardType.HERO && e.tags.get(T.ZONE) === Zone.PLAY && c.captured) {
-        const side = e.tags.get(T.CONTROLLER) === this.localController ? 'local' : 'opp';
+        const side = this.attackerSide(g, e.id, e.tags.get(T.CONTROLLER));
         c.heroAttack = { attackerId: e.id, side, atk: e.tags.get(T.ATK) ?? 0 };
         // Measure damage from here on.
         c.baselines.clear();
@@ -1153,6 +1185,21 @@ export class BgTracker {
     }
     const drop = c.baselines.get(e.id)! - now;
     if (drop > (c.maxDrop.get(e.id) ?? 0)) c.maxDrop.set(e.id, drop);
+  }
+
+  /** Side of a hero that attacks at the end of combat (Duos: our teammate's hero is ours). */
+  private attackerSide(g: GameCtx, heroId: number, controller: number | undefined): 'local' | 'opp' {
+    if (controller === this.localController) return 'local';
+    if (controller === this.dummyController) return 'opp';
+    if (this.mode(g) === 'duos') {
+      const tm = this.teammatePid();
+      const pid = this.store.tag(heroId, T.PLAYER_ID);
+      if (pid && (pid === tm || pid === this.localPid(g))) return 'local';
+      const card = this.store.get(heroId)?.cardId;
+      const tmHero = tm ? this.leaderboardHeroes(g).get(tm) : undefined;
+      if (card && tmHero?.cardId === card) return 'local';
+    }
+    return 'opp';
   }
 
   private sideOfHero(id: number): 'local' | 'opp' | undefined {
@@ -1278,7 +1325,11 @@ export class BgTracker {
     let result: 'won' | 'lost' | 'tied';
     let damage: number;
     if (c.heroAttack) {
-      result = c.heroAttack.side === 'local' ? 'won' : 'lost';
+      // Whose hero lost Health decides; the attacker's controller alone can't (in Duos the
+      // teammate's hero can make the final attack, and it isn't controlled by us).
+      if (oppDrop > 0 && ourDrop === 0) result = 'won';
+      else if (ourDrop > 0 && oppDrop === 0) result = 'lost';
+      else result = c.heroAttack.side === 'local' ? 'won' : 'lost';
       const d = result === 'won' ? oppDrop : ourDrop;
       damage = d > 0 ? d : c.heroAttack.atk;
     } else if (oppDrop > 0 && ourDrop === 0) {

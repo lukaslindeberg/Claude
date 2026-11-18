@@ -15,8 +15,10 @@ const gzipAsync = promisify(gzip);
 
 /** Cap per Power.log (uncompressed); a larger log keeps its tail. */
 export const GAME_LOG_MAX_BYTES = 60 * 1024 * 1024;
-/** The previous client session's Power.log is included when at most this big. */
-export const PREVIOUS_GAME_LOG_MAX_BYTES = 25 * 1024 * 1024;
+/** Older client sessions (Hearthstone restarts) are included up to this total (uncompressed). */
+export const GAME_LOGS_TOTAL_MAX_BYTES = 150 * 1024 * 1024;
+/** How many client sessions' Power.logs an export includes at most. */
+export const GAME_LOG_SESSIONS = 3;
 export const HISTORY_EXPORT_MATCHES = 30;
 
 export interface ExportGameLogsInput {
@@ -86,8 +88,13 @@ export interface GameLogFile {
   size: number;
 }
 
-/** The newest client session's Power.log, plus the previous one if it is small. */
-export function selectGameLogs(logsDir: string, previousMaxBytes = PREVIOUS_GAME_LOG_MAX_BYTES): GameLogFile[] {
+/**
+ * The newest client sessions' Power.logs (up to 3: Hearthstone writes a new folder each
+ * time it starts, so a restart mid-evening splits the games). Each log counts with at most
+ * GAME_LOG_MAX_BYTES (larger ones keep their tail) toward a total budget; the newest is
+ * always included.
+ */
+export function selectGameLogs(logsDir: string, totalMaxBytes = GAME_LOGS_TOTAL_MAX_BYTES): GameLogFile[] {
   let names: string[];
   try {
     names = readdirSync(logsDir, { withFileTypes: true })
@@ -105,7 +112,7 @@ export function selectGameLogs(logsDir: string, previousMaxBytes = PREVIOUS_GAME
     } catch {
       /* folder without a Power.log (Hearthstone not started a game yet) */
     }
-    if (withLogs.length >= 2) break;
+    if (withLogs.length >= GAME_LOG_SESSIONS) break;
   }
   if (!withLogs.length) {
     // Very old clients: <Logs>/Power.log directly.
@@ -119,7 +126,13 @@ export function selectGameLogs(logsDir: string, previousMaxBytes = PREVIOUS_GAME
     return [];
   }
   const out = [withLogs[0]];
-  if (withLogs[1] && withLogs[1].size <= previousMaxBytes) out.push(withLogs[1]);
+  let budget = totalMaxBytes - Math.min(withLogs[0].size, GAME_LOG_MAX_BYTES);
+  for (const g of withLogs.slice(1)) {
+    const cost = Math.min(g.size, GAME_LOG_MAX_BYTES);
+    if (cost > budget) break;
+    out.push(g);
+    budget -= cost;
+  }
   return out;
 }
 
@@ -183,6 +196,8 @@ logs/sim-cases.jsonl   One JSON object per combat (last ~400): app version, card
                        chance the sim gave the actual outcome, "surprise" when it
                        was below 5%). Replay a case with simulateBattle(case.input)
                        from src/core/sim to reproduce a simulator mistake.
+logs/tribe-capture.png The last hero-pick screen crop the tribe reader couldn't read
+                       (Windows; only when a read failed).
 settings.json          The app settings.
 history.json           The last 30 saved matches (newest first), with the
                        simulator prediction stored on each combat.
@@ -192,7 +207,7 @@ system.json            App/Electron/Chrome/Node versions, OS, CPU, memory,
                        displays (bounds, work area, scale factor), GPU features.
 hearthstone/log.config Hearthstone's logging configuration (if found).
 hearthstone/<session>/Power.log.gz
-                       Hearthstone's own game log of the newest client session
+                       Hearthstone's own game logs of the newest client sessions
                        (and the previous one if small), gzipped, at most 60 MB
                        uncompressed each (the tail is kept if larger). Only present
                        when "Include Hearthstone game logs" was checked. Feed it to
@@ -220,6 +235,15 @@ export async function writeDiagnosticsZip(input: DiagnosticsExportInput): Promis
       }
     }
     await zip.addAsync('logs/sim-cases.jsonl', input.simCases, { mtime });
+    // Last hero-pick screen crop the tribe reader could not read (Windows), if any.
+    const capture = join(input.appLogsDir, 'tribe-capture.png');
+    if (existsSync(capture)) {
+      try {
+        await zip.addAsync('logs/tribe-capture.png', readFileSync(capture), { store: true, mtime: statSync(capture).mtime });
+      } catch {
+        /* optional */
+      }
+    }
 
     zip.add('settings.json', json(input.settings), { mtime });
     const history = input.history.slice(0, HISTORY_EXPORT_MATCHES);

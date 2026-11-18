@@ -216,10 +216,23 @@ describe('start of combat', () => {
   });
 
   it('hero power: Nefarious Fire deals 1 damage to all enemy minions', () => {
-    const p = side([vanilla(1, 1)], { heroPowerCardId: 'TB_BaconShop_HP_043' });
+    const p = side([vanilla(1, 1)], { heroPowerCardId: 'TB_BaconShop_HP_043', heroPowerUsed: true });
     const b = newBattle(battle(p, side([vanilla(1, 1), vanilla(1, 2)])));
     startOfCombat(b);
     expect(b.sides[1].board.map((m) => m.health)).toEqual([1]);
+  });
+
+  it('hero powers that cost Gold do nothing at Start of Combat unless used this turn', () => {
+    const fire = newBattle(battle(side([vanilla(1, 1)], { heroPowerCardId: 'TB_BaconShop_HP_043', heroPowerUsed: false }), side([vanilla(1, 1)])));
+    startOfCombat(fire);
+    expect(fire.sides[1].board.length).toBe(1);
+    // Y'Shaarj: no summon without the Hero Power (a real Duos fight that tied, simulated as 100% win).
+    const rage = newBattle(battle(side([vanilla(2, 2)], { heroPowerCardId: 'TB_BaconShop_HP_103', heroPowerUsed: false, tavernTier: 2 }), side([vanilla(3, 3)])));
+    startOfCombat(rage);
+    expect(rage.sides[0].board.length).toBe(1);
+    const used = newBattle(battle(side([vanilla(2, 2)], { heroPowerCardId: 'TB_BaconShop_HP_103', heroPowerUsed: true, tavernTier: 2 }), side([vanilla(3, 3)])));
+    startOfCombat(used);
+    expect(used.sides[0].board.length).toBe(2);
   });
 
   it('hero power: Wingmen buffs the outer minions and they attack immediately', () => {

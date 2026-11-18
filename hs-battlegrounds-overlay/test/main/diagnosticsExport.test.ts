@@ -42,15 +42,15 @@ describe('export helpers', () => {
     expect(pickExportDir([undefined, file, join(dir, 'Downloads')])).toBe(join(dir, 'Downloads'));
   });
 
-  it('selects the newest session log and the previous one only if small', () => {
+  it('selects the newest session logs (up to 3) within the size budget', () => {
     const logs = join(dir, 'Logs');
     session(logs, 'Hearthstone_2026_11_06_20_00_00', 'old');
     session(logs, 'Hearthstone_2026_11_07_10_00_00', 'previous');
     session(logs, 'Hearthstone_2026_11_07_18_30_00', 'newest');
     mkdirSync(join(logs, 'Hearthstone_2026_11_07_19_00_00')); // no Power.log yet
     mkdirSync(join(logs, 'unrelated'));
-    expect(selectGameLogs(logs).map((g) => g.session)).toEqual(['Hearthstone_2026_11_07_18_30_00', 'Hearthstone_2026_11_07_10_00_00']);
-    expect(selectGameLogs(logs, 3).map((g) => g.session)).toEqual(['Hearthstone_2026_11_07_18_30_00']);
+    expect(selectGameLogs(logs).map((g) => g.session)).toEqual(['Hearthstone_2026_11_07_18_30_00', 'Hearthstone_2026_11_07_10_00_00', 'Hearthstone_2026_11_06_20_00_00']);
+    expect(selectGameLogs(logs, 8).map((g) => g.session)).toEqual(['Hearthstone_2026_11_07_18_30_00']);
     const legacy = join(dir, 'LegacyLogs');
     mkdirSync(legacy);
     writeFileSync(join(legacy, 'Power.log'), 'x');

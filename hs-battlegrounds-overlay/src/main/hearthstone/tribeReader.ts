@@ -116,7 +116,7 @@ export interface TribeReadResult {
 }
 
 /** One attempt: capture, crop, OCR, parse. `windowSize` is the game window in screen pixels. */
-export async function readLobbyTribes(windowSize: { width: number; height: number }): Promise<TribeReadResult> {
+export async function readLobbyTribes(windowSize: { width: number; height: number }, debugImagePath?: string): Promise<TribeReadResult> {
   if (!tribeReaderSupported()) return { reason: 'not supported on this platform' };
   const shot = await captureGameWindow(windowSize);
   if (!shot) return { reason: 'Hearthstone window not capturable' };
@@ -127,18 +127,23 @@ export async function readLobbyTribes(windowSize: { width: number; height: numbe
     width: Math.round(width * (CROP.x1 - CROP.x0)),
     height: Math.round(height * (CROP.y1 - CROP.y0)),
   });
-  if (isBlank(crop)) return { reason: 'captured image is blank (window capture not supported for this window?)' };
+  if (isBlank(crop)) {
+    if (debugImagePath) await fs.writeFile(debugImagePath, crop.toPNG()).catch(() => undefined);
+    return { reason: 'captured image is blank (window capture not supported for this window?)' };
+  }
   const dir = await fs.mkdtemp(join(tmpdir(), 'tavern-lens-'));
   const imagePath = join(dir, 'tribes.png');
   const scriptPath = join(dir, 'ocr.ps1');
   try {
-    await fs.writeFile(imagePath, prepare(crop).toPNG());
+    const png = prepare(crop).toPNG();
+    await fs.writeFile(imagePath, png);
     await fs.writeFile(scriptPath, OCR_SCRIPT, 'utf8');
     const text = await runOcr(scriptPath, imagePath);
     const parsed = parseLobbyTribesText(text);
     if (!parsed) {
-      log.debug(`tribe panel not recognised in: ${text.replace(/\s+/g, ' ').slice(0, 300)}`);
-      return { reason: 'tribe panel not recognised' };
+      // Kept for the diagnostics export: what was captured and what OCR read.
+      if (debugImagePath) await fs.writeFile(debugImagePath, png).catch(() => undefined);
+      return { reason: `tribe panel not recognised; OCR read: "${text.replace(/\s+/g, ' ').trim().slice(0, 200)}"` };
     }
     return { tribes: parsed.inGame };
   } finally {

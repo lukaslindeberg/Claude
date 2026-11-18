@@ -635,7 +635,8 @@ export class TavernLensApp {
 
   /**
    * At hero pick the game shows the lobby's tribes ("In this game: ..."), which the log
-   * doesn't contain: read them from the game window (Windows), a few tries 1.5 s apart.
+   * doesn't contain: read them from the game window (Windows), every 2 s until a hero is
+   * picked (the panel appears only after the game's intro).
    */
   private maybeReadTribes(state: BgGameState): void {
     if (!tribeReaderSupported() || state.spectating) return;
@@ -655,7 +656,7 @@ export class TavernLensApp {
     if (r.gameId !== gameId || r.busy || state.gameId !== gameId || state.phase !== 'heroSelection' || state.tribesSource === 'screen') return;
     const gw = this.status.get().gameWindow;
     const retry = () => {
-      if (r.attempts < 8 && r.gameId === gameId) r.timer = setTimeout(() => void this.readTribesOnce(gameId), 1500);
+      if (r.attempts < 40 && r.gameId === gameId) r.timer = setTimeout(() => void this.readTribesOnce(gameId), 2000);
       else if (r.gameId === gameId) log.info('lobby tribes: not read from the hero-pick screen; the tribe picker stays available');
     };
     if (!gw.found || gw.minimized || !gw.bounds) return retry();
@@ -664,13 +665,18 @@ export class TavernLensApp {
     const started = Date.now();
     try {
       const scale = screen.getDisplayMatching(gw.bounds).scaleFactor || 1;
-      const res = await readLobbyTribes({ width: Math.round(gw.bounds.width * scale), height: Math.round(gw.bounds.height * scale) });
+      const res = await readLobbyTribes(
+        { width: Math.round(gw.bounds.width * scale), height: Math.round(gw.bounds.height * scale) },
+        join(this.appLogsDir, 'tribe-capture.png'),
+      );
       if (res.tribes?.length) {
         const changed = this.live.setLobbyTribes(res.tribes);
         log.info(`lobby tribes read from the hero-pick screen in ${Date.now() - started} ms (try ${r.attempts}): ${res.tribes.join(', ')}${changed ? '' : ' (unchanged)'}`);
         return;
       }
-      log.debug(`lobby tribes: try ${r.attempts} found nothing (${res.reason ?? 'unknown'})`);
+      const msg = `lobby tribes: try ${r.attempts} found nothing (${res.reason ?? 'unknown'})`;
+      if (r.attempts === 1 || r.attempts % 5 === 0) log.info(msg);
+      else log.debug(msg);
     } catch (err) {
       log.warn(`lobby tribes: reading the hero-pick screen failed (try ${r.attempts})`, err);
     } finally {
