@@ -35,10 +35,6 @@
     "tip": "Always keep a spare minion in hand for the Shredder to summon with Divine Shield; sell the Shredder once your board needs the slot."
   },
   {
-    "cardId": "BG22_HERO_001",
-    "tip": "Use it every turn: take +3 Health and Taunt early to win the first fights, and switch to the damage Element when opponents rely on Divine Shields."
-  },
-  {
     "cardId": "BG22_HERO_002",
     "tip": "From turn 7 your highest-Attack minion gets copied in combat, so concentrate Attack buffs on one durable minion (Divine Shield or Cleave)."
   },
@@ -48,7 +44,7 @@
   },
   {
     "cardId": "BG22_HERO_004",
-    "tip": "You see a pair every turn: build toward triples, and Freeze and unfreeze to drop a copy you don't want; leveling gives strong new-Tier pairs."
+    "tip": "You see a pair of the highest-Tier minion after every Refresh, so lean into triples; leveling gives you pairs of the new Tier."
   },
   {
     "cardId": "BG22_HERO_200",
@@ -64,10 +60,6 @@
   {
     "cardId": "BG22_HERO_305",
     "tip": "Play Deathrattle and Reborn minions early to trigger Avenge (4) more often; each Whelp makes the next one bigger, so earlier triggers snowball."
-  },
-  {
-    "cardId": "BG23_HERO_303",
-    "tip": "Watch your next opponent's main tribe for an easy guess; with the reliable Coins, level on turn 2 and still double-buy on turn 3."
   },
   {
     "cardId": "BG23_HERO_305",
@@ -110,7 +102,7 @@
   },
   {
     "cardId": "BG31_HERO_006",
-    "tip": "It's free, so use the discount every turn from turn 3; if nothing useful is up, take a 1-Gold spell for free and hold it for later."
+    "tip": "Use the discount on a Tavern spell every turn from turn 3; spells you don't need right away can be held for later."
   },
   {
     "cardId": "BG32_HERO_001",
@@ -133,10 +125,6 @@
     "tip": "Pick the Tier 5 you can build around and commit to its plan from turn 1; it arrives on turn 7, so keep your Health up until then."
   },
   {
-    "cardId": "BG36_HERO_105",
-    "tip": "Your Dark Gift Discovers keep coming every 4 turns, so spend Gold on levels rather than paid Dark Gifts early; with low armor, contest turns 4-7."
-  },
-  {
     "cardId": "TB_BaconShop_HERO_01",
     "tip": "Buy cheap cards and token makers early to upgrade the buff fast, keeping 1 Gold for the Hero Power; stack it on one durable minion you'll keep."
   },
@@ -146,7 +134,7 @@
   },
   {
     "cardId": "TB_BaconShop_HERO_08",
-    "tip": "Put buffed Cleave or Venomous minions on the ends; Deathrattle minions like Goldrinn there trigger before the opponent can answer them."
+    "tip": "Put buffed Cleave or Venomous minions on the ends; Deathrattle minions there trigger before the opponent can answer them."
   },
   {
     "cardId": "TB_BaconShop_HERO_10",
@@ -184,7 +172,7 @@
   },
   {
     "cardId": "TB_BaconShop_HERO_22",
-    "tip": "Use it every turn on Divine Shield or Deathrattle minions; Reborn returns base stats, so avoid minions that only matter for their buffs."
+    "tip": "Use it every turn on your key Divine Shield or Deathrattle minion."
   },
   {
     "cardId": "TB_BaconShop_HERO_23",
@@ -192,7 +180,7 @@
   },
   {
     "cardId": "TB_BaconShop_HERO_33",
-    "tip": "Make the Amalgam your carry: every tribe's buffs hit it, so stack buffs and keyword-granting effects on it, and watch for Tess or Rafaam copying it."
+    "tip": "Make the Amalgam your carry: it has every type, so every tribe's buffs hit it."
   },
   {
     "cardId": "TB_BaconShop_HERO_34",
@@ -220,7 +208,7 @@
   },
   {
     "cardId": "TB_BaconShop_HERO_43",
-    "tip": "Buy Battlecry minions early, token makers like Alleycat count, to get Brann Bronzebeard by the midgame, then build Murlocs or Dragons around him."
+    "tip": "Buy Battlecry minions early to get Brann Bronzebeard by the midgame, then build around Battlecries."
   },
   {
     "cardId": "TB_BaconShop_HERO_45",
@@ -236,14 +224,14 @@
   },
   {
     "cardId": "TB_BaconShop_HERO_53",
-    "tip": "Force Dragons; Freezing guarantees the extra slot is a Dragon, so Freeze when you want more Dragon looks next turn.",
+    "tip": "Force Dragons: every Refresh shows an extra Dragon, so you see far more Dragons than other players.",
     "wantsTribes": [
       "DRAGON"
     ]
   },
   {
     "cardId": "TB_BaconShop_HERO_55",
-    "tip": "Force Murlocs and sell spent Battlecry Murlocs to fill the 5-sell counter and get new ones; a Murloc Tidehunter can beat a Refresh for finding Murlocs.",
+    "tip": "Force Murlocs and sell spent Battlecry Murlocs to fill the 5-sell counter and get new ones.",
     "wantsTribes": [
       "MURLOC"
     ]
@@ -261,7 +249,7 @@
   },
   {
     "cardId": "TB_BaconShop_HERO_58",
-    "tip": "Play token Battlecry minions like Alleycat, then transform both bodies; also reroll Tavern minions at each new Tier to find key cards."
+    "tip": "Reroll Tavern minions at each new Tier to find key cards, and transform tokens or minions you'd sell anyway."
   },
   {
     "cardId": "TB_BaconShop_HERO_59",
@@ -330,16 +318,8 @@
     "tip": "Pair the Fish with Deathrattle minions early, when doubling one Deathrattle can win a fight; Beasts or Undead suit it best late."
   },
   {
-    "cardId": "BG30_MagicItem_435",
-    "tip": "Below-average placement: it's slow. Save each Goldenizer for a Tier 5-6 carry whose Golden doubles its effect, not early filler; skip it if you need tempo now."
-  },
-  {
-    "cardId": "BG32_MagicItem_951",
-    "tip": "Each turn it Goldens a random Tier 1-4 minion, so sell low-Tier filler you don't care about and keep the ones whose Golden matters as its only targets."
-  },
-  {
     "cardId": "BG30_MagicItem_900",
-    "tip": "Every card played counts, including Tavern spells and Blood Gems, so play cheap cards each turn; the +4/+4 lands on a random Dragon.",
+    "tip": "Every card you play counts, Tavern spells and Blood Gems included, so cheap cards charge it fast.",
     "wantsTribes": [
       "DRAGON"
     ]
@@ -349,12 +329,8 @@
     "tip": "Blood Gems count as spells, so Quilboar Gem generators charge it fast. Fill your board before the spell that triggers it so all 7 minions get the Gem."
   },
   {
-    "cardId": "BG32_MagicItem_366",
-    "tip": "Greater, Solo only. Its 2 Refreshes show Tier 6 even below Tier 6, so delay levelling and roll twice a turn for Tier 6 carries. Those rolls never show low-Tier triple pieces."
-  },
-  {
     "cardId": "BG30_MagicItem_888",
-    "tip": "Does nothing until turn 9, so take it only if your board can hold Health until then; then buy a Greater that stacks when doubled, like a per-turn generator."
+    "tip": "It does nothing until your Greater Trinket on turn 9, which it then copies, so take it only if your board can hold Health until then."
   },
   {
     "cardId": "BG32_MagicItem_271",
@@ -370,14 +346,14 @@
   },
   {
     "cardId": "BG30_MagicItem_943",
-    "tip": "Only Gems played from hand get +6/+6, and Surveyor casts them twice. Value Gem-generating Quilboar over raw stats and pour the Gems into one carry.",
+    "tip": "Only Gems played from your hand get the extra +6/+6, so play them from hand onto the minion you want to grow.",
     "wantsTribes": [
       "QUILBOAR"
     ]
   },
   {
     "cardId": "BG30_MagicItem_868",
-    "tip": "Play Demons with Wrath Weaver out: each self-ping is rewound and grows Soul Rewinder's Attack and Health. Health-cost buys (Pilgrimp, Bazaar Sticker) feed it too.",
+    "tip": "Play Demons with Wrath Weaver out: each time it damages your hero, Soul Rewinder rewinds the damage and grows in Attack and Health.",
     "wantsTribes": [
       "DEMON"
     ]
@@ -401,20 +377,16 @@
     ]
   },
   {
-    "cardId": "BG30_MagicItem_423",
-    "tip": "The extra card is from a higher Tier, so it only pays off if you stay a Tier lower and roll a lot."
-  },
-  {
     "cardId": "BG35_MagicItem_755",
     "tip": "A 1-Gold Battlecry minion sells back for 1, so buying and selling is a free Battlecry. Best with Brann, Dragon Skull or Battlecry counters."
   },
   {
     "cardId": "BG36_MagicItem_308",
-    "tip": "Needs a Choose One supply (Glass of Perspective, Boar Gamer, Bramble Tunneler, Choose One spells); skip it without one. Turbo Hogrider rewards each card played."
+    "tip": "Needs a supply of Choose One cards (Glass of Perspective, Bramble Tunneler); skip it without one. Turbo Hogrider pays off every Choose One card you play."
   },
   {
     "cardId": "BG36_MagicItem_220",
-    "tip": "Gold scales with types, and Amalgams or dual-type minions count, so take it for a mixed board. On a single-tribe board it's 1-2 Gold a turn."
+    "tip": "Gold scales with how many minion types you have, so it's strong on a mixed board and weak on a single-tribe one."
   },
   {
     "cardId": "BG36_MagicItem_610",
@@ -447,12 +419,8 @@
     "tip": "Put Deathrattles that give permanent stats or cards in your two left-most slots. Summon Deathrattles are wasted on a full board."
   },
   {
-    "cardId": "BG36_MagicItem_214",
-    "tip": "Only Rallies that get cards or give permanent stats pay off (Bigwig Bandit, Sanguine Refiner, Bronze Timewalker); damage or combat-only Rallies do nothing."
-  },
-  {
     "cardId": "BG30_MagicItem_700",
-    "tip": "Put your best Deathrattle left-most with low Health so it dies first and gets the double trigger."
+    "tip": "Put your best Deathrattle minion where it dies early in combat (left-most, low Health) so it gets the extra trigger."
   },
   {
     "cardId": "BG35_MagicItem_733",
@@ -467,7 +435,7 @@
   },
   {
     "cardId": "BG35_MagicItem_710",
-    "tip": "Bounties are Tavern spells, so Bounty-generating Pirates trigger it; cast cheap spells every turn.",
+    "tip": "Cast cheap Tavern spells every turn; each one buffs all your Pirates.",
     "wantsTribes": [
       "PIRATE"
     ]
@@ -478,11 +446,7 @@
   },
   {
     "cardId": "BG30_MagicItem_891",
-    "tip": "Keep turn 8 Gold free for the Greater. It's best when you're ahead; on a weak board, losing that Gold can cost you HP."
-  },
-  {
-    "cardId": "BG30_MagicItem_847",
-    "tip": "The Gold pays off only from about turn 10. Take it only if your board can hold HP for a few turns."
+    "tip": "Keep Gold free on the turn the Greater Trinket arrives (2 turns later), since you have to buy it."
   },
   {
     "cardId": "BG30_MagicItem_544",
@@ -504,7 +468,7 @@
   },
   {
     "cardId": "BG35_MagicItem_814",
-    "tip": "Only take it if you'll hit Tier 6 by about turn 9. Level early in that turn so you spend the 14 Gold right away."
+    "tip": "Level to Tier 6 early in the turn, so you can spend the 14 Gold right away."
   },
   {
     "cardId": "BG36_MagicItem_370",
@@ -513,13 +477,6 @@
   {
     "cardId": "BG32_MagicItem_416",
     "tip": "Play your strongest scaling Battlecry first each turn. A filler Battlecry played first wastes the trigger."
-  },
-  {
-    "cardId": "BG36_MagicItem_215",
-    "tip": "Chromadrakes are Dragon Battlecries too, so their permanent Tavern spell and Dragon buffs double. Brann stacks on top.",
-    "wantsTribes": [
-      "DRAGON"
-    ]
   },
   {
     "cardId": "BG35_MagicItem_931",
@@ -554,7 +511,7 @@
   },
   {
     "cardId": "BG36_MagicItem_418",
-    "tip": "Needs a discard source (Aberrations, Willbreaker Sticker, a discard Hero Power); once charged, every Tavern spell you cast is stronger, so flood them."
+    "tip": "Needs a way to discard cards; once charged, every Tavern spell you cast is stronger for the rest of the game."
   },
   {
     "cardId": "BG30_MagicItem_902",
@@ -565,27 +522,12 @@
     "tip": "End every turn with 7 minions, and avoid swapping out buffed minions late, since new ones miss the stacks."
   },
   {
-    "cardId": "BG32_MagicItem_364",
-    "tip": "Only take it with Dragons that grow or gain keywords during combat. Otherwise it's an empty pick.",
-    "wantsTribes": [
-      "DRAGON"
-    ]
-  },
-  {
     "cardId": "BG35_MagicItem_820",
     "tip": "Take it at low Health. The Ice Block lets you spend the turn greedily (level or roll) without dying."
   },
   {
     "cardId": "BG32_MagicItem_817",
     "tip": "The steal happens at end of turn, so level or roll last and end on a shop with a high-Tier card."
-  },
-  {
-    "cardId": "BG30_MagicItem_541",
-    "tip": "Pair it with Soul Rewinder: rewound damage still counts, so Wrath Weaver pings and Health-cost buys grow the shop buff for free."
-  },
-  {
-    "cardId": "BG30_MagicItem_418",
-    "tip": "Hold Brann until you have Battlecries worth doubling. As a Murloc and Dragon, tribal buffs for either can grow him."
   },
   {
     "cardId": "BG32_MagicItem_901",
@@ -609,13 +551,6 @@
   {
     "cardId": "BG32_MagicItem_808t",
     "tip": "Blood Gems count as spells, so Quilboar Gem generators charge it fast. Fill your board before the spell that triggers it so all 7 minions get the Gems."
-  },
-  {
-    "cardId": "BG36_MagicItem_404",
-    "tip": "Your Deity only fights after 4 friendly Aberrations die in a combat, so take it only on a wide Aberration board. With C'Thun, the stacked stats split across your minions.",
-    "wantsTribes": [
-      "ABERRATION"
-    ]
   },
   {
     "cardId": "BG30_MagicItem_426",
@@ -642,11 +577,11 @@
   },
   {
     "cardId": "BG36_MagicItem_611",
-    "tip": "Each Tableware scales with distinct types, so build a mixed board; Amalgams and dual-type minions count."
+    "tip": "Each Tableware repeats for every different minion type you have, so it's strongest on a mixed board."
   },
   {
     "cardId": "BG36_MagicItem_400",
-    "tip": "With a discard source (Aberrations, Willbreaker Sticker, Kith'ix), discard the Coins for permanent max Gold instead of playing them."
+    "tip": "Discard the Coins instead of playing them if you can (for example with Willbreaker Sticker): each gives +2 max Gold for the rest of the game."
   },
   {
     "cardId": "BG32_MagicItem_926",
@@ -668,13 +603,6 @@
     "tip": "Use it on your most expensive Tavern spell each turn, and only while your Health can afford it."
   },
   {
-    "cardId": "BG36_MagicItem_830",
-    "tip": "Cast Tavern spells before you roll: each adds a Fodder to your next Refresh for your Demons to eat.",
-    "wantsTribes": [
-      "DEMON"
-    ]
-  },
-  {
     "cardId": "BG35_MagicItem_850",
     "tip": "Each cast lasts all game, so every Refresh puts more stats on shop minions. Roll often and buy or Freeze the buffed ones; it works on any board."
   },
@@ -684,7 +612,7 @@
   },
   {
     "cardId": "BG36_MagicItem_430",
-    "tip": "Needs a discard source (Aberrations, a discard Hero Power); discarded Sludge comes back, so it loops every turn."
+    "tip": "Needs a way to discard spells; a discarded Sludge Corrosion casts twice and gives you a new one, so it repeats every turn."
   },
   {
     "cardId": "BG32_MagicItem_350",
@@ -703,11 +631,11 @@
   },
   {
     "cardId": "BG30_MagicItem_701",
-    "tip": "Make every fourth buy an expensive one (a high-Tier minion or big spell). With Soul Rewinder out, the Health cost is rewound."
+    "tip": "Make every fourth buy an expensive one (a high-Tier minion or a big spell), since it costs Health instead of Gold."
   },
   {
     "cardId": "BG32_MagicItem_821",
-    "tip": "Buy your most expensive Demon with Health each turn; with Soul Rewinder out the damage is rewound, making it free.",
+    "tip": "Buy your most expensive Demon with Health each turn, while your Health can afford it.",
     "wantsTribes": [
       "DEMON"
     ]
@@ -750,7 +678,7 @@
   },
   {
     "cardId": "BG36_MagicItem_852",
-    "tip": "The unplayed spell is discarded each turn, which feeds discard payoffs (Corrupted Coins, Sludge Corrosion, Aberrations)."
+    "tip": "The unplayed spell is discarded each turn, which feeds discard payoffs (Corrupted Coins, Sludge Corrosion)."
   },
   {
     "cardId": "BG32_MagicItem_205",
@@ -768,7 +696,7 @@
   },
   {
     "cardId": "BG35_MagicItem_742",
-    "tip": "Keep Mechs on both ends of your board, or the Magnetize is lost. The Accord-o-Trons give stats and Gold.",
+    "tip": "Keep Mechs on both ends of your board so both Accord-o-Trons Magnetize; each also gives 1 Gold at the start of your turn.",
     "wantsTribes": [
       "MECHANICAL"
     ]
@@ -799,10 +727,6 @@
     "wantsTribes": [
       "MURLOC"
     ]
-  },
-  {
-    "cardId": "BG32_MagicItem_367",
-    "tip": "Only offered if you have an end of turn minion; take it if you have or can find several more end of turn minions or trinkets."
   },
   {
     "cardId": "BG36_MagicItem_302",
@@ -915,7 +839,7 @@
   },
   {
     "cardId": "BG36_MagicItem_406",
-    "tip": "Needs a discard source (Willbreaker Sticker, Aberration discard effects); each discarded spell becomes a new Aberration."
+    "tip": "Needs a way to discard spells, such as Willbreaker Sticker; each discarded spell gives you a new Aberration."
   },
   {
     "cardId": "BG36_MagicItem_820",
@@ -938,7 +862,7 @@
   },
   {
     "cardId": "BG36_MagicItem_403",
-    "tip": "Needs a steady discard source (Aberrations, Willbreaker Sticker, Kith'ix); every discard all game grows the whole board."
+    "tip": "Needs a steady way to discard cards (Willbreaker Sticker, for example); every discard all game grows your whole board."
   },
   {
     "cardId": "BG30_MagicItem_555",
