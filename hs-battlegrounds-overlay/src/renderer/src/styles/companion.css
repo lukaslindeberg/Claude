@@ -1090,10 +1090,12 @@ body.tl-body--companion #root {
   gap: 16px;
   align-items: start;
 }
-.tl-settings > .tl-card:first-child,
+.tl-settings > .tl-card:first-child {
+  grid-column: 1 / -1;
+}
 .tl-settings__widgets {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 14px 24px;
 }
 .tl-settings__widgets.is-disabled {
