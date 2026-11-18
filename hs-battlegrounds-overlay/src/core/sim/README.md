@@ -55,6 +55,7 @@ sim/
     heroPowers.ts trinkets.ts questRewards.ts anomalies.ts
     timewarped.ts     Timewarped minions
     buddies.ts        hero Buddies and hero-power tokens (Protoss, Zerg, Sneed's Shredder)
+    legacy.ts         out-of-pool minions seen in older games (Rat Pack, Mantid Queen, Ripsnarl Captain, ...)
     battlecries.ts    Battlecries triggered in combat (Greenskeeper, Rylak, Battle Horn), Brann/Dragon's Eye
     index.ts          ensureCardsRegistered(): registers everything (add new files here)
 ```
@@ -154,6 +155,8 @@ registerEnchantment('BG22_HERO_001p_t1e', { deathrattle: EARTH_DR });
 | `onDeathrattleTriggered(b, self, source)` | after a friendly Deathrattle triggered |
 | `onBloodGem(b, self)` | after a Blood Gem was played on this |
 | `onStatsChanged(b, self)` | after `buff` / `setStats` |
+| `onFriendlyGainedStats(b, self, target, attack, health)` | a friendly minion (incl. self) gained stats via `buff` (only while `b.watchStatGain`; set it in `init`) |
+| `onFriendlyHandGainedStats(b, self, card, attack, health)` | a card in hand gained stats via `buffHandCard` (needs `b.watchStatGain`) |
 | `onSpellCast(b, self, spellId, target)` | owner cast a Tavern spell in combat (`target === self`: "on this") |
 | `aura(b, self, target)` | static aura bonus `{attack, health}` for `target`, recomputed on board changes |
 | `battlecry(b, self)` | its Battlecry when another effect triggers it in combat (`triggerBattlecry` applies Brann / Deios / Dragon's Eye) |
@@ -161,7 +164,7 @@ registerEnchantment('BG22_HERO_001p_t1e', { deathrattle: EARTH_DR });
 `EffectHandler` (side-level) has `init`, `startOfCombat`, `avenge`/`onAvenge`, `onFriendlyDeath`,
 `onFriendlyAttack`, `afterFriendlyAttack`, `onFriendlySummon`, `afterFriendlySummon`,
 `onFriendlyReborn`, `onDeathrattleTriggered`, `onBoardEmpty`, `onDeityAwakened`, `onEnemyDeath`,
-`onFriendlyDamaged`, `onFriendlyDivineShieldLost`, `onSpellCast`; `e.side`,
+`onFriendlyDamaged`, `onFriendlyDivineShieldLost`, `onFriendlyVenomousLost`, `onSpellCast`; `e.side`,
 `e.scriptData1/2/3` (trinket / hero power script data), `e.data` scratch, and
 `unsupportedWhen({ side, cardId, used })` for effects that stay reported in some inputs (Lock and Load
 and Deadeye after the hero power was used). `side.summonBuffs` (`{ tribe?, maxTier?, attack, health }`)
@@ -172,7 +175,7 @@ Useful helpers (`cards/helpers.ts`): `summonForDeath`, `summonRightOf`, `summonT
 `giveVenomous`, `playBloodGem`, `castSpell`, `giveDeity`, `attackImmediately`,
 `triggerDeathrattlesArtificially`, `queueSpaceSummon`, `randomFriendly(ies)`, `randomPoolMinion`,
 `highestBy`, `leftMost`, `rightMost`, `neighbours`, `highestInHand`, `summonFromHand`,
-`summonBeetles`, `improveBeetles`, `improveUndeadAttack`, `counter`/`setCounter` (per-combat
+`summonBeetles`, `improveBeetles`, `buffHandCard` (stat gains of cards in hand), `improveUndeadAttack`, `counter`/`setCounter` (per-combat
 counters), `sd`, `bloodGemStats` / `addBloodGemStats` (stats a minion got from Blood Gems: the
 snapshot's `BG20_GEMe2` enchantment script data 1/2 plus gems played on it in combat). Debug: set `battle.log = []` before `runBattle` to get an attack/death/summon log.
 
@@ -235,16 +238,32 @@ They run when Timewarped Greenskeeper, Rylak Metalhead, Rylak Portrait or Battle
 Non-pool minions that current games can produce were found by following token ids, minion names in
 card text and `BACON_EVOLUTION_CARD_ID` from the pool, Timewarped minions, the heroes (hero powers,
 Buddies) and trinkets in play (community stats, patch 37.0.2): 174 reachable. 104 have no combat
-effect beyond keywords/stats; 66 are handled (45 Buddies / hero-power tokens added in
-`cards/buddies.ts`, the rest already elsewhere); 3 stay reported (Festergut, Mishmash and Titanic Guardian: they copy other
-minions' stat gains, for which the engine has no event).
+effect beyond keywords/stats; 68 are handled (47 Buddies / hero-power tokens added in
+`cards/buddies.ts`, incl. Mishmash and Titanic Guardian through the `onFriendlyGainedStats` event, the rest
+already elsewhere); 1 stays reported (Festergut).
 
 Also implemented: 22 non-pool minions that appear through tokens/portraits/Ghastcoiler-style
 effects (Sewer Rat, Kaboom Bot, Scallywag, Fish of N'Zoth, Selfless Hero, Harvest Golem, Cave Hydra,
 Foe Reaper, Imp Gang Boss, Nest Swarmer, Runed Progenitor, Silky Shimmermoth, Impulsive Trickster,
 Prized Promo-Drake, Bassgill, Stomping Stegodon, Fishbait, Ancestral Automaton, Flourishing
 Frostling, Timewarped Nest Swarmer, C'Thun and Y'Shaarj Deities); 26 hero powers (+2 reported only
-after use), 100 trinket ids (incl. greater versions), 12 quest rewards, 4 anomalies. Dark Paradox is handled per Dark Gift variant (`BG36_360t*`).
+after use), 104 trinket ids (incl. greater versions), 12 quest rewards, 4 anomalies. Dark Paradox is handled per Dark Gift variant (`BG36_360t*`).
+
+Out-of-pool minions (`cards/legacy.ts`): the cards most often reported when replaying the fixture logs of
+older patches - 33 with a combat handler (Rat Pack, Icky Imp, Imprisoner, Tunnel Blaster, Arid Atrocity,
+Kangor's Apprentice, Sneed's Old Shredder, Mecharoo, Security Rover, Imp Mama, Soul Juggler, Scavenging
+Hyena, Pack Leader, Swampstriker, Saltscale Honcho, Salty Looter, Ripsnarl Captain, Dozy Whelp, Phaerix,
+Mantid Queen, Yu'lon, The Glad-iator, Daggerspine Thrasher, Tough Tusk, Groundshaker, Master of
+Realities, Spacefarer, Hunter of Gatherers and five "get a card" effects) and 6 with no combat effect.
+Ripsnarl Captain (itself included), Dozy Whelp and Arid Atrocity (Golem = script data 1 x (1 + friendly
+minion types that died this combat)) were checked against `bg_hero_reroll_213490.power.log.gz`. Cards whose
+ids are missing from the bundled data (pre-2021 logs: `CFM_316`, `GVG_062`, `BGS_025`, ...) stay reported.
+
+Replaying every fixture log, the anonymised `test/sim/fixtures/real-combats.json` and a private set of
+275 recent live fights (Nov 2026, solo and duos), 38 of 366 fights are still reported (was 70): 3 of the
+275 live fights (Lock and Load after use; was 9) and 35 of 87 fixture-log fights, all of those from three
+2020-2022 logs with cards missing from the bundled data. The most likely result was called in 86.6% of
+fights (was 85.5%), mean Brier score 0.188 (was 0.198).
 
 ## Known simplifications
 
@@ -277,9 +296,14 @@ after use), 100 trinket ids (incl. greater versions), 12 quest rewards, 4 anomal
   switches to the golden card's script data.
 - Unsupported (reported): Lock and Load and Deadeye when the hero power was used this turn or its
   state is unknown (the removed minion / chosen target is not in the input; unused, they do nothing),
-  Assembler Portrait (Auto Assembler not simulated), Festergut, Mishmash, Titanic Guardian. Dark Gift
+  Assembler Portrait (Auto Assembler not simulated), the greater Mug of the Sire ("would summon a minion
+  that doesn't fit": summons that fail are not all counted) and Thornspike Pauldron (the +X is unknown),
+  Festergut. Dark Gift
   enchantments from the "Dark Gifts!" anomaly (Toreth's Blessing, Golemancy, ...) are ignored
   (which enchantment id carries the effect is unknown).
+- Mantid Queen counts an all-type minion as one type (the one no other minion has); Titanic Guardian
+  ignores Health gains of other Titanic Guardians (two would echo each other forever); Belcher Portrait
+  only buffs a minion that survived the hit in which it lost Venomous.
 - Battlecries triggered in combat pick random valid targets ("Give a Pirate", "Destroy a friendly
   Undead"); Brann and Timewarped Deios do not stack (the highest applies), Dragon's Eye adds one
   trigger per copy for Dragons.

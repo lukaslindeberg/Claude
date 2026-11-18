@@ -17,6 +17,7 @@ import {
   aliveMinions,
   buff,
   buffAll,
+  buffHandCard,
   castSpell,
   copyMinion,
   counter,
@@ -91,13 +92,6 @@ function buffEachType(b: Battle, side: SideState, attack: number, health: number
   }
 }
 
-/** Buff a card in hand (the snapshot is replaced, never mutated, so later hand summons carry it). */
-function buffHandCard(h: HandMinion, attack: number, health: number): void {
-  h.attack += attack;
-  h.health += health;
-  h.snapshot = { ...h.snapshot, attack: h.attack, health: h.health, maxHealth: h.health };
-}
-
 /** "Double" (k = 2) / "triple" (k = 3) a minion's current stats. */
 function multiplyStats(b: Battle, m: Minion, k: number): void {
   buff(b, m, m.attack * (k - 1), m.health * (k - 1));
@@ -135,7 +129,7 @@ function asSource(self: Minion, d: SourceData, fn: () => void): void {
 }
 
 /** Living minions next to a (possibly dead) minion: its old slot for real deaths. */
-function adjacentTo(self: Minion, ctx: DeathContext): Minion[] {
+export function adjacentTo(self: Minion, ctx: DeathContext): Minion[] {
   if (indexOf(self) >= 0) return neighbours(self);
   const board = self.side.board;
   const i = anchorIndex(ctx.anchor);
@@ -188,7 +182,7 @@ export function registerTimewarped(): void {
     deathrattle: (b, self, ctx) => {
       const card = b.rng.pick(handMinions(b, self.side));
       if (!card) return;
-      buffHandCard(card, sd(b, self, 1, 7 * ctx.mult), sd(b, self, 2, 7 * ctx.mult));
+      buffHandCard(b, self.side, card, sd(b, self, 1, 7 * ctx.mult), sd(b, self, 2, 7 * ctx.mult));
       summonFromHand(b, self.side, card, ctx.anchor);
     },
   });
@@ -615,7 +609,7 @@ export function registerTimewarped(): void {
   registerMinion('BG34_Giant_207', {
     onKill: (b, self) => {
       const h = handMinions(b, self.side)[0];
-      if (h) buffHandCard(h, sd(b, self, 1, 4 * self.mult), sd(b, self, 2, 4 * self.mult));
+      if (h) buffHandCard(b, self.side, h, sd(b, self, 1, 4 * self.mult), sd(b, self, 2, 4 * self.mult));
     },
   });
 
@@ -834,7 +828,7 @@ export function registerTimewarped(): void {
       setCounter(self, 'hp', self.maxHealth);
       if (da <= 0 && dh <= 0) return;
       for (const c of handMinions(b, self.side).slice(0, 2)) {
-        buffHandCard(c, Math.max(0, da) * self.mult, Math.max(0, dh) * self.mult);
+        buffHandCard(b, self.side, c, Math.max(0, da) * self.mult, Math.max(0, dh) * self.mult);
       }
     },
   });

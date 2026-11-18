@@ -243,6 +243,8 @@ export interface Battle {
   log: string[] | null;
   /** Set by a handler's `init` to enable the `onFriendlyGainedAttack` event (off by default: `buff` is hot). */
   watchAttackGain?: boolean;
+  /** Set by a handler's `init` to enable the `onFriendlyGainedStats` / `onFriendlyHandGainedStats` events. */
+  watchStatGain?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -303,6 +305,13 @@ export interface CardHandler {
    * Only dispatched when `b.watchAttackGain` is set (do that in `init`).
    */
   onFriendlyGainedAttack?(b: Battle, self: Minion, target: Minion, amount: number): void;
+  /**
+   * Whenever a friendly minion (including this one) gains stats through `buff` (the positive parts of
+   * the buff). Only dispatched when `b.watchStatGain` is set (do that in `init`).
+   */
+  onFriendlyGainedStats?(b: Battle, self: Minion, target: Minion, attack: number, health: number): void;
+  /** A card in the owner's hand gained stats in combat (`buffHandCard`; needs `b.watchStatGain`). */
+  onFriendlyHandGainedStats?(b: Battle, self: Minion, card: HandMinion, attack: number, health: number): void;
   /** After this minion attacked (only if it survived the damage step). */
   afterAttack?(b: Battle, self: Minion, info: AttackInfo): void;
   /** After any friendly minion (including this one) attacked. */
@@ -389,6 +398,8 @@ export interface EffectHandler {
   onFriendlyDamaged?(b: Battle, e: EffectInstance, damaged: Minion, amount: number): void;
   /** After a friendly minion lost Divine Shield. */
   onFriendlyDivineShieldLost?(b: Battle, e: EffectInstance, lost: Minion): void;
+  /** After a friendly minion lost Venomous (it dealt attack damage with it). */
+  onFriendlyVenomousLost?(b: Battle, e: EffectInstance, lost: Minion): void;
   /** Its owner cast a (Tavern) spell in combat (`target` = the minion it was cast on, if any). */
   onSpellCast?(b: Battle, e: EffectInstance, spellId: string, target: Minion | null): void;
   noCombatEffect?: boolean;

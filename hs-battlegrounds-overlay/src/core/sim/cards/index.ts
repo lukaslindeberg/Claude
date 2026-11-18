@@ -12,6 +12,7 @@ import { registerDemons } from './demon';
 import { registerDragons } from './dragon';
 import { registerElementals } from './elemental';
 import { registerHeroPowers } from './heroPowers';
+import { registerLegacy } from './legacy';
 import { registerMechs } from './mech';
 import { registerMurlocs } from './murloc';
 import { registerNaga } from './naga';
@@ -42,6 +43,7 @@ export function ensureCardsRegistered(): void {
   registerAberrations();
   registerTimewarped();
   registerBuddies(); // after timewarped.ts: some Buddies reuse Timewarped handlers
+  registerLegacy(); // out-of-pool minions seen in older games
   registerHeroPowers();
   registerTrinkets();
   registerQuestRewards();

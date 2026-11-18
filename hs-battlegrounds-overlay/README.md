@@ -160,7 +160,9 @@ npm run typecheck
 - Lobby-adjusted placements add up one-tribe-at-a-time community statistics, so they are estimates.
 - The simulator implements the in-combat effects of 111 of the 302 current-pool minions; the other 189
   were checked one by one and have no effect inside combat (their stats and keywords are simulated).
-  Some trinkets, hero powers and older cards aren't modelled; results involving them are marked
-  *unreliable* and list the cards. Start-of-combat ordering between the two sides is a best estimate.
+  Trinkets, hero powers, quest rewards and anomalies are modelled except Lock and Load / Deadeye after
+  use, Assembler Portrait and two greater trinkets; older cards missing from the card data aren't. Results
+  involving them are marked *unreliable* and list the cards (3 of 275 recent live fights). Start-of-combat
+  ordering between the two sides is a best estimate.
 
 Tavern Lens is a fan project, not affiliated with or endorsed by Blizzard Entertainment.

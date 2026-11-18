@@ -507,6 +507,18 @@ export function registerTrinkets(): void {
       for (const m of aliveMinions(e.side)) if (m.cardId.startsWith('BG24_707')) playBloodGem(b, m, 1);
     },
   });
+  // Belcher Portrait: Whenever a friendly minion loses Venomous, it gains +4/+4 permanently (greater: +14/+14).
+  // Only living minions (a minion killed by the same exchange is not saved by the Health).
+  for (const [id, n] of [['BG30_MagicItem_432', 4], ['BG30_MagicItem_432t', 14]] as const) {
+    registerEffect(id, {
+      onFriendlyVenomousLost: (b, _e, m) => {
+        if (m.health > 0 && !m.removed) buff(b, m, n, n);
+      },
+    });
+  }
+  // Kaboom Bot Portrait / Impulsive Portrait: read by the Kaboom Bot (mech.ts) and Impulsive Trickster
+  // (demon.ts) Deathrattles.
+  registerEffect(['BG30_MagicItem_803', 'BG32_MagicItem_820'], {});
   // Blood Amulet: After you trigger a Deathrattle, this plays a permanent Blood Gem on 3 random
   // friendly minions.
   registerEffect('BG35_MagicItem_432', {

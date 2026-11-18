@@ -1,6 +1,10 @@
 /** Demon handlers. */
 import { registerMinion } from './registry';
 import { buff, hasTribe, randomFriendly, sd, summonRightOf } from './helpers';
+import { adjacentTo } from './timewarped';
+
+/** Impulsive Portrait (trinket): "Your Impulsive Tricksters' Deathrattles target adjacent minions." */
+const IMPULSIVE_PORTRAIT = 'BG32_MagicItem_820';
 
 export function registerDemons(): void {
   // Devout Hellcaller (T3): After another friendly Demon deals damage, gain +2/+2 permanently.
@@ -11,8 +15,13 @@ export function registerDemons(): void {
   });
 
   // Impulsive Trickster: Deathrattle: Give this minion's maximum Health to another friendly minion.
+  // With Impulsive Portrait it targets the adjacent minions instead.
   registerMinion('BG21_006', {
     deathrattle: (b, self, ctx) => {
+      if (self.side.effects.some((e) => e.cardId === IMPULSIVE_PORTRAIT)) {
+        for (let i = 0; i < ctx.mult; i++) for (const t of adjacentTo(self, ctx)) buff(b, t, 0, self.maxHealth);
+        return;
+      }
       for (let i = 0; i < ctx.mult; i++) {
         const t = randomFriendly(b, self.side, undefined, self);
         if (t) buff(b, t, 0, self.maxHealth);

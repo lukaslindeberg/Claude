@@ -4,9 +4,8 @@
  * text, token ids and `BACON_EVOLUTION_CARD_ID` from the pool, the heroes and trinkets in play.
  *
  * Buddies whose text matches a Timewarped minion reuse its handler (registered after timewarped.ts).
- * Not simulated (reported): Festergut (random "Undead Creation", parts not in the card data), Mishmash
- * (copies its Amalgam's stat gains) and Titanic Guardian (copies other minions' Health gains): the engine
- * has no "gains stats" event for other minions.
+ * Not simulated (reported): Festergut (random "Undead Creation", parts not in the card data).
+ * Mishmash and Titanic Guardian copy other minions' stat gains through the `onFriendlyGainedStats` event.
  */
 import { getEffectHandler, getMinionHandler, registerMinion } from './registry';
 import {
@@ -275,6 +274,26 @@ export function registerBuddies(): void {
         if (card) summonForDeath(b, self, ctx, card.id, 1);
       }
       cardsAddedToHand(b, self.side, ctx.mult);
+    },
+  });
+  // Mishmash (The Curator): Whenever your Amalgam gains stats, this gains them too (golden: twice).
+  registerMinion('TB_BaconShop_HERO_33_Buddy', {
+    init: (b) => void (b.watchStatGain = true),
+    onFriendlyGainedStats: (b, self, target, attack, health) => {
+      if (target !== self && target.cardId.startsWith('TB_BaconShop_HP_033t')) buff(b, self, attack * self.mult, health * self.mult);
+    },
+  });
+  // Titanic Guardian (Pyramad): Whenever a different minion in your hand or board gains Health, this also
+  // gains it (golden: twice that amount). Gains of other Titanic Guardians are ignored (they would echo
+  // between two Guardians forever).
+  const isGuardian = (id: string) => id.startsWith('TB_BaconShop_HERO_39_Buddy');
+  registerMinion('TB_BaconShop_HERO_39_Buddy', {
+    init: (b) => void (b.watchStatGain = true),
+    onFriendlyGainedStats: (b, self, target, _attack, health) => {
+      if (target !== self && health > 0 && !isGuardian(target.cardId)) buff(b, self, 0, health * self.mult);
+    },
+    onFriendlyHandGainedStats: (b, self, card, _attack, health) => {
+      if (health > 0 && !isGuardian(card.cardId)) buff(b, self, 0, health * self.mult);
     },
   });
   // Sinestra: Whenever a friendly minion gains Attack during combat, give it +1 Health permanently (golden +2).

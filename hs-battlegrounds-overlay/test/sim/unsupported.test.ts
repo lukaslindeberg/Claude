@@ -7,9 +7,7 @@ const withTrinket = (cardId: string) => battle(side([vanilla(2, 2)], { trinkets:
 describe('unsupported effect detection', () => {
   // Trinkets whose combat effects aren't simulated must be flagged, never silently ignored.
   it.each([
-    ['BG30_MagicItem_432', 'Belcher Portrait (loses Venomous)'],
-    ['BG30_MagicItem_803', 'Kaboom Bot Portrait (Deathrattle damage)'],
-    ['BG32_MagicItem_820', 'Impulsive Portrait (Deathrattle targets)'],
+    ['BG36_MagicItem_841', 'Assembler Portrait (Magnetize at Start of Combat)'],
     ['BG35_MagicItem_431t', 'Thornspike Pauldron (after a Deathrattle)'],
     ['BG30_MagicItem_438t', "Mug of the Sire (summon doesn't fit)"],
   ])('flags %s — %s', (cardId) => {

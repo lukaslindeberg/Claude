@@ -6,6 +6,7 @@ import type { BgCard, Tribe } from '@shared/types';
 import type { CardDb } from '../../cards/cardDb';
 import { aliveMinions, endAnchor, indexOf, isAlive, rightOfAnchor } from '../engine/board';
 import { buff, summon } from '../engine/actions';
+import { emitHandStatsGained } from '../engine/events';
 import { hasTribe, minionFromCard, minionFromSnapshot, type TokenOptions } from '../engine/minion';
 import type { Battle, DeathContext, HandMinion, Minion, SideState, SummonAnchor } from '../engine/types';
 
@@ -181,6 +182,18 @@ export function highestInHand(
     if (!best || h[by] > best[by]) best = h;
   }
   return best;
+}
+
+/**
+ * Buff a card in hand during combat. The snapshot is replaced too (never mutated: it belongs to
+ * the input), so hand minions summoned later this combat (Diremuck Forager, Bassgill, Flighty
+ * Scout) carry the bonus.
+ */
+export function buffHandCard(b: Battle, side: SideState, h: HandMinion, attack: number, health: number): void {
+  h.attack += attack;
+  h.health += health;
+  h.snapshot = { ...h.snapshot, attack: h.attack, health: h.health, maxHealth: h.health };
+  if (b.watchStatGain && (attack > 0 || health > 0)) emitHandStatsGained(b, side, h, Math.max(0, attack), Math.max(0, health));
 }
 
 /** Summon a hand card onto the board "for this combat only" (removes it from the combat hand). */

@@ -106,9 +106,11 @@ export function registerMechs(): void {
   // Kaboom Bot: Deathrattle: Deal 4 damage to a random enemy minion (golden: twice).
   registerMinion('BG_BOT_606', {
     deathrattle: (b, self, ctx) => {
+      // Kaboom Bot Portrait (trinket): "Your Kaboom Bots' Deathrattles deal 10 extra damage."
+      const extra = 10 * self.side.effects.filter((e) => e.cardId === 'BG30_MagicItem_803').length;
       for (let i = 0; i < ctx.mult; i++) {
         const t = b.rng.pick(aliveMinions(self.side.opponent));
-        if (t) dealDamage(b, self, t, sd(b, self, 1, 4));
+        if (t) dealDamage(b, self, t, sd(b, self, 1, 4) + extra);
       }
     },
   });

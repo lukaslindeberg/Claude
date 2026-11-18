@@ -11,6 +11,7 @@ import {
   emitDivineShieldLost,
   emitFriendlyDamaged,
   emitSpellCast,
+  emitStatsGained,
   emitSummon,
   guarded,
 } from './events';
@@ -34,6 +35,7 @@ export function buff(b: Battle, m: Minion, attack: number, health: number): void
   }
   if (m.handler?.onStatsChanged) m.handler.onStatsChanged(b, m);
   if (b.watchAttackGain && attack > 0) emitAttackGained(b, m, attack);
+  if (b.watchStatGain && (attack > 0 || health > 0)) emitStatsGained(b, m, Math.max(0, attack), Math.max(0, health));
 }
 
 /** Set stats ("Set to X/Y"): resets damage. */
