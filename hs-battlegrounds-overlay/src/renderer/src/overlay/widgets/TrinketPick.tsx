@@ -110,7 +110,7 @@ function TrinketPickCard({ option, index, rank, value, rel }: { option: TrinketO
           ) : null}
         </div>
       </div>
-      {tip ? <TipNote tip={tip} compact label="How to play" /> : null}
+      {tip ? <TipNote tip={tip} compact lines={5} label="How to play" /> : null}
     </div>
   );
 }

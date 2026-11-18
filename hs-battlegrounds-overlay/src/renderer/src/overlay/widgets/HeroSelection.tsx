@@ -168,7 +168,7 @@ function HeroPickCard({ row, rank, index, lobby }: { row: HeroRow; rank?: number
           ))}
         </div>
       ) : null}
-      {tip ? <TipNote tip={tip} label="How to play" /> : null}
+      {tip ? <TipNote tip={tip} lines={4} label="How to play" /> : null}
     </div>
   );
 }

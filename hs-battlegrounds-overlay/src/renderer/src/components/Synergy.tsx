@@ -36,7 +36,8 @@ export function DeltaBadge({ delta, digits = 2 }: { delta: number; digits?: numb
  * game forwards mouse moves).
  */
 export function TipNote({ tip, lines = 2, className, compact, label }: { tip: PlayTip; lines?: number; className?: string; compact?: boolean; label?: string }) {
-  const long = tip.tip.length > (compact ? 70 : 95);
+  // Roughly 45 (compact) / 48 characters per line at the default width.
+  const long = tip.tip.length + (label ? 12 : 0) > lines * (compact ? 35 : 48);
   return (
     <div className={clsx('tl-tipnote', long && 'is-long', compact && 'is-compact', className)} style={{ '--lines': lines } as React.CSSProperties}>
       <span className="tl-tipnote__text">

@@ -76,7 +76,7 @@ describe('getPlayTip', () => {
 
   it('returns undefined for cards without tips', () => {
     expect(getPlayTip('')).toBeUndefined();
-    expect(getPlayTip('TB_BaconShop_HERO_34')).toBeUndefined();
+    expect(getPlayTip('BG20_HERO_100')).toBeUndefined(); // Rokara: no special strategy
     expect(getPlayTip('NOT_A_CARD')).toBeUndefined();
   });
 });
