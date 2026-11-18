@@ -1,6 +1,7 @@
 import { useApp } from '../../store/appStore';
 import { Card } from '../ui';
 import { DiagnosticsCard } from './Diagnostics';
+import { SetupChecks } from './SetupChecks';
 
 const LINKS: [string, string][] = [
   ['HearthSim hsdata', 'https://github.com/HearthSim/hsdata'],
@@ -86,6 +87,7 @@ export function About() {
             <dd>{status?.logsPath ?? 'Not found yet'}</dd>
           </dl>
         </Card>
+        <SetupChecks className="tl-about__checks" />
         <DiagnosticsCard className="tl-about__diag" />
         <Card title="Credits">
           <ul className="tl-about__list">

@@ -439,17 +439,26 @@ body.tl-body--companion #root {
   gap: 16px;
   align-items: start;
 }
-.tl-overview__checks {
-  grid-column: 1;
-  grid-row: 1 / span 2;
+.tl-setup-notice {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 5px;
+  background: rgba(214, 140, 40, 0.14);
+  border: 1px solid rgba(214, 160, 60, 0.45);
+  color: #f2d39a;
+  font-size: 13px;
 }
-.tl-demo-card,
-.tl-overview__game,
-.tl-overview__today {
-  grid-column: 2;
+.tl-setup-notice span {
+  flex: 1;
 }
-.tl-overview__recent {
-  grid-column: 1;
+.tl-overview__col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 .tl-recent {
   display: flex;
@@ -1226,6 +1235,13 @@ kbd {
 }
 .tl-about__hero {
   grid-column: span 2;
+}
+.tl-about__checks {
+  grid-column: span 2;
+}
+.tl-about__checks .tl-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 }
 .tl-about__brand {
   display: flex;

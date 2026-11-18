@@ -19,10 +19,10 @@ injection — and draws a transparent, click-through layer on top of the game.
 | **Lobby and session plaque** | One small plaque: turn, the lobby's tribes, your hero's expected placement in this lobby, an optional tier-up pace chip (Settings → *Tier-up timing*, off by default; "on curve" / "1 turn behind" / "2 turns ahead" against the median tier-up turns of your own top-4 games with this hero, or with any hero; shown only when your history backs it), the anomaly; games today, average and recent placements. Details on hover (the pace chip lists the usual turn per tier next to this game's). |
 | **Post-match summary** | Placement, final board as the game's cards, tier timings, a small health graph (your health + armor per turn against the other players' faint lines, the fights that cost the most marked in red with turn, opponent and damage on hover; team health in Duos), combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
 
-The **companion window** (tray icon → *Open Tavern Lens*) has five pages: **Overview** (setup checks and the
-current game), **Matches** (history and statistics), **Heroes** and **Trinkets** (ranked lists with a tribe
+The **companion window** (tray icon → *Open Tavern Lens*) has five pages: **Overview** (the current game, recent
+games and today), **Matches** (history and statistics), **Heroes** and **Trinkets** (ranked lists with a tribe
 filter that re-ranks them for a lobby, per-tribe effects, your own record and "How to play" notes) and
-**Settings** (with diagnostics and about). A **demo mode** replays a recorded game so you can see everything
+**Settings** (with setup checks, diagnostics and about). A **demo mode** replays a recorded game so you can see everything
 without launching Hearthstone.
 
 ### Screenshots
@@ -36,7 +36,7 @@ card images turned off they fall back to cards drawn from the card data.
 | ![Hero pick](docs/screenshots/overlay-hero-selection-lobby.jpg) Hero pick: heroes ranked for the lobby's tribes | ![Trinket pick](docs/screenshots/overlay-trinket-pick.jpg) Trinket pick: ranked offer, missing-tribe warning |
 | ![Recruit phase](docs/screenshots/overlay-recruit.jpg) Recruit phase: last battle, leaderboard panel, lobby and session plaque | ![Opponent board](docs/screenshots/overlay-opponent-hover.jpg) Hovering an opponent: their board as cards |
 | ![Battle odds](docs/screenshots/overlay-combat.jpg) Battle odds with the actual result | ![Unreliable odds](docs/screenshots/overlay-combat-unreliable.jpg) Odds flagged as unreliable |
-| ![Post-match summary](docs/screenshots/overlay-game-over.jpg) Post-match summary | ![Companion overview](docs/screenshots/companion-overview.jpg) Companion: overview and setup checks |
+| ![Post-match summary](docs/screenshots/overlay-game-over.jpg) Post-match summary | ![Companion overview](docs/screenshots/companion-overview.jpg) Companion: overview |
 | ![Heroes](docs/screenshots/companion-heroes.jpg) Companion: heroes ranked for a lobby | ![Trinkets](docs/screenshots/companion-trinkets.jpg) Companion: trinkets |
 
 More in [`docs/screenshots/`](docs/screenshots/); regenerate them with `node docs/screenshots/capture.mjs`

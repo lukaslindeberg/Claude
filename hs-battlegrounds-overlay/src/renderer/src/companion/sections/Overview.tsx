@@ -1,61 +1,20 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
-import type { AppStatus } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { HeroPortrait } from '../../components/HeroPortrait';
 import { MinionToken } from '../../components/MinionToken';
 import { HealthBar, PlacementBadge, PlacementPips, TierBadge, TribeChip } from '../../components/Bits';
-import { CheckIcon, PlayIcon, StopIcon, WarningIcon, CrossIcon } from '../../components/Icons';
+import { PlayIcon, StopIcon } from '../../components/Icons';
+import { SetupNotice } from './SetupChecks';
 import { formatDate, num, ordinal } from '../../lib/format';
 import { sortByDate, summarize, todays } from '../../lib/stats';
 import { Card, Kpi, SectionHeader } from '../ui';
 
-type Level = 'ok' | 'warn' | 'bad' | 'idle';
-
-function Check({ level, title, detail, action }: { level: Level; title: string; detail: React.ReactNode; action?: React.ReactNode }) {
-  return (
-    <div className={clsx('tl-check', `is-${level}`)}>
-      <span className="tl-check__icon">
-        {level === 'ok' ? <CheckIcon size={13} /> : level === 'bad' ? <CrossIcon size={12} /> : level === 'warn' ? <WarningIcon size={13} /> : <span className="tl-check__dash" />}
-      </span>
-      <div className="tl-check__text">
-        <span className="tl-check__title">{title}</span>
-        <span className="tl-check__detail">{detail}</span>
-      </div>
-      {action ? <div className="tl-check__action">{action}</div> : null}
-    </div>
-  );
-}
-
-const LOG_CONFIG: Record<AppStatus['logConfig'], [Level, string]> = {
-  ok: ['ok', 'Power logging is enabled.'],
-  updated: ['warn', 'log.config was updated — restart Hearthstone to apply.'],
-  'missing-restart-required': ['bad', 'Power logging is not enabled yet.'],
-  error: ['bad', 'Could not read or write log.config.'],
-  unknown: ['idle', 'Not checked yet.'],
-};
-
-function shortPath(p?: string): string | undefined {
-  if (!p) return p;
-  const parts = p.split(/[\\/]/);
-  return parts.length > 4 ? `…${p.includes('\\') ? '\\' : '/'}${parts.slice(-3).join(p.includes('\\') ? '\\' : '/')}` : p;
-}
-
 export function Overview() {
   const status = useApp((s) => s.status);
   const bridge = useApp((s) => s.bridge);
-  const [fixing, setFixing] = useState(false);
   const [starting, setStarting] = useState(false);
 
-  const fix = async () => {
-    if (!bridge) return;
-    setFixing(true);
-    try {
-      await bridge.fixLogConfig();
-    } finally {
-      setFixing(false);
-    }
-  };
   const toggleDemo = async () => {
     if (!bridge) return;
     setStarting(true);
@@ -67,15 +26,13 @@ export function Overview() {
     }
   };
 
-  const [lcLevel, lcText] = LOG_CONFIG[status?.logConfig ?? 'unknown'];
-  const gw = status?.gameWindow;
   const demoRunning = !!status?.demo.running;
 
   return (
     <div className="tl-section">
       <SectionHeader
         title="Overview"
-        subtitle="Everything Tavern Lens needs to follow your Battlegrounds games."
+        subtitle="Your current game, recent games and today at a glance."
         actions={
           <span className={clsx('tl-pill', status?.watching ? 'is-ok' : 'is-off')}>
             <span className="tl-dot" />
@@ -84,83 +41,32 @@ export function Overview() {
         }
       />
       <div className="tl-overview">
-        <Card title="Setup checks" className="tl-overview__checks">
-          <div className="tl-checks">
-            <Check
-              level={status?.hearthstoneRunning ? 'ok' : status?.hearthstoneInstallPath ? 'idle' : 'bad'}
-              title="Hearthstone"
-              detail={
-                status?.hearthstoneRunning
-                  ? `Running · ${shortPath(status.hearthstoneInstallPath) ?? 'install found'}`
-                  : status?.hearthstoneInstallPath
-                    ? `Installed at ${shortPath(status.hearthstoneInstallPath)} · not running`
-                    : 'Install not found — set the path in Settings.'
-              }
-            />
-            <Check
-              level={lcLevel}
-              title="log.config"
-              detail={lcText}
-              action={
-                status && status.logConfig !== 'ok' && status.logConfig !== 'updated' ? (
-                  <button className="tl-btn tl-btn--gold" onClick={fix} disabled={fixing}>
-                    {fixing ? 'Fixing…' : 'Fix'}
-                  </button>
-                ) : null
-              }
-            />
-            <Check
-              level={status?.powerLogPath ? 'ok' : status?.watching ? 'warn' : 'idle'}
-              title="Power.log"
-              detail={status?.powerLogPath ? <span title={status.powerLogPath}>Tailing {shortPath(status.powerLogPath)}</span> : 'Waiting for Hearthstone to write a log.'}
-            />
-            <Check
-              level={gw?.found ? (gw.minimized ? 'warn' : 'ok') : 'idle'}
-              title="Game window"
-              detail={
-                gw?.found
-                  ? `${gw.focused ? 'Focused' : gw.minimized ? 'Minimized' : 'In background'}${gw.bounds ? ` · ${gw.bounds.width}×${gw.bounds.height}` : ''}`
-                  : 'Not detected — the overlay appears when it is.'
-              }
-            />
-            <Check
-              level={status?.cardData.cards ? 'ok' : 'warn'}
-              title="Card data"
-              detail={status ? `Patch ${status.cardData.patch ?? '?'} · build ${status.cardData.build} · ${status.cardData.cards.toLocaleString()} cards (${status.cardData.source})` : '—'}
-            />
-          </div>
-          {status?.errors.length ? (
-            <div className="tl-errors">
-              {status.errors.map((e, i) => (
-                <div key={i} className="tl-errors__item">
-                  <WarningIcon size={12} /> {e}
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </Card>
+        <SetupNotice />
 
-        <Card className="tl-demo-card">
-          <div className="tl-demo-card__body">
-            <div>
-              <h2 className="tl-card__title">Try it without a game</h2>
-              <p className="tl-muted">Replays a recorded Battlegrounds game through the tracker and simulator so you can see every overlay widget.</p>
+        <div className="tl-overview__col">
+          <CurrentGame />
+          <RecentGames />
+        </div>
+        <div className="tl-overview__col">
+          <Card className="tl-demo-card">
+            <div className="tl-demo-card__body">
+              <div>
+                <h2 className="tl-card__title">Try it without a game</h2>
+                <p className="tl-muted">Replays a recorded Battlegrounds game through the tracker and simulator so you can see every overlay widget.</p>
+              </div>
+              <button className={clsx('tl-bigbtn', demoRunning && 'is-running')} onClick={toggleDemo} disabled={starting}>
+                {demoRunning ? <StopIcon size={16} /> : <PlayIcon size={16} />}
+                {demoRunning ? 'Stop demo' : 'Start demo'}
+              </button>
             </div>
-            <button className={clsx('tl-bigbtn', demoRunning && 'is-running')} onClick={toggleDemo} disabled={starting}>
-              {demoRunning ? <StopIcon size={16} /> : <PlayIcon size={16} />}
-              {demoRunning ? 'Stop demo' : 'Start demo'}
-            </button>
-          </div>
-          {demoRunning ? (
-            <div className="tl-progress">
-              <span style={{ width: `${Math.round((status?.demo.progress ?? 0) * 100)}%` }} />
-            </div>
-          ) : null}
-        </Card>
-
-        <CurrentGame />
-        <RecentGames />
-        <TodayCard />
+            {demoRunning ? (
+              <div className="tl-progress">
+                <span style={{ width: `${Math.round((status?.demo.progress ?? 0) * 100)}%` }} />
+              </div>
+            ) : null}
+          </Card>
+          <TodayCard />
+        </div>
       </div>
     </div>
   );
