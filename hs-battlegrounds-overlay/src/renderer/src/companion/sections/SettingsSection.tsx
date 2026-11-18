@@ -11,6 +11,7 @@ const WIDGETS: { id: WidgetId; label: string; hint: string }[] = [
   { id: 'opponentsPanel', label: 'Opponents panel', hint: 'Right-edge list of every player with their last seen board.' },
   { id: 'battleSim', label: 'Battle odds', hint: 'Win / tie / loss odds for each combat, flagged when they are unreliable.' },
   { id: 'lobbyInfo', label: 'Lobby info', hint: 'Turn, lobby tribes, your hero\'s expected placement and the anomaly.' },
+  { id: 'tierPace', label: 'Tier-up timing', hint: 'On the lobby plaque: your tavern tier against when your own top-4 games usually reach it. Needs Lobby info.' },
   { id: 'counters', label: 'Counters', hint: 'Blood Gem and Beetle stats, gold next turn and free refreshes, next to the refresh button.' },
   { id: 'sessionStats', label: 'Session tracker', hint: 'Games today and recent placements, on the same plaque.' },
   { id: 'postMatch', label: 'Post-match summary', hint: 'Placement, final board and combat timeline after each game.' },

@@ -10,6 +10,7 @@ const LABELS: Record<WidgetId, string> = {
   sessionStats: 'Session tracker',
   lobbyInfo: 'Lobby info',
   counters: 'Counters',
+  tierPace: 'Tier-up timing',
   postMatch: 'Post-match summary',
   trinketPick: 'Trinket pick',
 };

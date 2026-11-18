@@ -24,7 +24,7 @@ const reportSize = (size: { height: number }) => useDock.setState({ height: Math
  * (Lobby info / Session tracker); the session line hides while the post-match summary,
  * which has its own session section, is up.
  */
-export function DockWidget({ lobby: lobbyOn, session: sessionOn }: { lobby: boolean; session: boolean }) {
+export function DockWidget({ lobby: lobbyOn, session: sessionOn, tierPace = false }: { lobby: boolean; session: boolean; tierPace?: boolean }) {
   const game = useApp((s) => s.game);
   const history = useApp((s) => s.history);
   const postMatchUp = useApp(
@@ -44,7 +44,7 @@ export function DockWidget({ lobby: lobbyOn, session: sessionOn }: { lobby: bool
         <div className="tl-panel tl-dock">
           <DragHandle handle={handle} />
           <div className="tl-dock__lines">
-            {showLobby ? <LobbyLine /> : null}
+            {showLobby ? <LobbyLine tierPace={tierPace} /> : null}
             {showSession ? <SessionLine /> : null}
           </div>
         </div>
@@ -53,7 +53,7 @@ export function DockWidget({ lobby: lobbyOn, session: sessionOn }: { lobby: bool
   );
 }
 
-function LobbyLine() {
+function LobbyLine({ tierPace }: { tierPace: boolean }) {
   const game = useApp((s) => s.game)!;
   const db = useApp((s) => s.cardDb);
   const lobby = useLobbyTribes();
@@ -82,7 +82,7 @@ function LobbyLine() {
         <span className="tl-muted tl-small">Tribes unknown</span>
       )}
       {game.phase !== 'heroSelection' ? <HeroEstimate /> : null}
-      {game.phase === 'recruit' ? <TierPaceChip /> : null}
+      {tierPace && game.phase === 'recruit' ? <TierPaceChip /> : null}
       {anomaly ? (
         <Tooltip
           placement="top"

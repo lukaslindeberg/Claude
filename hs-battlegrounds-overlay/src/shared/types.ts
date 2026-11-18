@@ -678,6 +678,7 @@ export type WidgetId =
   | 'sessionStats'
   | 'lobbyInfo'
   | 'counters'
+  | 'tierPace'
   | 'postMatch'
   | 'trinketPick';
 
@@ -729,6 +730,8 @@ export const DEFAULT_SETTINGS: Settings = {
     sessionStats: true,
     lobbyInfo: true,
     counters: true,
+    /** Tier-up timing chip on the lobby plaque (needs Lobby info). Off by default. */
+    tierPace: false,
     postMatch: true,
     trinketPick: true,
   },

@@ -60,7 +60,7 @@ export default function OverlayApp() {
         <>
           {/* Each widget has its own error boundary: one crash never blanks the overlay. */}
           {on('heroSelection') ? <WidgetBoundary id="heroSelection"><HeroSelectionWidget /></WidgetBoundary> : null}
-          {on('lobbyInfo') || on('sessionStats') ? <WidgetBoundary id="lobbyInfo"><DockWidget lobby={on('lobbyInfo')} session={on('sessionStats')} /></WidgetBoundary> : null}
+          {on('lobbyInfo') || on('sessionStats') ? <WidgetBoundary id="lobbyInfo"><DockWidget lobby={on('lobbyInfo')} session={on('sessionStats')} tierPace={on('tierPace')} /></WidgetBoundary> : null}
           {on('counters') ? <WidgetBoundary id="counters"><CountersWidget /></WidgetBoundary> : null}
           {on('opponentsPanel') ? <WidgetBoundary id="opponentsPanel"><OpponentsPanel /></WidgetBoundary> : null}
           {on('battleSim') ? <WidgetBoundary id="battleSim"><BattleSimWidget /></WidgetBoundary> : null}
