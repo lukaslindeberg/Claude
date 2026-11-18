@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 import { useApp } from '../../store/appStore';
-import { PlacementPips, TribeEmblem } from '../../components/Bits';
+import { tierCurveFor, tierPace, turnReached } from '@core/stats/tierCurve';
+import { PlacementPips, TierBadge, TribeEmblem } from '../../components/Bits';
 import { DeltaBadge } from '../../components/Synergy';
 import { Tooltip } from '../../components/Tooltip';
 import { cleanCardText, num } from '../../lib/format';
@@ -81,6 +82,7 @@ function LobbyLine() {
         <span className="tl-muted tl-small">Tribes unknown</span>
       )}
       {game.phase !== 'heroSelection' ? <HeroEstimate /> : null}
+      {game.phase === 'recruit' ? <TierPaceChip /> : null}
       {anomaly ? (
         <Tooltip
           placement="top"
@@ -143,6 +145,62 @@ function HeroEstimate() {
       <span className="tl-dock__est">
         <b>≈{num(syn.estimate.avgPlacement, 2)}</b>
         <DeltaBadge delta={syn.delta} />
+      </span>
+    </Tooltip>
+  );
+}
+
+/**
+ * Tier-up pace: your tavern tier against the turn your top-4 games (with this hero, else
+ * with any hero) usually reach it. Hidden unless there is history behind the curve.
+ */
+function TierPaceChip() {
+  const db = useApp((s) => s.cardDb);
+  const game = useApp((s) => s.game);
+  const bundles = useApp((s) => s.heroStats);
+  const local = game?.players.find((p) => p.isLocal);
+  const heroId = db.baseHeroId(game?.chosenHeroCardId ?? local?.heroCardId ?? '');
+  const curve = heroId ? tierCurveFor(bundles, heroId, game?.mode) : undefined;
+  if (!game || !local || !curve) return null;
+  const pace = tierPace(curve, local.tavernTier, game.turn);
+  if (!pace) return null;
+  const tone = pace.delta < 0 ? 'is-behind' : pace.delta > 0 ? 'is-ahead' : 'is-even';
+  const top = game.mode === 'duos' ? 'top-2' : 'top-4';
+  return (
+    <Tooltip
+      placement="top"
+      content={
+        <div className="tl-picktip tl-pacetip">
+          <div className="tl-cardtip__name">Tier-up timing</div>
+          <div className="tl-pacetip__grid">
+            <span className="tl-pacetip__h">Tier</span>
+            <span className="tl-pacetip__h">Usually</span>
+            <span className="tl-pacetip__h">This game</span>
+            {[2, 3, 4, 5, 6].map((tier) => {
+              const row = curve.tiers.find((t) => t.tier === tier);
+              const mine = turnReached(local.tierHistory, tier);
+              const typical = row ? Math.round(row.turn) : undefined;
+              const cls = mine !== undefined && typical !== undefined ? (mine < typical ? 'is-good' : mine > typical ? 'is-bad' : '') : '';
+              return [
+                <span key={`t${tier}`}>
+                  <TierBadge tier={tier} size={13} />
+                </span>,
+                <b key={`u${tier}`}>{typical !== undefined ? `turn ${typical}` : '—'}</b>,
+                <b key={`m${tier}`} className={cls}>
+                  {mine !== undefined ? `turn ${mine}` : '·'}
+                </b>,
+              ];
+            })}
+          </div>
+          <div className="tl-pacetip__note">
+            Median over your {curve.games} {top} games{curve.scope === 'hero' ? ` with ${db.name(heroId)}` : ' (all heroes)'}.
+          </div>
+        </div>
+      }
+    >
+      <span className={`tl-dock__pace ${tone}`}>
+        <TierBadge tier={pace.tier} size={13} title="" />
+        <span>{pace.label}</span>
       </span>
     </Tooltip>
   );

@@ -16,8 +16,8 @@ injection — and draws a transparent, click-through layer on top of the game.
 | **Opponents panel** | Every player by leaderboard place: hero, health + armor, tavern tier, triples, last board seen, last result against you, next-opponent highlight. Hover a row to see that board as the game's cards with their current stats; click a row for trinkets, tier timings and health history. |
 | **Battle odds** | One compact plaque: win / tie / loss, average damage, lethal chance when there is any, and the actual result afterwards (it stays through the next shop as "Last battle"). When the boards contain effects the simulator doesn't model, the odds are greyed out behind "Unreliable: N effects not simulated" (the cards are listed on hover) instead of being shown as confident numbers. |
 | **Counters** | A small panel beside the game's refresh button: Blood Gem stats, Beetle stats, extra (or overdrawn) Gold next turn and free refreshes. Each appears only when it applies. |
-| **Lobby and session plaque** | One small plaque: turn, the lobby's tribes, your hero's expected placement in this lobby, the anomaly; games today, average and recent placements. Details on hover. |
-| **Post-match summary** | Placement, final board as the game's cards, tier timings, combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
+| **Lobby and session plaque** | One small plaque: turn, the lobby's tribes, your hero's expected placement in this lobby, a tier-up pace chip ("on curve" / "1 turn behind" / "2 turns ahead" against the median tier-up turns of your own top-4 games with this hero, or with any hero; shown only when your history backs it), the anomaly; games today, average and recent placements. Details on hover (the pace chip lists the usual turn per tier next to this game's). |
+| **Post-match summary** | Placement, final board as the game's cards, tier timings, a small health graph (your health + armor per turn against the other players' faint lines, the fights that cost the most marked in red with turn, opponent and damage on hover; team health in Duos), combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
 
 The **companion window** (tray icon → *Open Tavern Lens*) has five pages: **Overview** (setup checks and the
 current game), **Matches** (history and statistics), **Heroes** and **Trinkets** (ranked lists with a tribe
@@ -123,7 +123,8 @@ Power.log ──► log tailer ──► BgTracker (parser + entity store + BG r
 - Card data: HearthSim hsdata (bundled + auto-refresh).
 - Card art: [HearthstoneJSON](https://hearthstonejson.com/) image CDN (can be turned off in Settings).
 - Hero stats: your own match history, plus optional community statistics from Firestone's public data
-  files (Settings → *Community hero stats*).
+  files (Settings → *Community hero stats*). Firestone's files have no tier-up timings, so the tier-up
+  pace chip uses your own history only.
 - Test fixtures and the demo game: [HearthSim hsreplay-test-data](https://github.com/HearthSim/hsreplay-test-data) (CC0).
 
 All match history stays on your machine (`%APPDATA%/Tavern Lens` on Windows,

@@ -1,4 +1,5 @@
 import type { BattleSimResult, HeroStat, HeroStatsBundle, MatchRecord } from '@shared/types';
+import { tierCurves } from '@core/stats/tierCurve';
 import { isToday } from './format';
 
 export interface Summary {
@@ -108,10 +109,12 @@ export function findHeroStat(
 
 /** Personal hero stats bundle computed from match history. */
 export function personalBundle(matches: MatchRecord[]): HeroStatsBundle {
+  const curves = tierCurves(matches, 'solo');
   return {
     source: 'personal',
     label: 'Your games',
     updatedAt: new Date().toISOString(),
+    ...(curves.all ? { tierCurve: curves.all } : {}),
     stats: perHero(matches).map((r) => ({
       heroCardId: r.heroCardId,
       avgPlacement: r.avgPlacement,
@@ -120,6 +123,7 @@ export function personalBundle(matches: MatchRecord[]): HeroStatsBundle {
       winRate: r.winRate,
       placementDistribution: r.distribution.map((c) => c / r.games),
       tier: r.games >= 3 ? tierFromAvg(r.avgPlacement) : undefined,
+      tierCurve: curves.byHero.get(r.heroCardId),
     })),
   };
 }

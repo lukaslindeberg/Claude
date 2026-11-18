@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import type { GameMode, HeroStat, HeroStatsBundle, MatchRecord, Tribe, TribeSynergy } from '@shared/types';
 import { sortSynergies, tribeFromRace, tribeSynergyFromGames } from '@core/stats/synergy';
+import { tierCurves } from '@core/stats/tierCurve';
 import { createLogger } from './logger';
 
 const log = createLogger('hero-stats');
@@ -91,6 +92,7 @@ export function computePersonalHeroStats(
     }
     for (const o of new Set((m.heroOptions ?? []).map(normalize))) offered.set(o, (offered.get(o) ?? 0) + 1);
   }
+  const curves = tierCurves(history, mode, (m) => m.baseHeroCardId || normalize(m.heroCardId)).byHero;
   const out: HeroStat[] = [];
   for (const [heroCardId, places] of groups) {
     const games = places.length;
@@ -109,6 +111,7 @@ export function computePersonalHeroStats(
       placementDistribution: dist.map((n) => round(n / games, 4)),
       tier: tierForAvgPlacement(avg, mode),
       ...(tribeStats.length ? { tribeStats } : {}),
+      ...(curves.has(heroCardId) ? { tierCurve: curves.get(heroCardId) } : {}),
     });
   }
   return out.sort((a, b) => a.avgPlacement - b.avgPlacement || b.games - a.games);
@@ -119,6 +122,10 @@ export function personalBundles(
   normalize?: (id: string) => string,
 ): HeroStatsBundle[] {
   const updatedAt = new Date().toISOString();
+  const curve = (mode: GameMode) => {
+    const c = tierCurves(history, mode).all;
+    return c ? { tierCurve: c } : {};
+  };
   const bundles: HeroStatsBundle[] = [
     {
       source: 'personal',
@@ -126,10 +133,11 @@ export function personalBundles(
       updatedAt,
       mode: 'solo',
       stats: computePersonalHeroStats(history, 'solo', normalize),
+      ...curve('solo'),
     },
   ];
   const duos = computePersonalHeroStats(history, 'duos', normalize);
-  if (duos.length) bundles.push({ source: 'personal', label: 'Your games (Duos)', updatedAt, mode: 'duos', stats: duos });
+  if (duos.length) bundles.push({ source: 'personal', label: 'Your games (Duos)', updatedAt, mode: 'duos', stats: duos, ...curve('duos') });
   return bundles;
 }
 

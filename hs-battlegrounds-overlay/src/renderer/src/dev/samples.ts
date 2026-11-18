@@ -708,7 +708,14 @@ export function gameOverState(): BgGameState {
     p.health = hp;
     p.armor = 0;
     p.diedOnTurn = { 3: 14, 1: 13, 7: 12, 6: 11, 2: 10, 8: 9, 5: 8 }[p.playerId] as number | undefined;
+    // Health graph: everyone's line ends where they died (the winner's at its final health);
+    // ours follows the combats, and each opponent carries the fights we had against them.
+    const end = p.diedOnTurn ?? 14;
+    p.healthHistory = [...p.healthHistory.filter((h) => h.turn < end), { turn: end, value: hp }];
+    p.combatsAgainst = LOCAL_COMBATS.filter(([, pid]) => pid === p.playerId).map(([turn, , result, damage]) => ({ turn, opponentPlayerId: p.playerId, opponentHeroCardId: p.heroCardId, result, damage }));
     if (p.isLocal) {
+      let v = 42;
+      p.healthHistory = LOCAL_COMBATS.map(([turn, , result, damage]) => ({ turn, value: Math.max(0, (v -= result === 'lost' ? damage : 0)) }));
       p.tavernTier = 6;
       p.tierHistory = [...p.tierHistory, { tier: 6, turn: 11 }];
     }
