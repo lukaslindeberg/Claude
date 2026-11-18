@@ -9,6 +9,7 @@ const LABELS: Record<WidgetId, string> = {
   battleSim: 'Battle simulation',
   sessionStats: 'Session tracker',
   lobbyInfo: 'Lobby info',
+  counters: 'Counters',
   postMatch: 'Post-match summary',
   trinketPick: 'Trinket pick',
 };

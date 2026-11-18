@@ -644,6 +644,7 @@ export type WidgetId =
   | 'battleSim'
   | 'sessionStats'
   | 'lobbyInfo'
+  | 'counters'
   | 'postMatch'
   | 'trinketPick';
 
@@ -694,6 +695,7 @@ export const DEFAULT_SETTINGS: Settings = {
     battleSim: true,
     sessionStats: true,
     lobbyInfo: true,
+    counters: true,
     postMatch: true,
     trinketPick: true,
   },

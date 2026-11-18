@@ -4,7 +4,6 @@ import { useApp } from '../../store/appStore';
 import { PlacementPips, TribeEmblem } from '../../components/Bits';
 import { DeltaBadge } from '../../components/Synergy';
 import { Tooltip } from '../../components/Tooltip';
-import { BeetleIcon, BloodGemIcon, CoinIcon, RefreshIcon } from '../../components/Icons';
 import { cleanCardText, num } from '../../lib/format';
 import { sortByDate, summarize, todays } from '../../lib/stats';
 import { tribeLabel } from '../../lib/tribes';
@@ -45,7 +44,6 @@ export function DockWidget({ lobby: lobbyOn, session: sessionOn }: { lobby: bool
           <DragHandle handle={handle} />
           <div className="tl-dock__lines">
             {showLobby ? <LobbyLine /> : null}
-            {showLobby ? <CountersLine /> : null}
             {showSession ? <SessionLine /> : null}
           </div>
         </div>
@@ -99,42 +97,6 @@ function LobbyLine() {
           </span>
         </Tooltip>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * Small counters for the local player: Blood Gem and Beetle stats (when those cards are
- * in play), gold next turn and free refreshes (when non-zero). Hidden when empty.
- */
-function CountersLine() {
-  const c = useApp((s) => s.game?.counters);
-  if (!c) return null;
-  const chips: { key: string; icon: React.ReactNode; value: string; tip: string; tone?: string }[] = [];
-  if (c.bloodGem)
-    chips.push({ key: 'gem', icon: <BloodGemIcon size={13} />, value: `+${c.bloodGem.attack}/+${c.bloodGem.health}`, tip: `Each Blood Gem gives +${c.bloodGem.attack}/+${c.bloodGem.health}.`, tone: 'is-gem' });
-  if (c.beetle) chips.push({ key: 'beetle', icon: <BeetleIcon size={13} />, value: `${c.beetle.attack}/${c.beetle.health}`, tip: `Your Beetles are summoned as ${c.beetle.attack}/${c.beetle.health}.`, tone: 'is-beetle' });
-  const gold = (c.extraGoldNextTurn ?? 0) - (c.overdrawnGoldNextTurn ?? 0);
-  if (c.extraGoldNextTurn || c.overdrawnGoldNextTurn)
-    chips.push({
-      key: 'gold',
-      icon: <CoinIcon size={13} />,
-      value: gold > 0 ? `+${gold}` : gold < 0 ? `\u2212${-gold}` : '\u00b10',
-      tip: gold < 0 ? `Overdrawn: ${-gold} less Gold next turn.` : gold > 0 ? `${gold} extra Gold next turn.` : 'Extra and overdrawn Gold next turn cancel out.',
-      tone: gold < 0 ? 'is-gold is-neg' : 'is-gold',
-    });
-  if (c.freeRefreshes) chips.push({ key: 'refresh', icon: <RefreshIcon size={12} />, value: String(c.freeRefreshes), tip: `${c.freeRefreshes} free Refresh${c.freeRefreshes === 1 ? '' : 'es'} left this turn.`, tone: 'is-refresh' });
-  if (!chips.length) return null;
-  return (
-    <div className="tl-dock__line is-counters">
-      {chips.map((ch) => (
-        <Tooltip key={ch.key} placement="top" content={<div>{ch.tip}</div>}>
-          <span className={`tl-counter ${ch.tone ?? ''}`}>
-            {ch.icon}
-            <b>{ch.value}</b>
-          </span>
-        </Tooltip>
-      ))}
     </div>
   );
 }

@@ -120,3 +120,14 @@ export function battleSimPlacement(view: 'combat' | 'last', vp: Viewport, s: num
 export function bottomLeftMaxWidth(vp: Viewport): number {
   return Math.max(200, vp.width / 2 + HS_ZONES.hand.x0 * vp.height - 2 * EDGE);
 }
+
+/**
+ * Default spot of the counters panel: just right of Bob's refresh button (the right end
+ * of the Bob zone), level with it. Pulled left if the window is too narrow.
+ */
+export function countersPlacement(vp: Viewport, size: { width: number; height: number }): { left: number; top: number } {
+  const H = vp.height;
+  const left = vp.width / 2 + HS_ZONES.bob.x1 * H + 6;
+  const maxLeft = vp.width - size.width - EDGE;
+  return { left: Math.round(Math.max(EDGE, Math.min(left, maxLeft))), top: Math.round(H * 0.045) };
+}
