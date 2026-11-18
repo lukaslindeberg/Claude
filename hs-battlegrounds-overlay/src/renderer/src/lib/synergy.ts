@@ -33,19 +33,22 @@ export interface LobbyTribes {
   source: 'game' | 'manual' | 'none';
   /** The tracker inferred them from shop offers (not listed by the log). */
   inferred: boolean;
+  /** Read from the game's hero-pick screen. */
+  fromScreen?: boolean;
 }
 
 /** Tribes of the current lobby: the tracker's once known, else the user's manual pick. */
 export function useLobbyTribes(): LobbyTribes {
   const known = useApp((s) => s.game?.availableTribes);
   const inferred = useApp((s) => s.game?.tribesSource === 'inferred');
+  const fromScreen = useApp((s) => s.game?.tribesSource === 'screen');
   const gameId = useApp((s) => s.game?.gameId);
   const picks = useApp((s) => (gameId ? s.lobbyPicks[gameId] : undefined));
   return useMemo(() => {
-    if (known?.length) return { tribes: known, source: 'game', inferred };
-    if (picks?.length) return { tribes: picks, source: 'manual', inferred: false };
-    return { tribes: [], source: 'none', inferred: false };
-  }, [known, picks, inferred]);
+    if (known?.length) return { tribes: known, source: 'game', inferred, fromScreen };
+    if (picks?.length) return { tribes: picks, source: 'manual', inferred: false, fromScreen: false };
+    return { tribes: [], source: 'none', inferred: false, fromScreen: false };
+  }, [known, picks, inferred, fromScreen]);
 }
 
 /** "Beasts", "Mechs", ... for sentences. */

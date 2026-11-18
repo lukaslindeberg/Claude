@@ -158,6 +158,8 @@ interface GameCtx {
   battles: BattleState[];
   combats: CombatRecord[];
   tribes: Set<Tribe>;
+  /** The lobby's tribes as read from the hero-pick screen (authoritative when set). */
+  screenTribes?: Tribe[];
   /** Dummy-player names seen outside combat (Bob's skin / innkeeper names). */
   shopNames: Set<string>;
   firstCombatSeen: boolean;
@@ -1201,7 +1203,7 @@ export class BgTracker {
       turn: c.turn,
       player,
       opponent: opp,
-      availableTribes: [...g.tribes].sort(),
+      availableTribes: lobbyTribesOf(g),
       mode,
     };
     const anomaly = this.anomalyCardId();
@@ -1689,6 +1691,20 @@ export class BgTracker {
     return ents.map((e) => shopOffer(e, this.cardDb));
   }
 
+  /**
+   * The lobby's tribes from outside the log (read from the hero-pick screen). Ignored when
+   * no Battlegrounds game is running or the game already ended. Returns true if it changed.
+   */
+  setLobbyTribes(tribes: Tribe[]): boolean {
+    const g = this.g;
+    if (!g || !g.isBg || g.ended || !tribes.length) return false;
+    const next = [...new Set(tribes)].sort();
+    if (g.screenTribes && g.screenTribes.join() === next.join()) return false;
+    g.screenTribes = next;
+    this._version++;
+    return true;
+  }
+
   getState(): BgGameState {
     if (this.cache && this.cache.version === this._version) return this.cache.state;
     const state = this.buildState();
@@ -1864,8 +1880,8 @@ export class BgTracker {
       turn,
       heroOptions: this.heroOptions(g),
       players,
-      availableTribes: [...g.tribes].sort(),
-      tribesSource: g.tribes.size ? 'inferred' : 'unknown',
+      availableTribes: lobbyTribesOf(g),
+      tribesSource: g.screenTribes ? 'screen' : g.tribes.size ? 'inferred' : 'unknown',
       shop,
       localBoard,
       localHand,
@@ -2009,4 +2025,9 @@ export class BgTracker {
   getMatchRecord(): MatchRecord | undefined {
     return this.g?.matchRecord ? (JSON.parse(JSON.stringify(this.g.matchRecord)) as MatchRecord) : undefined;
   }
+}
+
+/** Lobby tribes: the hero-pick screen's list when read, else those seen in the shop. */
+function lobbyTribesOf(g: GameCtx): Tribe[] {
+  return g.screenTribes ? g.screenTribes.slice() : [...g.tribes].sort();
 }

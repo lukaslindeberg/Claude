@@ -45,6 +45,7 @@ import { Store, mergeSimPredictions } from './store';
 import { createTracker } from './trackerFactory';
 import { AppTray } from './tray';
 import { Updater } from './updater';
+import { readLobbyTribes, tribeReaderSupported } from './hearthstone/tribeReader';
 import { createOverlayWindow, createSettingsWindow } from './windows';
 
 const log = createLogger('app');
@@ -84,6 +85,8 @@ export class TavernLensApp {
   private predictions = new Map<number, BattleSimResult>();
   private liveSpectating = false;
   private liveActive = false;
+  /** Reading the lobby's tribes from the hero-pick screen (one game at a time). */
+  private tribeRead: { gameId: string; attempts: number; busy: boolean; timer?: NodeJS.Timeout } = { gameId: '', attempts: 0, busy: false };
   private pendingCardDb: CardDb | undefined;
   private hotkeyErrors: string[] = [];
   private hotkeysActive = false;
@@ -627,6 +630,53 @@ export class TavernLensApp {
       this.updateOverlay();
     }
     if (!this.demoActive) this.broadcast(IPC.state, state);
+    this.maybeReadTribes(state);
+  }
+
+  /**
+   * At hero pick the game shows the lobby's tribes ("In this game: ..."), which the log
+   * doesn't contain: read them from the game window (Windows), a few tries 1.5 s apart.
+   */
+  private maybeReadTribes(state: BgGameState): void {
+    if (!tribeReaderSupported() || state.spectating) return;
+    if (state.phase !== 'heroSelection' || !state.gameId || state.tribesSource === 'screen') return;
+    const r = this.tribeRead;
+    if (r.gameId !== state.gameId) {
+      if (r.timer) clearTimeout(r.timer);
+      this.tribeRead = { gameId: state.gameId, attempts: 0, busy: false };
+      this.tribeRead.timer = setTimeout(() => void this.readTribesOnce(state.gameId), 1500);
+    }
+  }
+
+  private async readTribesOnce(gameId: string): Promise<void> {
+    const r = this.tribeRead;
+    r.timer = undefined;
+    const state = this.live.getState();
+    if (r.gameId !== gameId || r.busy || state.gameId !== gameId || state.phase !== 'heroSelection' || state.tribesSource === 'screen') return;
+    const gw = this.status.get().gameWindow;
+    const retry = () => {
+      if (r.attempts < 8 && r.gameId === gameId) r.timer = setTimeout(() => void this.readTribesOnce(gameId), 1500);
+      else if (r.gameId === gameId) log.info('lobby tribes: not read from the hero-pick screen; the tribe picker stays available');
+    };
+    if (!gw.found || gw.minimized || !gw.bounds) return retry();
+    r.busy = true;
+    r.attempts++;
+    const started = Date.now();
+    try {
+      const scale = screen.getDisplayMatching(gw.bounds).scaleFactor || 1;
+      const res = await readLobbyTribes({ width: Math.round(gw.bounds.width * scale), height: Math.round(gw.bounds.height * scale) });
+      if (res.tribes?.length) {
+        const changed = this.live.setLobbyTribes(res.tribes);
+        log.info(`lobby tribes read from the hero-pick screen in ${Date.now() - started} ms (try ${r.attempts}): ${res.tribes.join(', ')}${changed ? '' : ' (unchanged)'}`);
+        return;
+      }
+      log.debug(`lobby tribes: try ${r.attempts} found nothing (${res.reason ?? 'unknown'})`);
+    } catch (err) {
+      log.warn(`lobby tribes: reading the hero-pick screen failed (try ${r.attempts})`, err);
+    } finally {
+      r.busy = false;
+    }
+    retry();
   }
 
   private onLiveEvents(events: BgEvent[]): void {
@@ -952,6 +1002,7 @@ export class TavernLensApp {
     try {
       unregisterHotkeys();
       this.updater?.stop();
+      if (this.tribeRead.timer) clearTimeout(this.tribeRead.timer);
       this.tailer?.stop();
       this.windowTracker?.stop();
       this.cardData?.stop();

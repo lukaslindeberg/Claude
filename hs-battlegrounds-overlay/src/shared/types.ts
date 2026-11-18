@@ -345,7 +345,7 @@ export interface BgGameState {
   /** Tribes known to be in the lobby. */
   availableTribes: Tribe[];
   /** How `availableTribes` was determined. */
-  tribesSource: 'log' | 'inferred' | 'unknown';
+  tribesSource: 'log' | 'screen' | 'inferred' | 'unknown';
   /** Anomaly card id (BACON_GLOBAL_ANOMALY_DBID). */
   anomalyCardId?: string;
   trinketsActive?: boolean;

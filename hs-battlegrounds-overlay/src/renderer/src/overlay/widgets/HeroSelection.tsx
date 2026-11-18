@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { LOBBY_TRIBES, type HeroOption, type Tribe } from '@shared/types';
 import { useApp } from '../../store/appStore';
@@ -62,7 +62,7 @@ export function HeroSelectionWidget() {
       >
         {(i) => <HeroPickCard row={rows[i]} rank={ranks[i]} index={i} lobby={lobby} />}
       </PickRow>
-      <LobbyTribePicker gameId={game.gameId} lobby={lobby} />
+      {lobby.source === 'game' ? null : <LobbyTribePicker gameId={game.gameId} lobby={lobby} />}
     </>
   );
 }
@@ -173,17 +173,34 @@ function HeroPickCard({ row, rank, index, lobby }: { row: HeroRow; rank?: number
   );
 }
 
+/** Top edge (window px) of the lobby plaque, re-read while it changes size. */
+function useDockTop(dockHeight: number): number | undefined {
+  const [top, setTop] = useState<number | undefined>();
+  useEffect(() => {
+    const read = () => {
+      const el = document.querySelector('[data-widget="lobbyInfo"]');
+      const t = el ? Math.round(el.getBoundingClientRect().top) : undefined;
+      setTop((cur) => (cur === t ? cur : t));
+    };
+    read();
+    const id = window.setInterval(read, 400);
+    return () => window.clearInterval(id);
+  }, [dockHeight]);
+  return top;
+}
+
 /**
  * "Tribes in this lobby?": Hearthstone shows the lobby's tribes on the hero-select screen
  * but does not write them to the log until shop offers reveal them, so the user can tick
- * them here for lobby-adjusted estimates right away. Once the tracker knows the tribes,
- * the row shows those, read-only.
+ * them here for lobby-adjusted estimates right away. Hidden once the tribes are known (read
+ * from the hero-pick screen on Windows, or from the shop); the lobby plaque shows them then.
  */
 function LobbyTribePicker({ gameId, lobby }: { gameId: string; lobby: LobbyTribes }) {
   const setPicks = useApp((s) => s.setLobbyPicks);
   const picks = useApp((s) => s.lobbyPicks[gameId]);
   const dockHeight = useDock((s) => s.height);
   const vp = useViewport();
+  const dockTop = useDockTop(dockHeight);
   const locked = lobby.source === 'game';
   const chosen = new Set<Tribe>(locked ? lobby.tribes : (picks ?? []));
   const toggle = (t: Tribe) => {
@@ -191,11 +208,14 @@ function LobbyTribePicker({ gameId, lobby }: { gameId: string; lobby: LobbyTribe
     const next = chosen.has(t) ? [...chosen].filter((x) => x !== t) : [...chosen, t];
     setPicks(gameId, LOBBY_TRIBES.filter((x) => next.includes(x)));
   };
-  const below = dockHeight ? dockHeight + 6 : 0;
   return (
     <FloatingWidget
       id="heroSelection"
-      defaultPosition={(vp, size) => ({ left: 10, top: vp.height - size.height - 10 - below })}
+      defaultPosition={(vp, size) => {
+        // Sit just above the lobby plaque where it really is (it can grow, or be dragged).
+        const bottom = dockTop !== undefined && dockTop > vp.height / 2 ? dockTop - 6 : vp.height - 10;
+        return { left: 10, top: bottom - size.height };
+      }}
       zIndex={22}
       maxWidth={bottomLeftMaxWidth(vp)}
     >

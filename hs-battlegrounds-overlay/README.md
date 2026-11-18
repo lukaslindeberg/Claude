@@ -155,8 +155,10 @@ npm run typecheck
 ## Known limitations
 
 - Hearthstone's log has no MMR, so rating tracking is manual.
-- Hearthstone's log does not list the lobby's tribes: tick them on the hero-pick tribe picker, or wait until
-  they are inferred from the minions offered in the shop (turn 1–2).
+- Hearthstone's log does not list the lobby's tribes. On Windows, Tavern Lens reads them from the hero-pick
+  screen ("In this game: …") with Windows' built-in text recognition (English game client; only the
+  Hearthstone window is captured, nothing is saved or sent). Elsewhere, or if that fails, tick them on the
+  hero-pick tribe picker, or wait until they are inferred from the minions offered in the shop (turn 1–2).
 - Lobby-adjusted placements add up one-tribe-at-a-time community statistics, so they are estimates.
 - The simulator implements the in-combat effects of 111 of the 302 current-pool minions; the other 189
   were checked one by one and have no effect inside combat (their stats and keywords are simulated).

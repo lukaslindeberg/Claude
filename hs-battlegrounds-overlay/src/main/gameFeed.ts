@@ -8,7 +8,7 @@
  * not parse, and per-game counters.
  */
 import type { PacketErrorInfo, TrackerDiagnostics } from '@core/bg/tracker';
-import type { BgEvent, BgGameState } from '@shared/types';
+import type { BgEvent, BgGameState, Tribe } from '@shared/types';
 import { describeEvent, formatDuration, logLineAgeMs } from './diagnostics/describe';
 import { RateLimiter, createLogger, isDebugLogging } from './logger';
 
@@ -24,6 +24,8 @@ export interface TrackerLike {
   tick?(): boolean;
   /** Counters and playback timing (diagnostics). */
   diagnostics?(): TrackerDiagnostics;
+  /** Lobby tribes read from the hero-pick screen. */
+  setLobbyTribes?(tribes: Tribe[]): boolean;
   /** Set by GameFeed: a packet whose handling threw (skipped). */
   onPacketError?: (err: unknown, info: PacketErrorInfo) => void;
 }
@@ -282,6 +284,13 @@ export class GameFeed {
   }
 
   /** Publishes the current state now (even if unchanged). */
+  /** Passes lobby tribes read from the screen to the tracker and publishes the change. */
+  setLobbyTribes(tribes: Tribe[]): boolean {
+    const changed = !!this.tracker.setLobbyTribes?.(tribes);
+    if (changed) this.throttle.request(true);
+    return changed;
+  }
+
   publishNow(): void {
     this.publishedVersion = -1;
     this.throttle.request(true);

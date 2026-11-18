@@ -62,13 +62,13 @@ function LobbyLine({ tierPace }: { tierPace: boolean }) {
   return (
     <div className="tl-dock__line">
       <span className="tl-dock__turn">{game.phase === 'heroSelection' ? 'Hero pick' : `Turn ${game.turn}`}</span>
-      {game.phase === 'heroSelection' ? null : lobby.tribes.length ? (
+      {game.phase === 'heroSelection' && lobby.source !== 'game' ? null : lobby.tribes.length ? (
         <Tooltip
           placement="top"
           content={
             <div>
               <b>{lobby.tribes.map(tribeLabel).join(' · ')}</b>
-              <div>{manual ? 'Your pick at hero selection.' : lobby.inferred ? 'Inferred from the minions seen so far.' : 'Minion types in this lobby.'}</div>
+              <div>{manual ? 'Your pick at hero selection.' : lobby.inferred ? 'Inferred from the minions seen so far.' : lobby.fromScreen ? "Read from the game's hero-pick screen." : 'Minion types in this lobby.'}</div>
             </div>
           }
         >

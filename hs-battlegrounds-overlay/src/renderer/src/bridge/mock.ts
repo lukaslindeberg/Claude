@@ -60,6 +60,9 @@ function sceneState(scene: string): BgGameState {
   // `&mode=duos`: the same lobby as four teams of two (recruit, combat, gameOver).
   if (new URLSearchParams(window.location.search).get('mode') === 'duos' && s.active && s.players.length) s = samples.duosState(s);
   if (new URLSearchParams(window.location.search).get('counters') === 'all' && s.active) s.counters = { ...samples.ALL_COUNTERS };
+  // `&tribes=screen`: the lobby's tribes as read from the hero-pick screen.
+  if (new URLSearchParams(window.location.search).get('tribes') === 'screen' && s.active)
+    s = { ...s, availableTribes: ['BEAST', 'DEMON', 'DRAGON', 'PIRATE', 'QUILBOAR'], tribesSource: 'screen' };
   return s;
 }
 
