@@ -508,6 +508,22 @@ export interface HeroStat {
   tier?: 'S' | 'A' | 'B' | 'C' | 'D';
   /** How the hero does depending on which tribes are in the lobby. */
   tribeStats?: TribeSynergy[];
+  /** Personal stats only: typical tier-up turns in your top-half games with this hero. */
+  tierCurve?: TierTimingCurve;
+}
+
+/**
+ * Typical turn on which each tavern tier is reached (median over the games), for the
+ * tier-up timing hint. Only tiers with enough data are listed.
+ */
+export interface TierTimingCurve {
+  tiers: { tier: number; /** Median turn the tier was first reached. */ turn: number; /** Games that reached it. */ games: number }[];
+  /** Games the curve is based on. */
+  games: number;
+  /** One hero's games, or all heroes'. */
+  scope: 'hero' | 'all';
+  /** Where the games come from: the user's own top 4 (duos: top 2) games. */
+  basis: 'personalTopHalf';
 }
 
 /**
@@ -573,6 +589,8 @@ export interface HeroStatsBundle {
   stats: HeroStat[];
   /** Game mode the stats refer to (placements are 1..4 in duos). Absent = solo. */
   mode?: GameMode;
+  /** Personal bundles: tier-up timing over all heroes (fallback for heroes without their own). */
+  tierCurve?: TierTimingCurve;
 }
 
 // ---------------------------------------------------------------------------

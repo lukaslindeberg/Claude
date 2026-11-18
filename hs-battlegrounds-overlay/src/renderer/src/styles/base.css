@@ -1649,6 +1649,75 @@ div.tl-tip-anchor {
   overflow: visible;
 }
 
+/* Health graph (post-match, match detail). Dark panels by default; the parchment overrides. */
+.tl-hchart {
+  --hc-mine: var(--tl-gold);
+  --hc-other: rgba(230, 200, 150, 0.22);
+  --hc-grid: rgba(255, 230, 190, 0.1);
+  --hc-axis: var(--tl-muted);
+  --hc-hit: #ef5f50;
+  --hc-ring: #1a0e04;
+  position: relative;
+  flex: none;
+}
+.tl-hchart svg {
+  display: block;
+  overflow: visible;
+}
+.tl-hchart__grid {
+  stroke: var(--hc-grid);
+  stroke-width: 1;
+}
+.tl-hchart__axis {
+  fill: var(--hc-axis);
+  font-size: 8.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tl-hchart__other {
+  fill: none;
+  stroke: var(--hc-other);
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+}
+.tl-hchart__fillstop {
+  stop-color: var(--hc-mine);
+}
+.tl-hchart__mine {
+  fill: none;
+  stroke: var(--hc-mine);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.tl-hchart__end {
+  fill: var(--hc-mine);
+  stroke: var(--hc-ring);
+  stroke-width: 1;
+}
+.tl-hchart__hit {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.tl-hchart__dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: var(--hc-hit);
+  border: 1.5px solid var(--hc-ring);
+  box-shadow: 0 0 0 2px rgba(239, 95, 80, 0.25);
+  cursor: default;
+}
+.tl-hchart__dot:hover {
+  transform: scale(1.3);
+}
+.tl-hchart__tip {
+  font-size: 12px;
+}
+
 /* toggle: brass switch in a carved slot */
 .tl-toggle {
   display: inline-flex;

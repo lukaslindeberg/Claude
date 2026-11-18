@@ -5,7 +5,9 @@ import type { MatchRecord } from '@shared/types';
 import { useApp } from '../../store/appStore';
 import { HeroPortrait } from '../../components/HeroPortrait';
 import { MinionToken } from '../../components/MinionToken';
-import { PlacementBadge, ResultChip, Sparkline, TierTimeline, TribeChip } from '../../components/Bits';
+import { PlacementBadge, ResultChip, TierTimeline, TribeChip } from '../../components/Bits';
+import { HealthChart } from '../../components/HealthChart';
+import { healthChartFromRecord } from '../../lib/healthChart';
 import { CheckIcon, ChevronIcon, CrossIcon, SearchIcon } from '../../components/Icons';
 import { duration, formatDate, ordinal, placementColor } from '../../lib/format';
 import { predictedOutcome, sortByDate } from '../../lib/stats';
@@ -141,6 +143,11 @@ function MatchDetail({ m }: { m: MatchRecord }) {
   const myTeam = duos ? m.lobby.find((p) => p.heroCardId === m.heroCardId && p.place === m.placement)?.teamId : undefined;
   const predicted = m.combats.filter((c) => c.prediction);
   const correct = predicted.filter((c) => predictedOutcome(c.prediction!) === c.result).length;
+  const health = useMemo(() => healthChartFromRecord(m), [m]);
+  const opponentLabel = (pid: number, heroCardId: string) => {
+    const name = m.lobby.find((p) => p.playerId === pid && p.heroCardId === heroCardId)?.name?.split('#')[0];
+    return name ? `${name} (${db.name(heroCardId)})` : db.name(heroCardId);
+  };
   return (
     <div className="tl-hist__detail">
       <div className="tl-hist__detail-main">
@@ -194,8 +201,12 @@ function MatchDetail({ m }: { m: MatchRecord }) {
               <TierTimeline history={m.tierHistory} compact />
             </div>
             <div>
-              <span className="tl-label">Health</span>
-              <Sparkline points={m.healthHistory} width={220} height={36} color={placementColor(m.placement)} />
+              <span className="tl-label">{duos ? 'Team health' : 'Health'}</span>
+              {health ? (
+                <HealthChart data={health} width={230} height={70} mineLabel={duos ? 'Your team' : 'You'} opponentLabel={(h) => opponentLabel(h.opponentPlayerId, h.opponentHeroCardId)} />
+              ) : (
+                <span className="tl-muted tl-small">Not enough data</span>
+              )}
             </div>
             <div>
               <span className="tl-label">Tribes</span>

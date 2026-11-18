@@ -9,6 +9,8 @@ import { Gem, PlacementBadge, PlacementPips, TierTimeline } from '../../componen
 import { CheckIcon, CloseIcon, CrossIcon } from '../../components/Icons';
 import { duration, num, ordinal, placementColor } from '../../lib/format';
 import { outcomeLetter, predictedOutcome, sortByDate, summarize, todays } from '../../lib/stats';
+import { HealthChart } from '../../components/HealthChart';
+import { healthChartFromGame } from '../../lib/healthChart';
 import { DragHandle, FloatingWidget } from '../Widget';
 import { bottomReserve } from '../layout';
 
@@ -69,6 +71,7 @@ function PostMatchBody({ handle, hovered }: { handle: Parameters<typeof DragHand
   const dismiss = useApp((s) => s.dismissPostMatch);
   const bridge = useApp((s) => s.bridge);
   const sims = useApp((s) => s.sims);
+  const db = useApp((s) => s.cardDb);
   const vp = useViewport();
   const session = useMemo(() => sortByDate(todays(history)), [history]);
 
@@ -96,6 +99,13 @@ function PostMatchBody({ handle, hovered }: { handle: Parameters<typeof DragHand
   const ratingDelta = record?.ratingAfter && record.ratingBefore ? record.ratingAfter - record.ratingBefore : undefined;
   const allTime = summarize(history);
   const title = place ? (TITLES[place] ?? `${ordinal(place)} place`) : 'Game over';
+  const health = useMemo(() => healthChartFromGame(game), [game]);
+  const playerLabel = (pid: number, heroCardId: string) => {
+    const p = game.players.find((x) => x.playerId === pid);
+    const name = p?.name?.split('#')[0];
+    const hero = p?.heroName ?? db.name(heroCardId);
+    return name ? `${name} (${hero})` : hero;
+  };
 
   return (
     <div className={clsx('tl-pm', `is-${tone}`)} style={{ '--place': color } as React.CSSProperties}>
@@ -154,6 +164,31 @@ function PostMatchBody({ handle, hovered }: { handle: Parameters<typeof DragHand
           </header>
           <TierTimeline history={local?.tierHistory ?? []} />
         </section>
+
+        {health ? (
+          <section className="tl-pm__section">
+            <header className="tl-pm__sechead">
+              <span className="tl-heading">{duos ? 'Team health' : 'Health'}</span>
+              <span className="tl-pm__note tl-pm__legend">
+                <i />
+                {duos ? 'Your team' : 'You'}
+                {health.others.length ? (
+                  <>
+                    <i className="is-other" />
+                    {duos ? 'Other teams' : 'Others'}
+                  </>
+                ) : null}
+                {health.hits.length ? (
+                  <>
+                    <i className="is-hit" />
+                    Biggest hits
+                  </>
+                ) : null}
+              </span>
+            </header>
+            <HealthChart data={health} width={360} height={104} mineLabel={duos ? 'Your team' : 'You'} opponentLabel={(h) => playerLabel(h.opponentPlayerId, h.opponentHeroCardId)} />
+          </section>
+        ) : null}
 
         <section className="tl-pm__section">
           <header className="tl-pm__sechead">
