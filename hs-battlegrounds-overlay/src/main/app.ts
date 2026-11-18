@@ -44,6 +44,7 @@ import { StatusStore } from './status';
 import { Store, mergeSimPredictions } from './store';
 import { createTracker } from './trackerFactory';
 import { AppTray } from './tray';
+import { Updater } from './updater';
 import { createOverlayWindow, createSettingsWindow } from './windows';
 
 const log = createLogger('app');
@@ -62,6 +63,7 @@ export interface AppLaunchOptions {
 export class TavernLensApp {
   private store!: Store;
   private status!: StatusStore;
+  private updater!: Updater;
   private cardData!: CardDataService;
   private community!: CommunityHeroStatsProvider;
   private communityTrinkets!: CommunityTrinketStatsProvider;
@@ -134,6 +136,11 @@ export class TavernLensApp {
       (s) => this.onStatusChanged(s),
     );
     this.status.update({ diagnostics: this.diagStatus() });
+    this.updater = new Updater((update) => {
+      this.status.update({ update });
+      this.tray?.update(this.trayState());
+    });
+    this.status.update({ update: this.updater.get() });
     onLogEntry((e) => {
       if (e.level === 'error' || e.level === 'warn') this.scheduleDiagStatus();
     });
@@ -197,6 +204,8 @@ export class TavernLensApp {
       openExternal: (url) => void shell.openExternal(url),
       quit: () => app.quit(),
       exportDiagnostics: (o) => this.exportDiagnostics(o),
+      checkForUpdates: () => this.updater.check(),
+      installUpdate: () => this.updater.install(),
       openLogsFolder: () => this.openLogsFolder(),
       showItemInFolder: (path) => this.showItemInFolder(path),
       logEvent: (sender, level, scope, message, data) =>
@@ -214,6 +223,7 @@ export class TavernLensApp {
       toggleOverlay: () => this.setSettings({ overlayEnabled: !this.store.getSettings().overlayEnabled }),
       openApp: () => this.showSettings(),
       toggleDemo: () => (this.demoActive ? this.stopDemo() : void this.startDemo()),
+      installUpdate: () => this.updater.install(),
       quit: () => app.quit(),
     });
     this.tray.create(this.trayState());
@@ -226,6 +236,7 @@ export class TavernLensApp {
       toDip: process.platform === 'win32' ? (r) => screen.screenToDipRect(null, r) : undefined,
     });
     this.windowTracker.start();
+    this.updater.start();
     screen.on('display-metrics-changed', () => this.updateOverlay());
     screen.on('display-added', () => this.updateOverlay());
     screen.on('display-removed', () => this.updateOverlay());
@@ -409,9 +420,11 @@ export class TavernLensApp {
 
   private trayState() {
     const st = this.status.get();
+    const update = this.updater?.get();
     return {
       overlayEnabled: this.store.getSettings().overlayEnabled,
       demoRunning: this.demoActive,
+      updateReady: update?.state === 'ready' ? update.latest : undefined,
       statusLine: this.demoActive
         ? 'Demo running'
         : st.gameWindow.found
@@ -938,6 +951,7 @@ export class TavernLensApp {
     log.info('shutting down');
     try {
       unregisterHotkeys();
+      this.updater?.stop();
       this.tailer?.stop();
       this.windowTracker?.stop();
       this.cardData?.stop();

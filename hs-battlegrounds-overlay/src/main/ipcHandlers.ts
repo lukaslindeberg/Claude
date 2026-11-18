@@ -41,6 +41,8 @@ export interface IpcBackend {
   quit(): void;
   exportDiagnostics(opts: DiagnosticsExportOptions): Promise<DiagnosticsExportResult>;
   openLogsFolder(): Promise<void>;
+  checkForUpdates(): Promise<void>;
+  installUpdate(): void;
   showItemInFolder(path: string): void;
   logEvent(sender: WebContents, level: unknown, scope: unknown, message: unknown, data: unknown): void;
 }
@@ -95,6 +97,8 @@ export function registerIpcHandlers(b: IpcBackend): void {
     b.exportDiagnostics({ includeGameLogs: !(isObject(opts) && opts.includeGameLogs === false) }),
   );
   handle(IPC.openLogsFolder, () => b.openLogsFolder());
+  handle(IPC.checkForUpdates, () => b.checkForUpdates());
+  handle(IPC.installUpdate, () => b.installUpdate());
 
   on(IPC.setInteractive, (e, interactive) => b.setInteractive(e.sender, !!interactive));
   on(IPC.openSettings, () => b.openSettings());

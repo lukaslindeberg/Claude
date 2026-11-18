@@ -607,6 +607,21 @@ export interface AppStatus {
   errors: string[];
   /** Diagnostics log state (main process). */
   diagnostics?: DiagnosticsStatus;
+  /** App updates from the release channel. */
+  update?: UpdateStatus;
+}
+
+export interface UpdateStatus {
+  state: 'disabled' | 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'ready' | 'error';
+  /** Newest version on the release channel (when known). */
+  latest?: string;
+  /** Download progress 0..1 (Windows installer). */
+  progress?: number;
+  error?: string;
+  /** True for the Windows installer, which downloads and installs updates itself; elsewhere updates are a download link. */
+  canInstall: boolean;
+  /** ISO time of the last completed check. */
+  checkedAt?: string;
 }
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';

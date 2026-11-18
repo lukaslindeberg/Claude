@@ -237,6 +237,16 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
       statusE.emit(status);
     },
     pickHearthstonePath: async () => 'D:\\Games\\Hearthstone',
+    async checkForUpdates() {
+      status = { ...status, update: { state: 'checking', canInstall: true } };
+      statusE.emit(status);
+      await new Promise((r) => setTimeout(r, 600));
+      status = { ...status, update: { state: 'up-to-date', latest: status.version, canInstall: true, checkedAt: new Date().toISOString() } };
+      statusE.emit(status);
+    },
+    async installUpdate() {
+      console.info('[mock bridge] install update');
+    },
     async fixLogConfig() {
       status = { ...status, logConfig: 'updated' };
       statusE.emit(status);

@@ -47,6 +47,8 @@ export const IPC = {
   fixLogConfig: 'tl:fix-log-config',
   exportDiagnostics: 'tl:export-diagnostics',
   openLogsFolder: 'tl:open-logs-folder',
+  checkForUpdates: 'tl:check-for-updates',
+  installUpdate: 'tl:install-update',
   // renderer -> main (send)
   setInteractive: 'tl:set-interactive',
   openSettings: 'tl:open-settings',
@@ -92,6 +94,10 @@ export interface TavernLensBridge {
   exportDiagnostics(opts?: DiagnosticsExportOptions): Promise<DiagnosticsExportResult>;
   /** Opens the folder with the app's log files. */
   openLogsFolder(): Promise<void>;
+  /** Checks the release channel now; the result arrives as `AppStatus.update`. */
+  checkForUpdates(): Promise<void>;
+  /** Installs a downloaded update (restarts the app) or opens the download page. */
+  installUpdate(): Promise<void>;
 
   /** Overlay only: make the window capture the mouse (true) or be click-through (false). */
   setInteractive(interactive: boolean): void;

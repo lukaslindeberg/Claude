@@ -24,6 +24,12 @@ extraResources:
     filter: ["*.png"]
 
 asar: true
+
+# Update channel: CI uploads the installers and latest.yml to a rolling GitHub release
+# (tag tavern-lens-latest); the app reads it from here (src/main/updater.ts).
+publish:
+  provider: generic
+  url: https://github.com/lukaslindeberg/Claude/releases/download/tavern-lens-latest
 compression: normal
 
 win:

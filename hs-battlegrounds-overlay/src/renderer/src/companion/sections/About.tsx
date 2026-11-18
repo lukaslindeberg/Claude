@@ -7,6 +7,58 @@ const LINKS: [string, string][] = [
   ['HearthstoneJSON', 'https://hearthstonejson.com'],
 ];
 
+/** Update state with the one action that makes sense for it. */
+function UpdateLine() {
+  const update = useApp((s) => s.status?.update);
+  const bridge = useApp((s) => s.bridge);
+  if (!update) return null;
+  const check = (
+    <button className="tl-btn" onClick={() => void bridge?.checkForUpdates()}>
+      Check now
+    </button>
+  );
+  const install = (label: string) => (
+    <button className="tl-btn tl-btn--gold" onClick={() => void bridge?.installUpdate()}>
+      {label}
+    </button>
+  );
+  let text: string;
+  let action: React.ReactNode = null;
+  switch (update.state) {
+    case 'disabled':
+      text = 'Updates are off in development builds.';
+      break;
+    case 'idle':
+    case 'checking':
+      text = 'Checking for updates…';
+      break;
+    case 'up-to-date':
+      text = 'Up to date.';
+      action = check;
+      break;
+    case 'available':
+      text = `Version ${update.latest} is available.`;
+      action = install('Download');
+      break;
+    case 'downloading':
+      text = `Downloading version ${update.latest}… ${Math.round((update.progress ?? 0) * 100)}%`;
+      break;
+    case 'ready':
+      text = `Version ${update.latest} is ready. It installs when Tavern Lens quits.`;
+      action = install('Restart now');
+      break;
+    default:
+      text = `Couldn't check for updates${update.error ? ` (${update.error})` : ''}.`;
+      action = check;
+  }
+  return (
+    <div className={`tl-about__update is-${update.state}`}>
+      <span>{text}</span>
+      {action}
+    </div>
+  );
+}
+
 export function About() {
   const status = useApp((s) => s.status);
   const db = useApp((s) => s.cardDb);
@@ -20,6 +72,7 @@ export function About() {
             <span className="tl-about__name">Tavern Lens</span>
             <span className="tl-muted">Version {status?.version ?? '1.0.0'} · {status?.platform ?? 'unknown platform'}</span>
           </div>
+          <UpdateLine />
           <p>
             A Hearthstone Battlegrounds companion: opponent boards, combat odds, hero and trinket rankings
             and session tracking. It reads the game's own log file and never touches the game's memory or network traffic.

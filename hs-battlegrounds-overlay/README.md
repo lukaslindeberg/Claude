@@ -68,9 +68,18 @@ npm run dist:win
 npm run dist:mac
 ```
 
-CI (`.github/workflows/tavern-lens.yml`) also builds Windows and macOS packages and uploads them as
-workflow artifacts. The packages are unsigned, so Windows SmartScreen / macOS Gatekeeper will warn on
+CI (`.github/workflows/tavern-lens.yml`) also builds Windows and macOS packages, uploads them as
+workflow artifacts and publishes them to the rolling
+[`tavern-lens-latest` release](https://github.com/lukaslindeberg/Claude/releases/tag/tavern-lens-latest). The packages are unsigned, so Windows SmartScreen / macOS Gatekeeper will warn on
 first launch.
+
+### Updates
+
+Every CI build gets a new version (`1.0.<build number>`). The Windows installer version checks that release
+at start-up and every four hours, downloads a newer build in the background and installs it when Tavern
+Lens quits (or right away: tray → *Restart to update*, or About → *Restart now*). macOS and the portable
+Windows build can't replace themselves while unsigned: About shows when a newer version is out, with a
+download button.
 
 ### First launch
 

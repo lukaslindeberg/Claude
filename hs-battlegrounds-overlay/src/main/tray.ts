@@ -11,12 +11,15 @@ export interface TrayState {
   overlayEnabled: boolean;
   demoRunning: boolean;
   statusLine?: string;
+  /** Version of a downloaded update waiting to be installed. */
+  updateReady?: string;
 }
 
 export interface TrayHandlers {
   toggleOverlay(): void;
   openApp(): void;
   toggleDemo(): void;
+  installUpdate(): void;
   quit(): void;
 }
 
@@ -50,6 +53,7 @@ export class AppTray {
       { label: state.overlayEnabled ? 'Hide overlay' : 'Show overlay', click: () => this.handlers.toggleOverlay() },
       { label: 'Open Tavern Lens', click: () => this.handlers.openApp() },
       { label: state.demoRunning ? 'Stop demo' : 'Start demo', click: () => this.handlers.toggleDemo() },
+      ...(state.updateReady ? [{ label: `Restart to update (${state.updateReady})`, click: () => this.handlers.installUpdate() }] : []),
       { type: 'separator' },
       { label: 'Quit', click: () => this.handlers.quit() },
     ]);

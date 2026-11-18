@@ -66,6 +66,8 @@ const bridge: TavernLensBridge = {
   exportDiagnostics: (opts?: DiagnosticsExportOptions) =>
     ipcRenderer.invoke(IPC.exportDiagnostics, opts ?? {}) as Promise<DiagnosticsExportResult>,
   openLogsFolder: () => ipcRenderer.invoke(IPC.openLogsFolder) as Promise<void>,
+  checkForUpdates: () => ipcRenderer.invoke(IPC.checkForUpdates) as Promise<void>,
+  installUpdate: () => ipcRenderer.invoke(IPC.installUpdate) as Promise<void>,
 
   setInteractive: (interactive: boolean) => ipcRenderer.send(IPC.setInteractive, !!interactive),
   openSettings: () => ipcRenderer.send(IPC.openSettings),
