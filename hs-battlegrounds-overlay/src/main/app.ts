@@ -45,6 +45,7 @@ import { Store, mergeSimPredictions } from './store';
 import { createTracker } from './trackerFactory';
 import { AppTray } from './tray';
 import { Updater } from './updater';
+import { CompGuidesProvider } from './compGuides';
 import { readLobbyTribes, tribeReaderSupported } from './hearthstone/tribeReader';
 import { createOverlayWindow, createSettingsWindow } from './windows';
 
@@ -68,6 +69,7 @@ export class TavernLensApp {
   private cardData!: CardDataService;
   private community!: CommunityHeroStatsProvider;
   private communityTrinkets!: CommunityTrinketStatsProvider;
+  private compGuides!: CompGuidesProvider;
   private live!: GameFeed;
   private demoFeed: GameFeed | undefined;
   private demo!: DemoPlayer;
@@ -161,6 +163,7 @@ export class TavernLensApp {
       normalize: (id) => this.cardData.current.baseHeroId(id),
     });
     this.communityTrinkets = new CommunityTrinketStatsProvider({ cacheDir: join(userData, 'cache'), fetch: fetchImpl });
+    this.compGuides = new CompGuidesProvider({ cacheDir: join(userData, 'cache'), fetch: fetchImpl });
 
     const logTransitions = !!process.env.TL_DEBUG;
     const cardName = (id: string) => this.cardData?.current.get(id)?.name;
@@ -197,6 +200,7 @@ export class TavernLensApp {
       getCardData: () => this.cardData.current.data,
       getHeroStats: () => this.getHeroStats(),
       getTrinketStats: () => this.getTrinketStats(),
+      getCompGuides: () => (this.store.getSettings().communityStats ? this.compGuides.get() : Promise.resolve(undefined)),
       reportSimResult: (turn, result) => this.reportSimResult(turn, result),
       startDemo: (speed) => this.startDemo(speed),
       stopDemo: () => this.stopDemo(),
@@ -260,6 +264,7 @@ export class TavernLensApp {
       setTimeout(() => {
         this.community.prefetch();
         this.communityTrinkets.prefetch();
+        this.compGuides.prefetch();
       }, 5000);
     }
 
@@ -455,6 +460,7 @@ export class TavernLensApp {
     if (!prev.communityStats && next.communityStats) {
       this.community.prefetch();
       this.communityTrinkets.prefetch();
+      this.compGuides.prefetch();
     }
     this.updateOverlay();
     this.tray?.update(this.trayState());

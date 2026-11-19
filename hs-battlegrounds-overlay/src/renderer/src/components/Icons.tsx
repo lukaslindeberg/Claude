@@ -234,6 +234,8 @@ export const NAV_ICONS = {
   heroes: (p: P) => svg(p.size, p.className, <path d="M8 2.2a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM2.8 14c.5-2.8 2.6-4.3 5.2-4.3s4.7 1.5 5.2 4.3" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />),
   trinkets: (p: P) =>
     svg(p.size, p.className, <path d="M8 1.8 13.4 6 8 14.2 2.6 6 8 1.8ZM2.6 6h10.8M5.6 6 8 14.2 10.4 6M5.6 6 8 1.8 10.4 6" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />),
+  comps: (p: P) =>
+    svg(p.size, p.className, <path d="M2.5 3.5h4v4h-4zM9.5 3.5h4v4h-4zM2.5 9.5h4v4h-4zM9.5 9.5h4v4h-4z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />),
   settings: (p: P) =>
     svg(
       p.size,

@@ -229,6 +229,9 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
       if (settings.communityStats) bundles.unshift(samples.communityTrinketStats());
       return bundles;
     },
+    async getCompGuides() {
+      return settings.communityStats ? samples.compGuides() : undefined;
+    },
     async reportSimResult(turn: number, result: BattleSimResult) {
       console.info(`[mock bridge] sim result for turn ${turn}`, result);
     },

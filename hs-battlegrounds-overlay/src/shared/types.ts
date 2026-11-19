@@ -582,6 +582,40 @@ export interface PlayTip {
   wantsTribes?: Tribe[];
 }
 
+/** A comp guide (Firestone community strategies + comp stats). */
+export interface CompGuideCard {
+  cardId: string;
+  /** core = the comp's key pieces, addon = good additions, cycle = cards you play through. */
+  role: 'core' | 'addon' | 'cycle';
+}
+
+export interface CompGuide {
+  id: string;
+  name: string;
+  /** Main tribe (from the comp id); absent for tribe-less comps. */
+  tribe?: Tribe;
+  /** Editor's power level (S best). */
+  tier?: string;
+  difficulty?: string;
+  cards: CompGuideCard[];
+  tip?: string;
+  /** "Commit when you have ...". */
+  whenToCommit?: string;
+  author?: string;
+  /** Community stats for the comp (final boards matched to it). */
+  avgPlacement?: number;
+  games?: number;
+  /** Share of games finishing 1st / in the top 4 (0..1). */
+  firstRate?: number;
+  top4Rate?: number;
+}
+
+export interface CompGuidesBundle {
+  source: string;
+  updatedAt: string;
+  comps: CompGuide[];
+}
+
 export interface HeroStatsBundle {
   source: 'personal' | 'community';
   label: string; // e.g. "Your games" or "Community (last patch, all ranks)"

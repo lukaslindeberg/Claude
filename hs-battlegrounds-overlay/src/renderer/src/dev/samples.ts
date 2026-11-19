@@ -4,6 +4,7 @@
  */
 import { CardDb } from '@core/cards/cardDb';
 import type {
+  CompGuidesBundle,
   AppStatus,
   BattleSimInput,
   BattleState,
@@ -955,5 +956,20 @@ export function sampleStatus(): AppStatus {
     demo: { running: false },
     cardData: { build: db.build, patch: db.patch, source: db.data.source, cards: db.size },
     errors: [],
+  };
+}
+
+/** Demo comp guides (placeholder text; the app loads the real ones from Firestone). */
+export function compGuides(): CompGuidesBundle {
+  const cards = (core: string[], addon: string[]) => [...core.map((cardId) => ({ cardId, role: 'core' as const })), ...addon.map((cardId) => ({ cardId, role: 'addon' as const }))];
+  return {
+    source: 'Firestone community comp guides',
+    updatedAt: '2026-11-19T03:10:31.205Z',
+    comps: [
+      { id: 'mech_demo', name: 'Mech Magnetic', tribe: 'MECHANICAL', tier: 'S', difficulty: 'Hard', cards: cards(['BG26_149', 'BG26_152'], ['BG34_171', 'BG35_342', 'BG28_741']), tip: 'Demo text: stack Magnetic minions on one carry and keep the Beatboxer safe in the middle of your board.', whenToCommit: 'Beatboxer + one Magnetic generator', author: 'demo', avgPlacement: 3.31, games: 1951, firstRate: 0.21, top4Rate: 0.676 },
+      { id: 'undead_demo', name: 'Undead Butcher', tribe: 'UNDEAD', tier: 'A', difficulty: 'Medium', cards: cards(['BG32_324', 'BG32_880'], ['BG25_354', 'BG31_835', 'BG25_009']), tip: 'Demo text: generate Butchering every turn and use it on minions with Reborn or Deathrattles.', whenToCommit: 'Drustfallen Butcher + Friendly Geist', author: 'demo', avgPlacement: 3.54, games: 1951, firstRate: 0.17, top4Rate: 0.683 },
+      { id: 'dragon_demo', name: 'Dragon Shield', tribe: 'DRAGON', tier: 'A', difficulty: 'Easy', cards: cards(['BG36_241', 'BG34_633'], ['BG32_820', 'BG29_813']), tip: 'Demo text: Divine Shields on Dragons, buff them with Tavern spells.', author: 'demo', avgPlacement: 2.82, games: 2250, firstRate: 0.24, top4Rate: 0.817 },
+      { id: 'beast_demo', name: 'Beast Leviathan', tribe: 'BEAST', tier: 'B', difficulty: 'Medium', cards: cards(['BG35_602'], ['BG36_204', 'BG35_604', 'BG26_802']), tip: 'Demo text: grow the Leviathan and protect it with Taunts.', avgPlacement: 3.91, games: 405, firstRate: 0.12, top4Rate: 0.576 },
+    ],
   };
 }

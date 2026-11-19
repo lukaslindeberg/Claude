@@ -14,6 +14,7 @@ import type {
   HeroStatsBundle,
   MatchRecord,
   TrinketStatsBundle,
+  CompGuidesBundle,
   Settings,
 } from '@shared/types';
 import { createLogger } from './logger';
@@ -30,6 +31,7 @@ export interface IpcBackend {
   getCardData(): BgCardData;
   getHeroStats(): Promise<HeroStatsBundle[]>;
   getTrinketStats(): Promise<TrinketStatsBundle[]>;
+  getCompGuides(): Promise<CompGuidesBundle | undefined>;
   reportSimResult(turn: number, result: BattleSimResult): void;
   startDemo(speed?: number): Promise<void>;
   stopDemo(): void;
@@ -85,6 +87,7 @@ export function registerIpcHandlers(b: IpcBackend): void {
   handle(IPC.getCardData, () => b.getCardData());
   handle(IPC.getHeroStats, () => b.getHeroStats());
   handle(IPC.getTrinketStats, () => b.getTrinketStats());
+  handle(IPC.getCompGuides, () => b.getCompGuides());
   handle(IPC.reportSimResult, (_e, turn, result) => {
     if (typeof turn !== 'number' || !Number.isFinite(turn) || !isObject(result)) return;
     b.reportSimResult(turn, result as unknown as BattleSimResult);

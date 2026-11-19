@@ -1650,3 +1650,87 @@ kbd {
 .tl-about__update.is-available {
   color: var(--tl-gold);
 }
+
+/* ------------------------------------------------------------------ comps */
+.tl-comps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+.tl-comp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tl-comp__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tl-comp__title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.tl-comp__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--tl-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: #fff;
+}
+.tl-comp__stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.tl-comp__avg {
+  font-family: var(--tl-display);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--tl-text);
+}
+.tl-comp__avg.is-good {
+  color: var(--tl-win);
+}
+.tl-comp__avg.is-bad {
+  color: var(--tl-loss);
+}
+.tl-comp__cards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px;
+}
+.tl-comp__cards .is-addon {
+  opacity: 0.85;
+}
+.tl-comp__sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 4px 0;
+  background: rgba(230, 190, 120, 0.25);
+}
+.tl-comp__tip {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--tl-text-2);
+}
+.tl-comp__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--tl-text-2);
+}
+.tl-comp__foot b {
+  color: var(--tl-gold);
+}
+.tl-comps__credit {
+  margin-top: 14px;
+}

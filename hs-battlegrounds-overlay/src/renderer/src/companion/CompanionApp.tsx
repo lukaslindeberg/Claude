@@ -7,11 +7,12 @@ import { Overview } from './sections/Overview';
 import { Matches } from './sections/Matches';
 import { Heroes } from './sections/Heroes';
 import { Trinkets } from './sections/Trinkets';
+import { Comps } from './sections/Comps';
 import { SettingsSection } from './sections/SettingsSection';
 import { About } from './sections/About';
 import '../styles/companion.css';
 
-export type SectionId = 'overview' | 'matches' | 'heroes' | 'trinkets' | 'settings';
+export type SectionId = 'overview' | 'matches' | 'heroes' | 'trinkets' | 'comps' | 'settings';
 
 function SettingsPage() {
   return (
@@ -27,6 +28,7 @@ const SECTIONS: { id: SectionId; label: string; Component: ComponentType }[] = [
   { id: 'matches', label: 'Matches', Component: Matches },
   { id: 'heroes', label: 'Heroes', Component: Heroes },
   { id: 'trinkets', label: 'Trinkets', Component: Trinkets },
+  { id: 'comps', label: 'Comps', Component: Comps },
   { id: 'settings', label: 'Settings', Component: SettingsPage },
 ];
 

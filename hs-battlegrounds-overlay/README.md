@@ -19,9 +19,10 @@ injection — and draws a transparent, click-through layer on top of the game.
 | **Lobby and session plaque** | One small plaque: turn, the lobby's tribes, your hero's expected placement in this lobby, an optional tier-up pace chip (Settings → *Tier-up timing*, off by default; "on curve" / "1 turn behind" / "2 turns ahead" against the median tier-up turns of your own top-4 games with this hero, or with any hero; shown only when your history backs it), the anomaly; games today, average and recent placements. Details on hover (the pace chip lists the usual turn per tier next to this game's). |
 | **Post-match summary** | Placement, final board as the game's cards, tier timings, a small health graph (your health + armor per turn against the other players' faint lines, the fights that cost the most marked in red with turn, opponent and damage on hover; team health in Duos), combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
 
-The **companion window** (tray icon → *Open Tavern Lens*) has five pages: **Overview** (the current game, recent
+The **companion window** (tray icon → *Open Tavern Lens*) has six pages: **Overview** (the current game, recent
 games and today), **Matches** (history and statistics), **Heroes** and **Trinkets** (ranked lists with a tribe
-filter that re-ranks them for a lobby, per-tribe effects, your own record and "How to play" notes) and
+filter that re-ranks them for a lobby, per-tribe effects, your own record and "How to play" notes), **Comps** (this patch's strong boards with
+their key minions, a short tip, when to commit and their average placement, filtered by lobby tribes) and
 **Settings** (with setup checks, diagnostics and about). A **demo mode** replays a recorded game so you can see everything
 without launching Hearthstone.
 
@@ -122,6 +123,8 @@ Power.log ──► log tailer ──► BgTracker (parser + entity store + BG r
 
 - Card data: HearthSim hsdata (bundled + auto-refresh).
 - Card art: [HearthstoneJSON](https://hearthstonejson.com/) image CDN (can be turned off in Settings).
+- Comp guides: Firestone's public community comp strategies (key minions, a tip, when to commit; authors
+  credited on each tip) and comp statistics (average placement), shown on the companion's **Comps** page.
 - Hero stats: your own match history, plus optional community statistics from Firestone's public data
   files (Settings → *Community hero stats*). Firestone's files have no tier-up timings, so the tier-up
   pace chip uses your own history only.
