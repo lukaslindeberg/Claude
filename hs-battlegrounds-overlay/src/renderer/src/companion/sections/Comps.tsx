@@ -62,10 +62,8 @@ export function Comps() {
       <TribeFilter value={tribes} onChange={setTribes} />
       {bundle === null ? (
         <Empty title="Loading comps…" />
-      ) : !communityOn ? (
-        <Empty title="Comp guides need community stats">Turn on Settings → Behaviour → Community hero stats.</Empty>
       ) : !bundle?.comps.length ? (
-        <Empty title="No comp guides available">They are downloaded from Firestone's public data; check your connection.</Empty>
+        <Empty title="No comp guides available" />
       ) : !comps.length ? (
         <Empty title="No comps for these tribes" />
       ) : (
@@ -77,7 +75,8 @@ export function Comps() {
       )}
       {bundle?.comps.length ? (
         <p className="tl-muted tl-small tl-comps__credit">
-          Guides and tiers: Firestone community (authors named on each tip). Placement: Firestone comp statistics, last patch, all ranks.
+          Comp list and tiers: {bundle.source}. Average placement: Firestone comp statistics (last patch, all ranks), where a matching comp exists
+          {communityOn ? '' : ' (turn on community stats in Settings to show them)'}.
         </p>
       ) : null}
     </div>
@@ -122,8 +121,9 @@ function CompCard({ comp }: { comp: CompGuide }) {
           <MinionToken key={c.cardId} minion={token(c.cardId)} size="xs" className="is-addon" />
         ))}
       </div>
+      {comp.objective ? <p className="tl-comp__objective">{comp.objective}</p> : null}
       {comp.tip ? <p className="tl-comp__tip">{comp.tip}</p> : null}
-      {comp.whenToCommit || comp.author ? (
+      {comp.whenToCommit || comp.author || comp.enablers?.length ? (
         <div className="tl-comp__foot">
           {comp.whenToCommit ? (
             <span>
@@ -132,7 +132,11 @@ function CompCard({ comp }: { comp: CompGuide }) {
           ) : (
             <span />
           )}
-          {comp.author ? <span className="tl-muted tl-small">Tip by {comp.author}</span> : null}
+          {comp.enablers?.length ? (
+            <span className="tl-muted tl-small">Usually starts with {comp.enablers.map((id) => db.name(id)).join(' or ')}</span>
+          ) : comp.author ? (
+            <span className="tl-muted tl-small">Tip by {comp.author}</span>
+          ) : null}
         </div>
       ) : null}
     </Card>

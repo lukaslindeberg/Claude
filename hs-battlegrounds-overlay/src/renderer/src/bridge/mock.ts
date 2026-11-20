@@ -20,6 +20,7 @@ import {
   type WidgetId,
 } from '@shared/types';
 import { CardDb } from '@core/cards/cardDb';
+import { attachMatchedStats, bundledCompGuides } from '@core/stats/comps';
 import * as samples from '../dev/samples';
 import { personalBundle } from '../lib/stats';
 import { personalTrinketBundle } from '../lib/synergy';
@@ -230,7 +231,9 @@ export function createMockBridge(opts: MockOptions): TavernLensBridge {
       return bundles;
     },
     async getCompGuides() {
-      return settings.communityStats ? samples.compGuides() : undefined;
+      const bundle = bundledCompGuides();
+      if (settings.communityStats) attachMatchedStats(bundle.comps, samples.compGuides().comps);
+      return bundle;
     },
     async reportSimResult(turn: number, result: BattleSimResult) {
       console.info(`[mock bridge] sim result for turn ${turn}`, result);

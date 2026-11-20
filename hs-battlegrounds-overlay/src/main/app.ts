@@ -200,7 +200,7 @@ export class TavernLensApp {
       getCardData: () => this.cardData.current.data,
       getHeroStats: () => this.getHeroStats(),
       getTrinketStats: () => this.getTrinketStats(),
-      getCompGuides: () => (this.store.getSettings().communityStats ? this.compGuides.get() : Promise.resolve(undefined)),
+      getCompGuides: () => this.compGuides.get(this.store.getSettings().communityStats),
       reportSimResult: (turn, result) => this.reportSimResult(turn, result),
       startDemo: (speed) => this.startDemo(speed),
       stopDemo: () => this.stopDemo(),

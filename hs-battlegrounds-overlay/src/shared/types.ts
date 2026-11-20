@@ -597,6 +597,10 @@ export interface CompGuide {
   /** Editor's power level (S best). */
   tier?: string;
   difficulty?: string;
+  /** One line: what the comp is trying to do. */
+  objective?: string;
+  /** The card that usually starts the comp. */
+  enablers?: string[];
   cards: CompGuideCard[];
   tip?: string;
   /** "Commit when you have ...". */

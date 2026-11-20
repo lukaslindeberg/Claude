@@ -8,7 +8,10 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { CompGuide, CompGuideCard, CompGuidesBundle, Tribe } from '@shared/types';
+import { attachMatchedStats, bundledCompGuides } from '@core/stats/comps';
 import { decodeMaybeGzip } from './heroStats';
+
+export { attachMatchedStats, bundledCompGuides };
 import { createLogger } from './logger';
 
 const log = createLogger('comps');
@@ -190,14 +193,24 @@ export class CompGuidesProvider {
     return this.inflight;
   }
 
-  /** Cached guides, refreshed when stale; a stale copy is served if the refresh fails. */
-  async get(): Promise<CompGuidesBundle | undefined> {
+  /** Firestone's community guides with stats (cached; a stale copy is served if a refresh fails). */
+  async getCommunity(): Promise<CompGuidesBundle | undefined> {
     let c = await this.loadCache();
     if (!c || this.now() - c.fetchedAt > CACHE_TTL_MS) c = (await this.fetchFresh()) ?? c;
     return c?.bundle;
   }
 
+  /** Our comp list, with live placements from the community stats when `withStats`. */
+  async get(withStats: boolean): Promise<CompGuidesBundle> {
+    const bundle = bundledCompGuides();
+    if (withStats) {
+      const community = await this.getCommunity().catch(() => undefined);
+      if (community) attachMatchedStats(bundle.comps, community.comps);
+    }
+    return bundle;
+  }
+
   prefetch(): void {
-    void this.get().catch(() => undefined);
+    void this.getCommunity().catch(() => undefined);
   }
 }

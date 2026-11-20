@@ -123,8 +123,9 @@ Power.log ──► log tailer ──► BgTracker (parser + entity store + BG r
 
 - Card data: HearthSim hsdata (bundled + auto-refresh).
 - Card art: [HearthstoneJSON](https://hearthstonejson.com/) image CDN (can be turned off in Settings).
-- Comp guides: Firestone's public community comp strategies (key minions, a tip, when to commit; authors
-  credited on each tip) and comp statistics (average placement), shown on the companion's **Comps** page.
+- Comp guides: a bundled comp list (`src/core/cards/data/comps.json`; tiers, key minions, objective and how-to
+  notes, based on HSReplay's comp tier list as of November 2026), with live average placements from Firestone's
+  public comp statistics where a matching comp exists. Shown on the companion's **Comps** page.
 - Hero stats: your own match history, plus optional community statistics from Firestone's public data
   files (Settings → *Community hero stats*). Firestone's files have no tier-up timings, so the tier-up
   pace chip uses your own history only.

@@ -50,3 +50,32 @@ describe('comp guides', () => {
     expect(sortCompGuides(g).map((x) => x.id)).toEqual(['neutral_other', 'beast_example']);
   });
 });
+
+describe('bundled comp list', () => {
+  it('has valid tiers and only real card ids', async () => {
+    const { bundledCompGuides } = await import('../../src/core/stats/comps');
+    const { CardDb } = await import('../../src/core/cards/cardDb');
+    const db = CardDb.bundled();
+    const b = bundledCompGuides();
+    expect(b.comps.length).toBeGreaterThanOrEqual(30);
+    expect(new Set(b.comps.map((c) => c.id)).size).toBe(b.comps.length);
+    for (const c of b.comps) {
+      expect(['S', 'A', 'B', 'C']).toContain(c.tier);
+      expect(c.cards.some((x) => x.role === 'core')).toBe(true);
+      for (const x of [...c.cards.map((y) => y.cardId), ...(c.enablers ?? [])]) expect(db.get(x), `${c.id}: ${x}`).toBeTruthy();
+    }
+  });
+
+  it('takes stats only from a clearly matching community comp, one each', async () => {
+    const { attachMatchedStats } = await import('../../src/core/stats/comps');
+    const mine = (id: string, core: string[]) => ({ id, name: id, tribe: 'BEAST' as const, cards: core.map((cardId) => ({ cardId, role: 'core' as const })) });
+    const a = mine('a', ['X1', 'X2', 'X3']);
+    const b = mine('b', ['X1', 'Y2']);
+    const support = mine('c', ['BG_LOE_077', 'BG33_823']); // Brann + Sky Admiral Rogers: support cards only
+    const f = { id: 'f', name: 'f', tribe: 'BEAST' as const, games: 500, avgPlacement: 3.2, cards: ['X1', 'X2', 'X3', 'Y2', 'BG_LOE_077', 'BG33_823'].map((cardId) => ({ cardId, role: 'core' as const })) };
+    attachMatchedStats([a, b, support], [f]);
+    expect(a).toMatchObject({ avgPlacement: 3.2, games: 500 });
+    expect((b as { games?: number }).games).toBeUndefined(); // f already taken by the better match
+    expect((support as { games?: number }).games).toBeUndefined();
+  });
+});

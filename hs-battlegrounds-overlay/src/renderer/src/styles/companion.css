@@ -1734,3 +1734,9 @@ kbd {
 .tl-comps__credit {
   margin-top: 14px;
 }
+.tl-comp__objective {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tl-text);
+}
