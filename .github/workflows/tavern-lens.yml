@@ -1,0 +1,114 @@
+name: Tavern Lens
+
+on:
+  # Branch pushes are covered by the pull_request trigger; only run on push for
+  # the main branches and release tags so a PR push doesn't run everything twice.
+  push:
+    branches: [main, master]
+    tags: ['tavern-lens-v*']
+    paths:
+      - 'hs-battlegrounds-overlay/**'
+      - '.github/workflows/tavern-lens.yml'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'hs-battlegrounds-overlay/**'
+      - '.github/workflows/tavern-lens.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: tavern-lens-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: hs-battlegrounds-overlay
+
+jobs:
+  test:
+    name: Typecheck & unit tests
+    # Skip while the PR is a draft (work in progress); runs again when it's marked ready.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hs-battlegrounds-overlay/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run
+
+  build:
+    name: Package (${{ matrix.os }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      # Unsigned builds: don't look for signing identities in the keychain.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hs-battlegrounds-overlay/package-lock.json
+      - run: npm ci
+      # Every CI build gets its own, increasing version so installed apps can update to it.
+      - run: npm version "1.0.${{ github.run_number }}" --no-git-tag-version --allow-same-version
+      - run: npx electron-vite build
+      - run: npx electron-builder --publish never
+      - uses: actions/upload-artifact@v5
+        with:
+          name: tavern-lens-${{ matrix.os }}
+          path: |
+            hs-battlegrounds-overlay/release/**
+            !hs-battlegrounds-overlay/release/*-unpacked/**
+            !hs-battlegrounds-overlay/release/mac/**
+            !hs-battlegrounds-overlay/release/mac-*/**
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish update channel
+    needs: build
+    # Builds of this repository (not forks) go to the rolling release the app updates from.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: tavern-lens-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: tavern-lens-*
+          path: dist
+          merge-multiple: true
+      - name: Upload to the release
+        run: |
+          set -euo pipefail
+          ls -la dist
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Tavern Lens (latest build)" \
+            --notes "Latest Tavern Lens build. Windows: Tavern-Lens-Setup-*.exe (updates itself) or the portable .exe. macOS: the .dmg for your Mac (arm64 = Apple silicon)." \
+            --latest=false
+          shopt -s nullglob
+          files=(dist/*.exe dist/*.dmg dist/*.blockmap)
+          # Installers first, then the update file that points at them.
+          gh release upload "$TAG" "${files[@]}" --clobber
+          gh release upload "$TAG" dist/latest*.yml --clobber
+          keep=$(for f in "${files[@]}" dist/latest*.yml; do basename "$f"; done)
+          gh release view "$TAG" --json assets --jq '.assets[].name' | while read -r name; do
+            grep -qxF "$name" <<<"$keep" || gh release delete-asset "$TAG" "$name" --yes
+          done

@@ -1,0 +1,2120 @@
+/* Tavern Lens — "Bob's Tavern" design system: tokens, materials and shared components.
+ *
+ * Materials: dark carved wood (panels), slate-blue stone (wells, menu boards),
+ * brass/gold trim (9-slice SVG frame with corner clamps), parchment (tooltips, notes,
+ * the post-match scroll) and gem accents. Textures are tiny SVG turbulence tiles.
+ * Fonts: Fraunces (flared display serif: titles, big numbers, outlined stats) and
+ * Archivo (Franklin-style grotesque, slightly condensed: UI text).
+ */
+:root {
+  --tl-alpha: 0.92;
+  --tl-scale: 1;
+
+  /* wood */
+  --wood-hi: #4b3121;
+  --wood: #2f1f14;
+  --wood-lo: #1b110a;
+  --wood-a-hi: rgba(62, 41, 26, var(--tl-alpha));
+  --wood-a-lo: rgba(30, 20, 12, var(--tl-alpha));
+  /* slate stone */
+  --stone-hi: #3a4658;
+  --stone: #262f3d;
+  --stone-lo: #171c25;
+  /* brass / gold */
+  --brass-hi: #fff0bd;
+  --brass: #dcaa50;
+  --brass-mid: #a8742a;
+  --brass-lo: #6a4515;
+  --brass-dark: #1d1105;
+  /* parchment & ink */
+  --parch: #f1e4c4;
+  --parch-2: #e3cfa2;
+  --parch-edge: #b58d55;
+  --ink: #3a2412;
+  --ink-2: #6b4b2d;
+  --ink-red: #8e2b16;
+  /* gems */
+  --gem-green: #3fcf60;
+  --gem-red: #e2483c;
+  --gem-grey: #a6adb8;
+  --gem-blue: #4a9cf0;
+  --gem-purple: #a464f0;
+  --gem-gold: #f3c44b;
+
+  /* semantic */
+  --tl-panel: var(--wood-a-lo);
+  --tl-panel-solid: #24180f;
+  --tl-inset: rgba(0, 0, 0, 0.22);
+  --tl-inset-2: rgba(0, 0, 0, 0.3);
+  --tl-border: rgba(220, 170, 80, 0.32);
+  --tl-border-soft: rgba(255, 220, 160, 0.1);
+  --tl-border-strong: rgba(220, 170, 80, 0.6);
+  --tl-gold: #f4cd6c;
+  --tl-gold-2: #dcaa50;
+  --tl-gold-3: #8a6224;
+  --tl-text: #f6ead2;
+  --tl-text-2: #d6c4a2;
+  --tl-muted: #a08d70;
+  --tl-win: #5fd47d;
+  --tl-loss: #ef5f50;
+  --tl-tie: #b0b5bf;
+  --tl-info: #62b9ea;
+  --tl-buffed: #78f06a;
+  --tl-damaged: #ff4b3a;
+
+  --tl-font: 'Archivo Variable', 'Archivo', 'Segoe UI', system-ui, sans-serif;
+  --tl-display: 'Fraunces Variable', 'Fraunces', Georgia, 'Times New Roman', serif;
+  --tl-radius: 7px;
+  --tl-radius-sm: 5px;
+  --tl-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --tl-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --tex-noise: url('../assets/ui/noise.svg');
+  --tex-grain: url('../assets/ui/grain.svg');
+  --tex-mottle: url('../assets/ui/mottle.svg');
+  --tex-parch: url('../assets/ui/parch.svg');
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--tl-font);
+  font-stretch: 94%;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--tl-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'tnum' 1;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  font-stretch: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.tl-muted {
+  color: var(--tl-muted);
+}
+.tl-small {
+  font-size: 11px;
+}
+.tl-gold {
+  color: var(--tl-gold);
+}
+.tl-display {
+  font-family: var(--tl-display);
+}
+.tl-nowrap {
+  white-space: nowrap;
+}
+.tl-up {
+  color: #86ea9c;
+}
+.tl-down {
+  color: #ff8b80;
+}
+
+/* Outlined white numbers, like the game's attack/health numbers. */
+.tl-num {
+  font-family: var(--tl-display);
+  font-weight: 800;
+  color: #fff;
+  -webkit-text-stroke: 0.2em var(--tl-num-stroke, #120a03);
+  paint-order: stroke fill;
+  letter-spacing: -0.02em;
+}
+
+/* ------------------------------------------------------------------ materials */
+
+/* Dark carved wood in a bevelled brass frame with corner clamps (9-slice SVG: the frame
+   is the border image, so `overflow: hidden` panels never clip it). */
+.tl-panel {
+  position: relative;
+  color: var(--tl-text);
+  border: 6px solid transparent;
+  border-image: url('../assets/ui/frame-ornate.svg') 24 / 17px / 2px stretch;
+  border-radius: 8px;
+  background:
+    radial-gradient(130% 90% at 50% 45%, transparent 52%, rgba(0, 0, 0, 0.42) 100%),
+    radial-gradient(120% 60% at 50% -10%, rgba(255, 196, 110, 0.16), transparent 60%),
+    var(--tex-grain) 0 0 / 420px 240px,
+    linear-gradient(180deg, var(--wood-a-hi), var(--wood-a-lo));
+  background-clip: padding-box;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 2px 0 rgba(255, 220, 160, 0.1),
+    inset 0 0 22px rgba(0, 0, 0, 0.5),
+    0 10px 26px rgba(0, 0, 0, 0.55),
+    0 2px 5px rgba(0, 0, 0, 0.5);
+}
+.tl-panel.is-plain,
+.tl-plain-frame {
+  border-image-source: url('../assets/ui/frame-plain.svg');
+  border-image-slice: 16;
+  border-image-width: 13px;
+  border-image-outset: 1px;
+}
+
+/* Engraved brass title plate with a rivet at each end. */
+.tl-plate {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 21px;
+  padding: 0 15px;
+  border-radius: 4px;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #2c1806;
+  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.55);
+  background:
+    radial-gradient(circle at 7px 50%, #fff3c4 0 1.2px, #7a5216 1.9px, transparent 2.5px),
+    radial-gradient(circle at calc(100% - 7px) 50%, #fff3c4 0 1.2px, #7a5216 1.9px, transparent 2.5px),
+    linear-gradient(180deg, #f6d98c 0%, #dba94a 45%, #b17c28 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 220, 0.75),
+    inset 0 -1px 0 rgba(80, 45, 5, 0.6),
+    0 0 0 1px #2a1704,
+    0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Slate-blue stone: wells inside panels, menu boards. */
+.tl-stone {
+  background:
+    var(--tex-noise) 0 0 / 180px 180px,
+    var(--tex-mottle) 0 0 / 360px 360px,
+    linear-gradient(180deg, #2c3646, #1b212c);
+  border: 1px solid #0c0f14;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 225, 170, 0.07);
+  border-radius: 5px;
+}
+/* Recessed well: darker carved slot. */
+.tl-well {
+  background: rgba(0, 0, 0, 0.26);
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 225, 170, 0.06);
+  border-radius: 5px;
+}
+
+/* Parchment: cream, fibrous, with burnt edges and dark-brown ink. */
+.tl-parchment,
+.tl-on-parchment {
+  --tl-text: var(--ink);
+  --tl-text-2: var(--ink-2);
+  --tl-muted: #8a6d4c;
+  --tl-gold: #8a5a12;
+  --tl-border-soft: rgba(90, 60, 30, 0.2);
+  --tl-num-stroke: #1d0f04;
+  color: var(--ink);
+}
+.tl-parchment {
+  background:
+    radial-gradient(130% 120% at 50% 50%, transparent 55%, rgba(140, 90, 40, 0.35) 100%),
+    var(--tex-parch) 0 0 / 300px 300px,
+    linear-gradient(175deg, #f6ebcf, #e9d7ad);
+  border: 1px solid #7a5428;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 250, 230, 0.5),
+    inset 0 0 14px rgba(120, 75, 25, 0.35),
+    0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* ------------------------------------------------------------------ typography */
+.tl-heading {
+  font-family: var(--tl-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  color: var(--tl-gold);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+}
+.tl-on-parchment .tl-heading,
+.tl-parchment .tl-heading {
+  color: var(--ink-red);
+  text-shadow: none;
+}
+.tl-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tl-muted);
+}
+
+/* ------------------------------------------------------------------ buttons & inputs */
+.tl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 5px;
+  border: 1px solid #0b0d11;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, #4a5568, #2a3240);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.5);
+  color: #f6ead2;
+  font-weight: 650;
+  font-size: 12px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+  transition: filter 0.15s var(--tl-ease), transform 0.1s;
+}
+.tl-btn:hover {
+  filter: brightness(1.15);
+}
+.tl-btn:active {
+  transform: translateY(1px);
+}
+.tl-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  filter: none;
+}
+.tl-btn--gold {
+  font-family: var(--tl-display);
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  color: #2a1504;
+  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.6);
+  border-color: #4a2c06;
+  background: linear-gradient(180deg, #ffe9a3 0%, #f1c158 38%, #c88a26 70%, #a8701c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 252, 230, 0.8),
+    inset 0 -2px 0 rgba(90, 50, 5, 0.45),
+    0 0 0 1px rgba(255, 220, 140, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.tl-btn--danger {
+  color: #ffd2cc;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, #7a2a22, #4a1410);
+}
+.tl-btn--ghost {
+  color: var(--tl-text);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  text-shadow: none;
+}
+.tl-btn--ghost:hover {
+  background: rgba(255, 220, 160, 0.08);
+  filter: none;
+}
+.tl-btn--icon {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
+.tl-input {
+  height: 30px;
+  border-radius: 5px;
+  border: 1px solid #0b0d11;
+  background: rgba(8, 10, 14, 0.55);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 225, 170, 0.07);
+  padding: 0 10px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tl-input:focus {
+  border-color: var(--brass-mid);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(220, 170, 80, 0.25);
+}
+.tl-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.tl-search svg {
+  position: absolute;
+  left: 9px;
+  color: var(--tl-muted);
+  pointer-events: none;
+}
+.tl-search .tl-input {
+  padding-left: 28px;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ art */
+.tl-art {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+.tl-art__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.tl-art__img.is-loaded {
+  opacity: 1;
+}
+/* Fallback: tribe gradient, painted vignette and engraved initials. */
+.tl-art.is-fallback::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 40%, transparent 35%, rgba(10, 5, 0, 0.55) 100%),
+    var(--tex-noise) 0 0 / 120px 120px;
+  pointer-events: none;
+}
+.tl-art__initials {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  color: #fff3d6;
+  -webkit-text-stroke: 0.16em rgba(25, 12, 2, 0.85);
+  paint-order: stroke fill;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.01em;
+  font-size: 13px;
+  user-select: none;
+}
+
+/* ------------------------------------------------------------------ gems & stat gems */
+.tl-gem {
+  --g: var(--gem-gold);
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+  vertical-align: middle;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.95) 0 9%, rgba(255, 255, 255, 0) 26%),
+    radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--g) 55%, white) 0%, var(--g) 42%, color-mix(in srgb, var(--g) 40%, black) 100%);
+  box-shadow:
+    0 0 0 1.5px #c99640,
+    0 0 0 2.5px var(--brass-dark),
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.45);
+}
+.tl-gem.is-win {
+  --g: var(--gem-green);
+}
+.tl-gem.is-loss {
+  --g: var(--gem-red);
+}
+.tl-gem.is-tie {
+  --g: var(--gem-grey);
+}
+.tl-gem.is-blue {
+  --g: var(--gem-blue);
+}
+.tl-gem.is-purple {
+  --g: var(--gem-purple);
+}
+
+.tl-statgem {
+  --s: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 0.22em #140a02;
+  paint-order: stroke fill;
+  letter-spacing: -0.04em;
+  background: center / contain no-repeat;
+  font-variant-numeric: lining-nums;
+}
+.tl-statgem.is-atk {
+  background-image: url('../assets/ui/gem-atk.svg');
+}
+.tl-statgem.is-atk.is-sword {
+  background-image: url('../assets/ui/gem-atk-sword.svg');
+  background-size: 128%;
+}
+.tl-statgem.is-hp {
+  background-image: url('../assets/ui/gem-hp.svg');
+  padding-top: calc(var(--s, 22px) * 0.2);
+}
+.tl-statgem.is-armor {
+  background-image: url('../assets/ui/gem-armor.svg');
+  padding-bottom: calc(var(--s, 22px) * 0.06);
+}
+.tl-statgem.is-buffed {
+  color: var(--tl-buffed);
+}
+.tl-statgem.is-damaged {
+  color: var(--tl-damaged);
+}
+
+/* ------------------------------------------------------------------ minion token */
+.tl-token {
+  --w: 56px;
+  --h: 70px;
+  --badge: 23px;
+  --badge-font: 15px;
+  --rim: 3px;
+  --star: 8px;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+}
+.tl-token--xs {
+  --w: 28px;
+  --h: 35px;
+  --badge: 14px;
+  --badge-font: 9.5px;
+  --rim: 1.5px;
+  --star: 11px;
+}
+.tl-token--sm {
+  --w: 36px;
+  --h: 45px;
+  --badge: 17px;
+  --badge-font: 11px;
+  --rim: 2px;
+  --star: 12px;
+}
+.tl-token--lg {
+  --w: 82px;
+  --h: 102px;
+  --badge: 32px;
+  --badge-font: 20px;
+  --rim: 4px;
+  --star: 10px;
+}
+.tl-token__figure {
+  position: relative;
+  width: var(--w);
+  height: calc(var(--h) + var(--badge) * 0.22);
+}
+/* Bevelled stone/silver rim around the oval portrait. */
+.tl-token__oval {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w);
+  height: var(--h);
+  border-radius: 50%;
+  padding: var(--rim);
+  background: linear-gradient(155deg, #f2f4f7 0%, #a9b1bd 22%, #545b67 48%, #8d96a3 70%, #3c424c 100%);
+  box-shadow: 0 0 0 1px #0b0c0f, 0 3px 7px rgba(0, 0, 0, 0.6);
+}
+.tl-token__art {
+  border-radius: 50%;
+}
+.tl-token__art .tl-art__initials {
+  font-size: calc(var(--w) * 0.3);
+}
+.tl-token--xs .tl-art__initials,
+.tl-token--sm .tl-art__initials {
+  font-size: calc(var(--w) * 0.32);
+}
+.tl-token__fx {
+  position: absolute;
+  inset: var(--rim);
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.65), inset 0 calc(var(--h) * -0.14) calc(var(--h) * 0.18) calc(var(--h) * -0.08) rgba(0, 0, 0, 0.6);
+}
+/* Golden: gleaming gold rim with a warm halo. */
+.tl-token.is-golden .tl-token__oval {
+  padding: calc(var(--rim) + 0.5px);
+  background: linear-gradient(155deg, #fffbe0 0%, #f6cf62 20%, #b97a18 46%, #ffe08a 66%, #7a4a08 100%);
+  box-shadow: 0 0 0 1px #2a1702, 0 0 calc(var(--w) * 0.14) rgba(255, 196, 70, 0.7), 0 3px 7px rgba(0, 0, 0, 0.55);
+}
+.tl-token.is-golden .tl-token__fx {
+  background: linear-gradient(140deg, rgba(255, 236, 160, 0.3), transparent 38%, transparent 72%, rgba(255, 210, 90, 0.22));
+}
+/* Divine shield: translucent golden bubble over the portrait. */
+.tl-token__bubble {
+  position: absolute;
+  left: calc(var(--w) * -0.1);
+  top: calc(var(--h) * -0.08);
+  width: calc(var(--w) * 1.2);
+  height: calc(var(--h) * 1.16);
+  border-radius: 50%;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 30% 16% at 34% 20%, rgba(255, 255, 240, 0.75), transparent 100%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 215, 110, 0) 56%, rgba(255, 215, 110, 0.32) 76%, rgba(255, 238, 170, 0.9) 92%, rgba(255, 238, 170, 0) 100%);
+  box-shadow: 0 0 calc(var(--w) * 0.12) rgba(255, 210, 90, 0.55);
+}
+/* Reborn: ghostly blue glow and tint. */
+.tl-token.has-reborn .tl-token__oval {
+  box-shadow: 0 0 0 1px #06141c, 0 0 calc(var(--w) * 0.16) calc(var(--w) * 0.03) rgba(110, 215, 255, 0.85), 0 3px 7px rgba(0, 0, 0, 0.55);
+}
+.tl-token.has-reborn .tl-token__fx {
+  background: linear-gradient(180deg, rgba(140, 230, 255, 0.32), rgba(40, 140, 200, 0.22));
+  mix-blend-mode: screen;
+}
+/* Stealth: dark mist over the portrait. */
+.tl-token.has-stealth .tl-token__art {
+  filter: saturate(0.55) brightness(0.8);
+}
+.tl-token.has-stealth .tl-token__fx {
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 75%, rgba(14, 10, 26, 0.75), transparent 70%),
+    radial-gradient(ellipse 55% 35% at 72% 40%, rgba(14, 10, 26, 0.6), transparent 70%),
+    radial-gradient(ellipse 50% 30% at 45% 15%, rgba(40, 30, 70, 0.5), transparent 70%),
+    var(--tex-noise) 0 0 / 60px 60px;
+}
+/* Taunt: grey stone shield behind the oval (gold when golden). */
+.tl-token__taunt {
+  position: absolute;
+  left: calc(var(--w) * -0.17);
+  top: calc(var(--h) * -0.07);
+  width: calc(var(--w) * 1.34);
+  height: calc(var(--h) * 1.2);
+  background: url('../assets/ui/taunt.svg') center / 100% 100% no-repeat;
+}
+.tl-token.is-golden .tl-token__taunt {
+  background-image: url('../assets/ui/taunt-gold.svg');
+}
+/* Stats: attack in a gold disc (bottom-left), health in a red drop (bottom-right). */
+.tl-token__atk,
+.tl-token__hp {
+  position: absolute;
+  bottom: 0;
+  z-index: 3;
+  width: var(--badge);
+  height: var(--badge);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  font-size: var(--badge-font);
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: calc(var(--badge-font) * 0.24) #140a02;
+  paint-order: stroke fill;
+  letter-spacing: -0.05em;
+  background: center / contain no-repeat;
+}
+.tl-token__atk[data-len='2'],
+.tl-token__hp[data-len='2'] {
+  font-size: calc(var(--badge-font) * 0.86);
+}
+.tl-token__atk[data-len='3'],
+.tl-token__hp[data-len='3'],
+.tl-token__atk[data-len='4'],
+.tl-token__hp[data-len='4'] {
+  font-size: calc(var(--badge-font) * 0.68);
+}
+.tl-token__atk {
+  left: calc(var(--badge) * -0.22);
+  background-image: url('../assets/ui/gem-atk.svg');
+}
+.tl-token--md .tl-token__atk,
+.tl-token--lg .tl-token__atk {
+  background-image: url('../assets/ui/gem-atk-sword.svg');
+  background-size: 134%;
+}
+.tl-token__hp {
+  right: calc(var(--badge) * -0.22);
+  padding-top: calc(var(--badge) * 0.16);
+  background-image: url('../assets/ui/gem-hp.svg');
+  background-size: 108%;
+}
+.tl-token__atk.is-buffed,
+.tl-token__hp.is-buffed {
+  color: var(--tl-buffed);
+}
+.tl-token__hp.is-damaged {
+  color: var(--tl-damaged);
+}
+/* compact tokens keep their badges inside their own footprint so rows can pack tightly */
+.tl-token--xs .tl-token__atk,
+.tl-token--sm .tl-token__atk {
+  left: -2px;
+}
+.tl-token--xs .tl-token__hp,
+.tl-token--sm .tl-token__hp {
+  right: -2px;
+}
+/* Tier stars along the top of the rim (md/lg), a single star with the number on small tokens. */
+.tl-token__stars {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--star) * -0.42);
+  transform: translateX(-50%);
+  display: flex;
+  z-index: 3;
+  pointer-events: none;
+}
+.tl-token__stars i {
+  width: var(--star);
+  height: var(--star);
+  margin: 0 -0.5px;
+  background: url('../assets/ui/star.svg') center / contain no-repeat;
+  transform: translateY(calc(var(--o) * var(--o) * var(--star) * 0.09));
+}
+.tl-token__tierstar {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--star) * -0.45);
+  transform: translateX(-50%);
+  z-index: 3;
+  width: var(--star);
+  height: var(--star);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 1px;
+  background: url('../assets/ui/star.svg') center / contain no-repeat;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  font-size: calc(var(--star) * 0.55);
+  color: #2a1504;
+  line-height: 1;
+}
+/* Keyword plaques under the oval (deathrattle skull, trigger rune). */
+.tl-token__plaques {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--badge) * 0.02);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0;
+  z-index: 4;
+}
+.tl-token__plaques i,
+.tl-token__marks i {
+  display: block;
+  width: calc(var(--w) * 0.26);
+  height: calc(var(--w) * 0.22);
+  background: center / contain no-repeat;
+}
+.tl-token--lg .tl-token__plaques i {
+  width: 21px;
+  height: 18px;
+}
+.tl-token__plaques .is-deathrattle,
+.tl-token__marks .is-deathrattle {
+  background-image: url('../assets/ui/plaque-skull.svg');
+}
+.tl-token__plaques .is-trigger,
+.tl-token__marks .is-trigger {
+  background-image: url('../assets/ui/plaque-rune.svg');
+}
+.tl-token__marks .is-venom {
+  background-image: url('../assets/ui/venom.svg');
+}
+.tl-token__marks .is-wind {
+  background-image: url('../assets/ui/swirl.svg');
+}
+/* Small tokens: markers in a strip along the top of the rim. */
+.tl-token__marks {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  transform: translateX(-50%);
+  display: flex;
+  z-index: 4;
+}
+.tl-token--xs .tl-token__marks i,
+.tl-token--sm .tl-token__marks i {
+  width: 12px;
+  height: 11px;
+}
+.tl-token--xs .tl-token__marks i {
+  width: 10px;
+  height: 9px;
+}
+/* Side markers on md/lg: windfury swirl (left), venom drop (right). */
+.tl-token__side {
+  position: absolute;
+  top: 34%;
+  z-index: 3;
+  width: calc(var(--w) * 0.28);
+  height: calc(var(--w) * 0.3);
+  background: center / contain no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7));
+}
+.tl-token__side.is-wind {
+  left: calc(var(--w) * -0.16);
+  background-image: url('../assets/ui/swirl.svg');
+}
+.tl-token__side.is-venom {
+  right: calc(var(--w) * -0.12);
+  background-image: url('../assets/ui/venom.svg');
+}
+.tl-token__name {
+  max-width: calc(var(--w) + 28px);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.15;
+  font-weight: 650;
+  color: var(--tl-text);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9), 0 0 4px rgba(0, 0, 0, 0.6);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tl-token.is-highlight .tl-token__oval {
+  background: linear-gradient(155deg, #e8ffe9 0%, #7fe6a0 30%, #2e8a4b 60%, #a5f0bd 100%);
+}
+
+/* ------------------------------------------------------------------ hero frame */
+.tl-hero {
+  --fw: 2px;
+  position: relative;
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+}
+.tl-hero--rounded {
+  border-radius: 22%;
+}
+.tl-hero__art {
+  border-radius: inherit;
+  border: var(--fw) solid;
+  border-color: #ffeaa8 #b27c2c #6b4514 #d6a24c;
+  box-shadow:
+    0 0 0 1px var(--brass-dark),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.tl-hero::after {
+  content: '';
+  position: absolute;
+  inset: var(--fw);
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55), inset 0 -6px 10px -5px rgba(0, 0, 0, 0.55);
+}
+.tl-hero .tl-art__img {
+  /* hero art crops often carry light frame edges: crop them away */
+  transform: scale(1.1);
+}
+.tl-hero.is-tiny .tl-hero__art {
+  box-shadow: 0 0 0 1px var(--brass-dark);
+}
+.tl-hero.has-ring .tl-hero__art {
+  box-shadow: 0 0 0 1px var(--brass-dark), 0 0 0 2px var(--ring), 0 0 10px 1px var(--ring);
+}
+.tl-hero.is-next .tl-hero__art {
+  border-color: #fff6cc #f0b840 #a86a10 #ffd36a;
+  box-shadow: 0 0 0 1px #2a1702, 0 0 9px 2px rgba(255, 196, 64, 0.85);
+}
+.tl-hero.is-fighting .tl-hero__art {
+  box-shadow: 0 0 0 1px #2a0604, 0 0 9px 2px rgba(240, 70, 50, 0.85);
+}
+.tl-hero.is-local .tl-hero__art {
+  box-shadow: 0 0 0 1px #052a10, 0 0 8px 1px rgba(110, 230, 140, 0.6);
+}
+/* Eliminated: desaturated, cracked. */
+.tl-hero.is-dead .tl-hero__art {
+  filter: grayscale(1) brightness(0.5) contrast(1.1);
+  border-color: #8a8a8a #4a4a4a #2a2a2a #6a6a6a;
+}
+.tl-hero__crack {
+  position: absolute;
+  inset: var(--fw);
+  border-radius: inherit;
+  z-index: 1;
+  background: url('../assets/ui/crack.svg') center / cover no-repeat;
+  pointer-events: none;
+}
+.tl-hero__tier {
+  position: absolute;
+  left: -18%;
+  top: -14%;
+  z-index: 2;
+}
+.tl-hero__triples {
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1px;
+  z-index: 2;
+}
+.tl-hero__triples i,
+.tl-triples i {
+  width: 6px;
+  height: 6px;
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #fff4c2, #f0bc48 50%, #8a5508);
+  box-shadow: 0 0 0 1px var(--brass-dark);
+}
+.tl-hero__stats {
+  position: absolute;
+  left: 50%;
+  bottom: -18%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  z-index: 2;
+}
+
+/* ------------------------------------------------------------------ tooltip */
+.tl-tooltip {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  animation: tl-fade-in 0.12s var(--tl-ease);
+}
+/* Default tooltip: a parchment note. */
+.tl-tooltip__body {
+  zoom: var(--tl-scale);
+  max-width: 300px;
+  padding: 8px 11px;
+  font-size: 12px;
+  line-height: 1.4;
+  --tl-text: var(--ink);
+  --tl-text-2: var(--ink-2);
+  --tl-muted: #8a6d4c;
+  color: var(--ink);
+  background:
+    radial-gradient(130% 120% at 50% 50%, transparent 55%, rgba(140, 90, 40, 0.3) 100%),
+    var(--tex-parch) 0 0 / 300px 300px,
+    linear-gradient(175deg, #f6ebcf, #e9d7ad);
+  border: 1px solid #6e4a22;
+  border-radius: 4px;
+  box-shadow: inset 0 0 12px rgba(120, 75, 25, 0.32), 0 8px 22px rgba(0, 0, 0, 0.55);
+}
+.tl-tooltip--card .tl-tooltip__body {
+  max-width: none;
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+.tl-tip-anchor {
+  display: inline-flex;
+}
+div.tl-tip-anchor {
+  display: block;
+}
+@keyframes tl-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Card tooltip: render (or parchment card) + parchment note. */
+.tl-cardtip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.tl-card-render {
+  position: relative;
+  display: block;
+  width: 186px;
+  aspect-ratio: 512 / 776;
+  flex: none;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.65));
+}
+.tl-card-render__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.tl-card-render.is-loaded .tl-card-render__img {
+  opacity: 1;
+}
+.tl-cardtip__note {
+  --tl-text: var(--ink);
+  --tl-text-2: var(--ink-2);
+  --tl-muted: #8a6d4c;
+  width: 178px;
+  margin-left: -12px;
+  padding: 10px 11px 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 11.5px;
+  background:
+    radial-gradient(130% 120% at 50% 50%, transparent 55%, rgba(140, 90, 40, 0.32) 100%),
+    var(--tex-parch) 0 0 / 300px 300px,
+    linear-gradient(175deg, #f6ebcf, #e8d4a8);
+  border: 1px solid #6e4a22;
+  border-radius: 3px 6px 6px 3px;
+  box-shadow: inset 0 0 12px rgba(120, 75, 25, 0.32), 0 8px 18px rgba(0, 0, 0, 0.5);
+  transform: rotate(0.6deg);
+}
+.tl-cardtip__name {
+  font-family: var(--tl-display);
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.1;
+  color: #2a1606;
+}
+.tl-cardtip__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+.tl-cardtip__golden {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a4d06;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ffe596, #e2aa3c);
+  box-shadow: 0 0 0 1px #7a4d06;
+}
+.tl-cardtip__stats {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 0;
+  border-top: 1px solid rgba(110, 74, 34, 0.25);
+  border-bottom: 1px solid rgba(110, 74, 34, 0.25);
+}
+.tl-cardtip__stats .tl-statgem.is-buffed {
+  color: #8dff7a;
+}
+.tl-cardtip__base {
+  margin-left: 4px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+.tl-cardtip__base b {
+  color: #2f6a18;
+}
+.tl-cardtip__kws {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+}
+.tl-cardtip__kw {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
+  font-size: 10.5px;
+}
+.tl-cardtip__kw > span {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 50%;
+  background: #2a1d14;
+}
+.tl-cardtip__ench {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tl-cardtip__label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-red);
+}
+.tl-cardtip__enchrow {
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+.tl-cardtip__enchrow b {
+  font-weight: 700;
+}
+.tl-cardtip__count {
+  margin-left: 4px;
+  font-weight: 800;
+  color: var(--ink-red);
+}
+.tl-cardtip__enchtext {
+  display: block;
+  color: var(--ink-2);
+  font-size: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tl-cardtip__more {
+  font-size: 10px;
+  color: var(--ink-2);
+  font-style: italic;
+}
+.tl-anomaly-tip {
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tl-anomaly-tip .tl-cardtip__name {
+  font-size: 13px;
+}
+.tl-cardtip__body {
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Parchment card: a Battlegrounds-style card built from card data. */
+.tl-pcard {
+  --tribe: #8f8778;
+  position: absolute;
+  inset: 0;
+}
+.tl-pcard__body {
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  top: 7%;
+  bottom: 8%;
+  border-radius: 9% / 6%;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--tribe) 30%, #3a2618), #1e140c) padding-box,
+    linear-gradient(160deg, #e0dccf, #8c8578 40%, #4a463f 60%, #b9b3a6) border-box;
+  box-shadow: 0 0 0 1px #0d0905;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tl-pcard.is-golden .tl-pcard__body {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--tribe) 25%, #4a3214), #24170a) padding-box,
+    linear-gradient(160deg, #fff4c2, #e2aa3c 40%, #8a5508 60%, #ffd770) border-box;
+}
+.tl-pcard__art {
+  width: 60%;
+  aspect-ratio: 0.8;
+  margin-top: 6%;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #9aa1ab;
+  box-shadow: 0 0 0 1px #0b0c0f, 0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.tl-pcard.is-golden .tl-pcard__art {
+  border-color: #f0c050;
+}
+.tl-pcard__name {
+  position: relative;
+  z-index: 1;
+  width: 104%;
+  margin-top: -9%;
+  padding: 4px 6px 3px;
+  text-align: center;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  font-size: 12.5px;
+  line-height: 1.1;
+  color: #fff;
+  -webkit-text-stroke: 0.2em #1a0e04;
+  paint-order: stroke fill;
+  background:
+    var(--tex-parch) 0 0 / 300px 300px,
+    linear-gradient(180deg, #ecdcb4, #c9ad78);
+  border: 1px solid #5e3e1a;
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl-pcard__text {
+  flex: 1;
+  width: 88%;
+  margin: 6px 0 15%;
+  padding: 6px 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--ink);
+  background:
+    var(--tex-parch) 0 0 / 300px 300px,
+    linear-gradient(180deg, #ece0c4, #d9c6a0);
+  border-radius: 4px;
+  box-shadow: inset 0 0 6px rgba(90, 60, 20, 0.45);
+  overflow: hidden;
+}
+.tl-pcard__text p {
+  margin: 0;
+}
+.tl-pcard__empty {
+  color: var(--ink-2);
+  font-style: italic;
+}
+.tl-pcard__tribe {
+  position: absolute;
+  bottom: 3.5%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  font-family: var(--tl-display);
+  font-weight: 700;
+  font-size: 10px;
+  color: #fff;
+  -webkit-text-stroke: 0.18em #1a0e04;
+  paint-order: stroke fill;
+  background: linear-gradient(180deg, #e8d7ae, #b89a62);
+  border: 1px solid #5e3e1a;
+  border-radius: 3px;
+}
+.tl-pcard__tier {
+  position: absolute;
+  left: 6%;
+  top: 4%;
+}
+.tl-pcard__cost {
+  position: absolute;
+  right: 5%;
+  top: 4%;
+}
+.tl-pcard__atk {
+  position: absolute;
+  left: 2%;
+  bottom: 3%;
+}
+.tl-pcard__hp {
+  position: absolute;
+  right: 3%;
+  bottom: 3%;
+}
+
+/* ------------------------------------------------------------------ bits */
+.tl-kw-icons {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.tl-kw-icon {
+  display: inline-flex;
+  line-height: 0;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.8));
+}
+
+/* Tavern tier: banner shield. */
+.tl-tier {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: none;
+  background: url('../assets/ui/tier-shield.svg') center / 100% 100% no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55));
+}
+.tl-tier.is-gold {
+  background-image: url('../assets/ui/tier-shield-gold.svg');
+}
+.tl-tier__num {
+  margin-top: 14%;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 0.22em #1a0b02;
+  paint-order: stroke fill;
+}
+.tl-triples {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 2px;
+  font-weight: 800;
+  font-size: 10px;
+  color: var(--tl-gold);
+}
+.tl-triples i {
+  margin: 0 1px;
+}
+.tl-triples i.is-empty {
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 1px rgba(220, 170, 80, 0.45);
+}
+.tl-triples__more {
+  margin-left: 2px;
+}
+
+.tl-hpbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+.tl-hpbar__track {
+  flex: 1;
+  height: 7px;
+  margin-right: 3px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 225, 170, 0.08);
+  overflow: hidden;
+}
+.tl-hpbar.is-compact .tl-hpbar__track {
+  height: 6px;
+}
+.tl-hpbar__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.4s var(--tl-ease);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.tl-hpbar__fill.is-high {
+  background: linear-gradient(180deg, #ff8072, #c62f24);
+}
+.tl-hpbar__fill.is-mid {
+  background: linear-gradient(180deg, #ff9a52, #c8561c);
+}
+.tl-hpbar__fill.is-low {
+  background: linear-gradient(180deg, #ff5a4a, #8a1410);
+}
+.tl-hpbar.is-dead .tl-hpbar__track {
+  opacity: 0.4;
+}
+
+/* Tribe emblem: enamel medallion with an engraved glyph. */
+.tl-emblem {
+  --c: #8f8778;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, color-mix(in srgb, var(--c) 55%, white) 0%, var(--c) 40%, color-mix(in srgb, var(--c) 38%, black) 100%);
+  box-shadow:
+    0 0 0 1.25px #d6a54c,
+    0 0 0 2.25px var(--brass-dark),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+.tl-emblem svg {
+  fill: #fffaf0;
+  filter: drop-shadow(0 0.75px 0 rgba(0, 0, 0, 0.7));
+}
+.tl-tribe {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 21px;
+  padding: 0 8px 0 2px;
+  border-radius: 11px;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 22%, #2a1d12), color-mix(in srgb, var(--c) 10%, #160e08));
+  box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.1);
+  color: color-mix(in srgb, var(--c) 55%, #fff4e0);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.tl-tribe.is-compact {
+  height: 19px;
+  padding: 0 6px 0 2px;
+  font-size: 9.5px;
+  gap: 4px;
+  letter-spacing: 0.06em;
+}
+.tl-tribe.is-muted {
+  opacity: 0.45;
+}
+.tl-tribe.is-button {
+  cursor: pointer;
+  transition: opacity 0.15s, filter 0.15s;
+}
+.tl-tribe.is-button:not(.is-active) {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+}
+
+/* Placement: small plaques; xl is a big enamel medallion. */
+.tl-place {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  color: color-mix(in srgb, var(--c) 70%, white);
+  border: 1px solid color-mix(in srgb, var(--c) 55%, black);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 26%, #2a1c12), color-mix(in srgb, var(--c) 10%, #140c07));
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.12), 0 1px 2px rgba(0, 0, 0, 0.5);
+  border-radius: 5px;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.9);
+}
+.tl-place--sm {
+  min-width: 36px;
+  height: 21px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.tl-place--md {
+  min-width: 44px;
+  height: 28px;
+  font-size: 15px;
+}
+.tl-place--lg {
+  min-width: 64px;
+  height: 40px;
+  font-size: 21px;
+  border-radius: 7px;
+}
+.tl-place--xl {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: none;
+  font-size: 46px;
+  color: #fff;
+  -webkit-text-stroke: 0.14em #1a0b02;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 4px rgba(0, 0, 0, 0.6);
+  background:
+    radial-gradient(circle at 36% 28%, rgba(255, 255, 255, 0.6) 0 6%, transparent 26%),
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--c) 60%, white) 0%, var(--c) 42%, color-mix(in srgb, var(--c) 35%, black) 100%);
+  box-shadow:
+    0 0 0 4px #d9a84a,
+    0 0 0 5px var(--brass-dark),
+    0 0 0 7px rgba(255, 230, 160, 0.25),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.4),
+    0 0 26px color-mix(in srgb, var(--c) 60%, transparent),
+    0 6px 14px rgba(0, 0, 0, 0.6);
+}
+.tl-place__suffix {
+  font-size: 0.42em;
+  align-self: flex-start;
+  margin-top: 0.62em;
+  margin-left: 1px;
+  -webkit-text-stroke-width: 0.2em;
+}
+.tl-pips {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.tl-pip {
+  --c: #888;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: 0.2em rgba(20, 10, 2, 0.9);
+  paint-order: stroke fill;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, color-mix(in srgb, var(--c) 85%, white), color-mix(in srgb, var(--c) 60%, black));
+  box-shadow: 0 0 0 1px rgba(20, 10, 2, 0.85), inset 0 -1px 1px rgba(0, 0, 0, 0.3);
+}
+.tl-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 6px 0 5px;
+  border-radius: 4px;
+  font-weight: 800;
+  font-size: 11px;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 230, 180, 0.08);
+  white-space: nowrap;
+}
+.tl-result--sm {
+  height: 17px;
+  padding: 0 5px 0 4px;
+  font-size: 10px;
+  gap: 3px;
+}
+.tl-result.is-won {
+  color: #a4f5b4;
+}
+.tl-result.is-lost {
+  color: #ffaaa2;
+}
+.tl-result.is-tied {
+  color: #d3d6de;
+}
+.tl-on-parchment .tl-result,
+.tl-parchment .tl-result {
+  background: rgba(70, 40, 10, 0.1);
+  border-color: rgba(90, 60, 30, 0.35);
+  box-shadow: none;
+}
+.tl-on-parchment .tl-result.is-won,
+.tl-parchment .tl-result.is-won {
+  color: #1f6a2c;
+}
+.tl-on-parchment .tl-result.is-lost,
+.tl-parchment .tl-result.is-lost {
+  color: #9a2216;
+}
+.tl-on-parchment .tl-result.is-tied,
+.tl-parchment .tl-result.is-tied {
+  color: #5a5a5a;
+}
+.tl-result__dmg {
+  font-weight: 700;
+  opacity: 0.9;
+}
+/* Hero tier crest (S..D). */
+.tl-herotier {
+  --c: #7d7466;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font-family: var(--tl-display);
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 0.2em #140a02;
+  paint-order: stroke fill;
+  clip-path: polygon(50% 0, 100% 16%, 100% 62%, 50% 100%, 0 62%, 0 16%);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.4), transparent 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--c) 85%, white), color-mix(in srgb, var(--c) 50%, black));
+  position: relative;
+}
+.tl-herotier::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 0, 100% 16%, 100% 62%, 50% 100%, 0 62%, 0 16%, 0 16%, 9% 21%, 9% 58%, 50% 89%, 91% 58%, 91% 21%, 50% 9%, 9% 21%, 0 16%);
+  background: linear-gradient(160deg, #fff0bd, #d9a84a 45%, #6a4515);
+}
+.tl-herotier > span {
+  position: relative;
+  margin-top: -8%;
+}
+.tl-herotier.is-none {
+  opacity: 0.75;
+}
+.tl-herotier--sm {
+  width: 20px;
+  height: 23px;
+  font-size: 12px;
+}
+.tl-herotier--md {
+  width: 30px;
+  height: 34px;
+  font-size: 17px;
+}
+.tl-herotier--lg {
+  width: 42px;
+  height: 48px;
+  font-size: 25px;
+}
+/* Odds: tug-of-war in a carved groove with a brass knot at the balance point. */
+.tl-odds {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.tl-odds__track {
+  display: flex;
+  height: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid #0a0604;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 225, 170, 0.1);
+}
+.tl-odds__seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.7);
+  transition: flex-grow 0.5s var(--tl-ease);
+  white-space: nowrap;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 2px rgba(0, 0, 0, 0.25);
+}
+.tl-odds__seg.is-win {
+  background: linear-gradient(180deg, #7ef09a, #2f9a4c 60%, #1f6e34);
+}
+.tl-odds__seg.is-tie {
+  background: linear-gradient(180deg, #c7ccd6, #7d8494 60%, #5a606e);
+}
+.tl-odds__seg.is-loss {
+  background: linear-gradient(180deg, #ff8a7c, #c4352a 60%, #8a1a12);
+}
+.tl-odds__knot {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: calc(100% + 6px);
+  min-height: 12px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: linear-gradient(90deg, #6a4515, #f6d07a 45%, #fff3c4 55%, #a8742a);
+  box-shadow: 0 0 0 1px var(--brass-dark), 0 1px 3px rgba(0, 0, 0, 0.6);
+  transition: left 0.5s var(--tl-ease);
+}
+.tl-odds.is-slim .tl-odds__knot {
+  width: 6px;
+  height: calc(100% + 5px);
+  min-height: 0;
+}
+.tl-tiertl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.tl-tiertl__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.tl-tiertl__step + .tl-tiertl__step::before {
+  content: '';
+  width: 9px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #f0c466, #8a5a1a);
+  margin-right: 1px;
+}
+.tl-tiertl.is-compact .tl-tiertl__step + .tl-tiertl__step::before {
+  width: 5px;
+}
+.tl-tiertl__turn {
+  font-size: 10.5px;
+  color: var(--tl-text-2);
+  font-weight: 650;
+}
+.tl-tiertl.is-compact .tl-tiertl__turn {
+  font-size: 9.5px;
+}
+.tl-spark {
+  display: block;
+  overflow: visible;
+}
+
+/* Health graph (post-match, match detail). Dark panels by default; the parchment overrides. */
+.tl-hchart {
+  --hc-mine: var(--tl-gold);
+  --hc-other: rgba(230, 200, 150, 0.22);
+  --hc-grid: rgba(255, 230, 190, 0.1);
+  --hc-axis: var(--tl-muted);
+  --hc-hit: #ef5f50;
+  --hc-ring: #1a0e04;
+  position: relative;
+  flex: none;
+}
+.tl-hchart svg {
+  display: block;
+  overflow: visible;
+}
+.tl-hchart__grid {
+  stroke: var(--hc-grid);
+  stroke-width: 1;
+}
+.tl-hchart__axis {
+  fill: var(--hc-axis);
+  font-size: 8.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tl-hchart__other {
+  fill: none;
+  stroke: var(--hc-other);
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+}
+.tl-hchart__fillstop {
+  stop-color: var(--hc-mine);
+}
+.tl-hchart__mine {
+  fill: none;
+  stroke: var(--hc-mine);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.tl-hchart__end {
+  fill: var(--hc-mine);
+  stroke: var(--hc-ring);
+  stroke-width: 1;
+}
+.tl-hchart__hit {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.tl-hchart__dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: var(--hc-hit);
+  border: 1.5px solid var(--hc-ring);
+  box-shadow: 0 0 0 2px rgba(239, 95, 80, 0.25);
+  cursor: default;
+}
+.tl-hchart__dot:hover {
+  transform: scale(1.3);
+}
+.tl-hchart__tip {
+  font-size: 12px;
+}
+
+/* toggle: brass switch in a carved slot */
+.tl-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.tl-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.tl-toggle__track {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #0a0604;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 225, 170, 0.1);
+  transition: background 0.18s var(--tl-ease);
+}
+.tl-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f4f1ea, #9a968e 70%, #5a564f);
+  box-shadow: 0 0 0 1px #0a0604, 0 1px 2px rgba(0, 0, 0, 0.6);
+  transition: transform 0.18s var(--tl-ease), background 0.18s;
+}
+.tl-toggle input:checked + .tl-toggle__track {
+  background: linear-gradient(180deg, #2c8a46, #1a5a2c);
+}
+.tl-toggle input:checked + .tl-toggle__track .tl-toggle__thumb {
+  transform: translateX(16px);
+  background: radial-gradient(circle at 35% 30%, #fff6d0, #e8b54c 60%, #8a5a12);
+}
+.tl-toggle input:focus-visible + .tl-toggle__track {
+  outline: 2px solid rgba(242, 193, 78, 0.6);
+  outline-offset: 2px;
+}
+.tl-toggle.is-disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.tl-toggle__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.tl-toggle__label {
+  font-weight: 650;
+}
+.tl-toggle__hint {
+  font-size: 11.5px;
+  color: var(--tl-muted);
+}
+
+/* scrollbars */
+.tl-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(220, 170, 80, 0.4) transparent;
+}
+.tl-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.tl-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #a8742a, #e6b65a, #a8742a);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.tl-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+  .tl-pm__timer {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ tribe synergy & play tips */
+/* Tribe emblem + placement impact ("−.09" green helps, "+.15" red hurts). */
+.tl-syn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 5px 0 2px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  box-shadow: 0 1px 0 rgba(255, 225, 170, 0.06);
+  white-space: nowrap;
+  transition: opacity 0.15s, filter 0.15s;
+}
+.tl-syn__v {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.tl-syn.is-good .tl-syn__v {
+  color: #86ea9c;
+}
+.tl-syn.is-bad .tl-syn__v {
+  color: #ff8b80;
+}
+/* In this lobby: brass ring. Not in this lobby (once it is known): dimmed. */
+.tl-syn.is-lobby {
+  background: rgba(244, 205, 108, 0.14);
+  border-color: rgba(244, 205, 108, 0.75);
+  box-shadow: 0 0 6px rgba(244, 205, 108, 0.3);
+}
+.tl-syn.is-out {
+  opacity: 0.42;
+  filter: saturate(0.4);
+}
+
+.tl-delta {
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.3);
+}
+.tl-delta.is-good {
+  color: #86ea9c;
+  background: rgba(40, 140, 70, 0.28);
+}
+.tl-delta.is-bad {
+  color: #ff8b80;
+  background: rgba(160, 50, 35, 0.3);
+}
+.tl-delta.is-flat {
+  color: var(--tl-muted);
+}
+
+/* Play tip: a strip of parchment with a red wax-ink initial rule. */
+.tl-tipnote {
+  position: relative;
+  pointer-events: auto;
+  padding: 5px 8px 5px 9px;
+  font-size: 11px;
+  line-height: 1.32;
+  color: var(--ink);
+  background:
+    var(--tex-parch) 0 0 / 300px 300px,
+    linear-gradient(175deg, #f6ebcf, #e6d2a6);
+  border: 1px solid #7a5428;
+  border-left: 3px solid var(--ink-red);
+  border-radius: 3px;
+  box-shadow: inset 0 0 8px rgba(120, 75, 25, 0.3), 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+.tl-tipnote__text {
+  display: -webkit-box;
+  -webkit-line-clamp: var(--lines, 2);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* The full text unfolds over what is below on hover, without changing the layout. */
+.tl-tipnote__full {
+  display: none;
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  z-index: 6;
+  padding: inherit;
+  padding-left: 9px;
+  color: var(--ink);
+  background: inherit;
+  border: 1px solid #7a5428;
+  border-left: 3px solid var(--ink-red);
+  border-radius: 3px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+}
+.tl-tipnote.is-long:hover .tl-tipnote__full {
+  display: block;
+}
+.tl-tipnote.is-compact {
+  font-size: 10.5px;
+}
+
+/* "✓ Beasts in lobby" / "No Beasts in this lobby" / "Wants Beasts" */
+.tl-rel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tl-rel__emblems {
+  display: inline-flex;
+  gap: 2px;
+}
+.tl-rel.is-ok {
+  color: #9cefb0;
+}
+.tl-rel.is-missing {
+  color: #ff8f84;
+}
+.tl-rel.is-unknown {
+  color: var(--tl-text-2);
+}
+.tl-on-parchment .tl-rel.is-ok,
+.tl-parchment .tl-rel.is-ok,
+.tl-tooltip__body .tl-rel.is-ok {
+  color: #1f6b33;
+}
+.tl-on-parchment .tl-rel.is-missing,
+.tl-parchment .tl-rel.is-missing,
+.tl-tooltip__body .tl-rel.is-missing {
+  color: var(--ink-red);
+}
+.tl-tooltip__body .tl-rel.is-unknown {
+  color: var(--ink-2);
+}
+
+/* Tooltip with a play tip (hero / trinket). */
+.tl-tooltip__body .tl-syn {
+  background: rgba(90, 60, 30, 0.12);
+  border-color: rgba(90, 60, 30, 0.25);
+  box-shadow: none;
+}
+.tl-tooltip__body .tl-syn.is-good .tl-syn__v {
+  color: #1f6b33;
+}
+.tl-tooltip__body .tl-syn.is-bad .tl-syn__v {
+  color: var(--ink-red);
+}
+.tl-tooltip__body .tl-syn.is-lobby {
+  border-color: #a8742a;
+  background: rgba(220, 170, 80, 0.25);
+}
+
+/* Small scroll marker: this hero / trinket has a play tip. */
+
+/* Lesser / greater trinket tag. */
+.tl-trinketkind {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(160, 200, 255, 0.4);
+  color: #bcd6ff;
+  background: rgba(40, 70, 130, 0.35);
+}
+.tl-trinketkind.is-greater {
+  border-color: rgba(214, 160, 255, 0.5);
+  color: #e4c8ff;
+  background: rgba(100, 50, 150, 0.38);
+}
+
+/* ------------------------------------------------------------------ the game's cards */
+/* A Battlegrounds card render standing free (transparent PNG): no box around it. */
+.tl-gamecard {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+.tl-gamecard__scale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 186px;
+}
+.tl-gamecard .tl-card-render {
+  filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.7));
+}
+.tl-gamecard.is-golden .tl-card-render {
+  filter: drop-shadow(0 0 7px rgba(255, 205, 90, 0.75)) drop-shadow(0 5px 9px rgba(0, 0, 0, 0.7));
+}
+/* Current stats over the printed ones (only when they differ). */
+.tl-gamecard__atk,
+.tl-gamecard__hp {
+  position: absolute;
+  bottom: 21px;
+  z-index: 2;
+}
+.tl-gamecard__atk {
+  left: 9px;
+}
+.tl-gamecard__hp {
+  right: 9px;
+}
+.tl-boardcards {
+  display: flex;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+/* Rank medal: a struck coin; #1 is bright gold under a crown. */
+.tl-medal {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 50%;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  color: #f1dcae;
+  text-shadow: 0 1px 0 #000;
+  background: radial-gradient(circle at 35% 28%, #a98352 0%, #6d4c26 48%, #2e1c0b 100%);
+  box-shadow:
+    0 0 0 1.5px #c4933f,
+    0 0 0 3px #1a0e04,
+    inset 0 -2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 1px 1px rgba(255, 240, 200, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.tl-medal.is-best {
+  color: #3a2104;
+  text-shadow: 0 1px 0 rgba(255, 245, 200, 0.7);
+  background: radial-gradient(circle at 35% 28%, #fffbe0 0%, #f6cf62 42%, #b47a1c 100%);
+  box-shadow:
+    0 0 0 1.5px #fff0b4,
+    0 0 0 3px #3a2104,
+    inset 0 -2px 3px rgba(120, 70, 5, 0.5),
+    0 0 14px rgba(255, 205, 90, 0.7),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.tl-medal.is-none {
+  color: var(--tl-muted);
+  filter: saturate(0.4);
+}
+.tl-medal__crown {
+  position: absolute;
+  top: -58%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffd76a;
+  filter: drop-shadow(0 1px 0 #3a2104) drop-shadow(0 0 4px rgba(255, 205, 90, 0.8));
+}
+
+/* Small table inside a parchment tooltip (pick details, lobby estimate). */
+.tl-picktip {
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+.tl-picktip__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.tl-picktip__row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tl-picktip__row b.is-good {
+  color: #1f6b33;
+}
+.tl-picktip__row b.is-bad {
+  color: var(--ink-red);
+}
+.tl-picktip__row.is-total {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(90, 60, 30, 0.3);
+}
+.tl-picktip__mine {
+  gap: 8px !important;
+  font-weight: 700;
+}
+.tl-picktip__mine > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.tl-tipnote__label {
+  margin-right: 5px;
+  font-family: var(--tl-display);
+  font-weight: 800;
+  color: var(--ink-red);
+}

@@ -1,0 +1,55 @@
+/**
+ * Registers every card handler. Idempotent; called by `simulateBattle`.
+ * Add new tribe/effect files here.
+ */
+import { registerAberrations } from './aberration';
+import { registerAnomalies } from './anomalies';
+import { registerDarkGifts } from './darkGifts';
+import { registerBattlecries } from './battlecries';
+import { registerBeasts } from './beast';
+import { registerBuddies } from './buddies';
+import { registerDemons } from './demon';
+import { registerDragons } from './dragon';
+import { registerElementals } from './elemental';
+import { registerHeroPowers } from './heroPowers';
+import { registerLegacy } from './legacy';
+import { registerMechs } from './mech';
+import { registerMurlocs } from './murloc';
+import { registerNaga } from './naga';
+import { registerNeutrals } from './neutral';
+import { registerPirates } from './pirate';
+import { registerQuestRewards } from './questRewards';
+import { registerQuilboar } from './quilboar';
+import { registerTimewarped } from './timewarped';
+import { registerTrinkets } from './trinkets';
+import { registerUndead } from './undead';
+
+let registered = false;
+
+export function ensureCardsRegistered(): void {
+  if (registered) return;
+  registered = true;
+  registerNeutrals();
+  registerBeasts();
+  registerDemons();
+  registerDragons();
+  registerElementals();
+  registerMechs();
+  registerMurlocs();
+  registerNaga();
+  registerPirates();
+  registerQuilboar();
+  registerUndead();
+  registerAberrations();
+  registerTimewarped();
+  registerBuddies(); // after timewarped.ts: some Buddies reuse Timewarped handlers
+  registerLegacy(); // out-of-pool minions seen in older games
+  registerHeroPowers();
+  registerTrinkets();
+  registerQuestRewards();
+  registerAnomalies();
+  registerDarkGifts();
+  registerBattlecries(); // last: adds Battlecry hooks to the handlers registered above
+}
+
+export * from './registry';
