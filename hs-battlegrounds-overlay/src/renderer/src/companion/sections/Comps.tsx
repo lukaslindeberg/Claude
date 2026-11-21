@@ -114,13 +114,17 @@ function CompCard({ comp }: { comp: CompGuide }) {
       </div>
       <div className="tl-comp__cards">
         {core.map((c) => (
-          <MinionToken key={c.cardId} minion={token(c.cardId)} size="sm" showName />
-        ))}
-        {addons.length ? <span className="tl-comp__sep" aria-hidden /> : null}
-        {addons.map((c) => (
-          <MinionToken key={c.cardId} minion={token(c.cardId)} size="xs" className="is-addon" />
+          <MinionToken key={c.cardId} minion={token(c.cardId)} size="sm" showName className="tl-comp__unit" />
         ))}
       </div>
+      {addons.length ? (
+        <div className="tl-comp__cards is-addons">
+          <span className="tl-comp__rowlabel">Add-ons</span>
+          {addons.map((c) => (
+            <MinionToken key={c.cardId} minion={token(c.cardId)} size="xs" showName className="tl-comp__unit" />
+          ))}
+        </div>
+      ) : null}
       {comp.objective ? <p className="tl-comp__objective">{comp.objective}</p> : null}
       {comp.tip ? <p className="tl-comp__tip">{comp.tip}</p> : null}
       {comp.whenToCommit || comp.author || comp.enablers?.length ? (

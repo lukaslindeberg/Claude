@@ -1703,17 +1703,42 @@ kbd {
 .tl-comp__cards {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 8px 4px;
 }
-.tl-comp__cards .is-addon {
-  opacity: 0.85;
+/* Every unit the same width, names on a fixed two-line band: portraits line up. */
+.tl-comp__unit {
+  width: 78px;
 }
-.tl-comp__sep {
-  width: 1px;
-  align-self: stretch;
-  margin: 4px 4px 0;
-  background: rgba(230, 190, 120, 0.25);
+.tl-comp__unit .tl-token__name {
+  max-width: 78px;
+  height: 2.3em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.tl-comp__cards.is-addons {
+  align-items: flex-start;
+  padding-top: 8px;
+  border-top: 1px solid rgba(230, 190, 120, 0.12);
+}
+.tl-comp__cards.is-addons .tl-comp__unit {
+  width: 66px;
+}
+.tl-comp__cards.is-addons .tl-token__name {
+  max-width: 66px;
+  font-size: 10px;
+  color: var(--tl-text-2);
+}
+.tl-comp__rowlabel {
+  align-self: center;
+  width: 100%;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tl-muted);
 }
 .tl-comp__tip {
   margin: 0;
