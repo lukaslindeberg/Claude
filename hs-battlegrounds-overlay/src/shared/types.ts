@@ -315,6 +315,24 @@ export interface BgCounters {
   freeRefreshes?: number;
 }
 
+/**
+ * Actions in the shop (buy, sell, play, refresh, freeze, level, Hero Power...), for an APM
+ * counter. Durations are log time of the shop phases.
+ */
+export interface BgApm {
+  /** Shop turn being counted (0 before the first shop). */
+  turn: number;
+  /** Actions this shop phase so far. */
+  turnActions: number;
+  /** True while the shop phase of `turn` is open. */
+  inShop: boolean;
+  /** Earlier shop phases this game: actions and their total length (ms). */
+  pastActions: number;
+  pastMs: number;
+  /** The last finished shop phase. */
+  last?: { turn: number; actions: number; ms: number };
+}
+
 export interface BgGameState {
   /** Unique id for this game (stable for the game's duration). */
   gameId: string;
@@ -361,6 +379,8 @@ export interface BgGameState {
   maxGold?: number;
   /** Small local-player counters (Blood Gems, Beetles, gold next turn, free refreshes). */
   counters?: BgCounters;
+  /** Shop actions per minute. */
+  apm?: BgApm;
   battle: BattleState;
   /** History of battles this game (newest last). */
   battles: BattleState[];

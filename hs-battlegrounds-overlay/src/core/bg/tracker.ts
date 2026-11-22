@@ -160,6 +160,8 @@ interface GameCtx {
   battles: BattleState[];
   combats: CombatRecord[];
   tribes: Set<Tribe>;
+  /** Shop actions (APM counter); turnStartTs is the log time the current shop opened. */
+  apm: { turn: number; turnActions: number; turnStartTs: string; pastActions: number; pastMs: number; last?: { turn: number; actions: number; ms: number } };
   /** The lobby's tribes as read from the hero-pick screen (authoritative when set). */
   screenTribes?: Tribe[];
   /** Dummy-player names seen outside combat (Bob's skin / innkeeper names). */
@@ -605,6 +607,7 @@ export class BgTracker {
       battles: [],
       combats: [],
       tribes: new Set(),
+      apm: { turn: 0, turnActions: 0, turnStartTs: '', pastActions: 0, pastMs: 0 },
       shopNames: new Set(),
       firstCombatSeen: false,
       lastTurn: 0,
@@ -881,6 +884,9 @@ export class BgTracker {
       if (g.combat && !g.combat.ended) this.endCombat(g);
       if (turn !== g.lastTurn) {
         g.lastTurn = turn;
+        g.apm.turn = turn;
+        g.apm.turnActions = 0;
+        g.apm.turnStartTs = this.logTs;
         this.emit({ type: 'turnStart', turn });
       }
     } else if (!g.combat || g.combat.ended || g.combat.turn !== turn) {
@@ -1096,6 +1102,15 @@ export class BgTracker {
   }
 
   private onBlockStart(g: GameCtx, pk: Extract<Packet, { type: 'BlockStart' }>): void {
+    // APM: every top-level PLAY (buy, sell, play, refresh, freeze, level up...) or POWER
+    // (Hero Power) by the local player while the shop is open.
+    if (this.depth === 0 && g.apm.turnStartTs && (pk.blockType === 7 || pk.blockType === 3)) {
+      const src = this.store.get(this.store.resolve(pk.entity));
+      if (src && src.tags.get(T.CONTROLLER) === this.localController) {
+        g.apm.turnActions++;
+        this.bump();
+      }
+    }
     const c = g.combat;
     if (!c || c.ended || g.ended) return;
     const s = this.store;
@@ -1123,6 +1138,14 @@ export class BgTracker {
   // -------------------------------------------------------------------------
 
   private startCombat(g: GameCtx): void {
+    const a = g.apm;
+    if (a.turnStartTs) {
+      const ms = logTimeDiff(this.logTs, a.turnStartTs);
+      a.pastActions += a.turnActions;
+      a.pastMs += ms;
+      a.last = { turn: a.turn, actions: a.turnActions, ms };
+      a.turnStartTs = '';
+    }
     if (g.combat && !g.combat.ended) {
       if (g.combat.turn === this.bgTurn()) return; // already started (TURN then BOARD_VISUAL_STATE)
       this.endCombat(g);
@@ -1964,6 +1987,11 @@ export class BgTracker {
     if (lp && turn > 0) {
       const counters = localCounters(s, db, lctl, lp.entityId, g.localHeroId, g.counterSeen);
       if (counters) state.counters = counters;
+      if (g.apm.turn > 0) {
+        const a = g.apm;
+        state.apm = { turn: a.turn, turnActions: a.turnActions, inShop: !!a.turnStartTs, pastActions: a.pastActions, pastMs: a.pastMs };
+        if (a.last) state.apm.last = { ...a.last };
+      }
     }
     const placement = g.ended && !g.matchRecord ? (this.currentPlacement(g) ?? g.finalPlacement) : g.finalPlacement;
     if (placement !== undefined) state.finalPlacement = placement;

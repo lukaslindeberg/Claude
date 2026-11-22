@@ -1096,6 +1096,16 @@ body.tl-body--overlay {
 .tl-counter.is-neg b {
   color: var(--tl-loss);
 }
+.tl-counter.is-apm svg {
+  color: #e9d8a6;
+}
+.tl-counter.is-apm b::after {
+  content: ' APM';
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--tl-text-2);
+}
 .tl-counter.is-refresh svg {
   color: var(--tl-info);
 }
