@@ -5,6 +5,7 @@
  * See README.md in this folder for the detection logic and log quirks.
  */
 import type {
+  ApmTurn,
   BattleSimInput,
   BattleState,
   BgEvent,
@@ -161,7 +162,7 @@ interface GameCtx {
   combats: CombatRecord[];
   tribes: Set<Tribe>;
   /** Shop actions (APM counter); turnStartTs is the log time the current shop opened. */
-  apm: { turn: number; turnActions: number; turnStartTs: string; pastActions: number; pastMs: number; last?: { turn: number; actions: number; ms: number } };
+  apm: { turn: number; turnActions: number; turnStartTs: string; pastActions: number; pastMs: number; last?: ApmTurn; history: ApmTurn[] };
   /** The lobby's tribes as read from the hero-pick screen (authoritative when set). */
   screenTribes?: Tribe[];
   /** Dummy-player names seen outside combat (Bob's skin / innkeeper names). */
@@ -607,7 +608,7 @@ export class BgTracker {
       battles: [],
       combats: [],
       tribes: new Set(),
-      apm: { turn: 0, turnActions: 0, turnStartTs: '', pastActions: 0, pastMs: 0 },
+      apm: { turn: 0, turnActions: 0, turnStartTs: '', pastActions: 0, pastMs: 0, history: [] },
       shopNames: new Set(),
       firstCombatSeen: false,
       lastTurn: 0,
@@ -1144,6 +1145,7 @@ export class BgTracker {
       a.pastActions += a.turnActions;
       a.pastMs += ms;
       a.last = { turn: a.turn, actions: a.turnActions, ms };
+      a.history = [...a.history.filter((h) => h.turn !== a.turn), a.last];
       a.turnStartTs = '';
     }
     if (g.combat && !g.combat.ended) {
@@ -1705,6 +1707,7 @@ export class BgTracker {
       tierHistory: local?.tierHistory ?? [],
       combats: g.combats.slice(),
       healthHistory: local?.healthHistory ?? [],
+      ...(g.apm.history.length ? { apm: g.apm.history.slice() } : {}),
       lobby: state.players.map((p) => {
         const o: MatchRecord['lobby'][number] = {
           playerId: p.playerId,
@@ -1991,6 +1994,7 @@ export class BgTracker {
         const a = g.apm;
         state.apm = { turn: a.turn, turnActions: a.turnActions, inShop: !!a.turnStartTs, pastActions: a.pastActions, pastMs: a.pastMs };
         if (a.last) state.apm.last = { ...a.last };
+        if (a.history.length) state.apm.history = a.history.slice();
       }
     }
     const placement = g.ended && !g.matchRecord ? (this.currentPlacement(g) ?? g.finalPlacement) : g.finalPlacement;

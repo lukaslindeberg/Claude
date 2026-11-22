@@ -17,7 +17,7 @@ injection — and draws a transparent, click-through layer on top of the game.
 | **Battle odds** | One compact plaque: win / tie / loss, average damage, lethal chance when there is any, and the actual result afterwards (it stays through the next shop as "Last battle"). When the boards contain effects the simulator doesn't model, the odds are greyed out behind "Unreliable: N effects not simulated" (the cards are listed on hover) instead of being shown as confident numbers. |
 | **Counters** | A small panel beside the game's refresh button: your APM (shop actions per minute: live during the shop, the last shop during combat; game average on hover), Blood Gem stats, Beetle stats, extra (or overdrawn) Gold next turn and free refreshes. Each appears only when it applies. |
 | **Lobby and session plaque** | One small plaque: turn, the lobby's tribes, your hero's expected placement in this lobby, an optional tier-up pace chip (Settings → *Tier-up timing*, off by default; "on curve" / "1 turn behind" / "2 turns ahead" against the median tier-up turns of your own top-4 games with this hero, or with any hero; shown only when your history backs it), the anomaly; games today, average and recent placements. Details on hover (the pace chip lists the usual turn per tier next to this game's). |
-| **Post-match summary** | Placement, final board as the game's cards, tier timings, a small health graph (your health + armor per turn against the other players' faint lines, the fights that cost the most marked in red with turn, opponent and damage on hover; team health in Duos), combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
+| **Post-match summary** | Placement, final board as the game's cards, tier timings, an APM graph (shop actions per minute per turn, with the game average), a small health graph (your health + armor per turn against the other players' faint lines, the fights that cost the most marked in red with turn, opponent and damage on hover; team health in Duos), combat timeline with predicted vs. actual results, on a scroll docked at the right edge. Closes with its button, any overlay hotkey, or by itself after 40 s (paused while hovered). |
 
 The **companion window** (tray icon → *Open Tavern Lens*) has six pages: **Overview** (the current game, recent
 games and today), **Matches** (history and statistics), **Heroes** and **Trinkets** (ranked lists with a tribe
@@ -77,7 +77,7 @@ first launch.
 ### Updates
 
 Every CI build gets a new version (`1.0.<build number>`). The Windows installer version checks that release
-at start-up and every four hours, downloads a newer build in the background and installs it when Tavern
+at start-up, after every game and every four hours, downloads a newer build in the background and installs it when Tavern
 Lens quits (or right away: tray → *Restart to update*, or About → *Restart now*). macOS and the portable
 Windows build can't replace themselves while unsigned: About shows when a newer version is out, with a
 download button.

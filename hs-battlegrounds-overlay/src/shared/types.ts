@@ -330,7 +330,16 @@ export interface BgApm {
   pastActions: number;
   pastMs: number;
   /** The last finished shop phase. */
-  last?: { turn: number; actions: number; ms: number };
+  last?: ApmTurn;
+  /** Every finished shop phase this game (oldest first). */
+  history?: ApmTurn[];
+}
+
+/** One shop phase: actions and its length (ms). */
+export interface ApmTurn {
+  turn: number;
+  actions: number;
+  ms: number;
 }
 
 export interface BgGameState {
@@ -501,6 +510,8 @@ export interface MatchRecord {
   combats: CombatRecord[];
   /** Health+armor after each turn. */
   healthHistory: { turn: number; value: number }[];
+  /** Shop actions per turn (APM graph); absent in older records. */
+  apm?: ApmTurn[];
   /** Trinkets the local player picked (card ids). */
   trinkets?: string[];
   /** Quest rewards the local player earned (card ids). */

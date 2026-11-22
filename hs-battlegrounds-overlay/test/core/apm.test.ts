@@ -20,6 +20,9 @@ describe('APM counter', () => {
     expect(total).toBeLessThan(200);
     expect(apm.pastActions).toBe(total);
     for (const t of perTurn.values()) expect(t.ms).toBeGreaterThan(0);
+    // Every finished shop phase is kept for the graph and saved with the match.
+    expect(apm.history?.map((h) => h.turn)).toEqual([...perTurn.keys()].sort((a, b) => a - b));
+    expect(tracker.getMatchRecord()?.apm?.length).toBe(perTurn.size);
     // Turn 1 is short: only a few actions.
     expect(perTurn.get(1)!.actions).toBeLessThan(6);
   });

@@ -1685,3 +1685,15 @@ body.tl-body--demo.tl-body--overlay {
   position: absolute;
   opacity: 0.9;
 }
+
+.tl-apmtip .tl-hchart {
+  --hc-mine: #6e2f0c;
+  --hc-grid: rgba(110, 74, 34, 0.2);
+  --hc-axis: var(--ink-2);
+}
+.tl-apmtip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 260px;
+}

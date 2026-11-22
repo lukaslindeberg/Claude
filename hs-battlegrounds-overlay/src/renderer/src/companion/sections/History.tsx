@@ -7,6 +7,7 @@ import { HeroPortrait } from '../../components/HeroPortrait';
 import { MinionToken } from '../../components/MinionToken';
 import { PlacementBadge, ResultChip, TierTimeline, TribeChip } from '../../components/Bits';
 import { HealthChart } from '../../components/HealthChart';
+import { ApmChart, averageApm } from '../../components/ApmChart';
 import { healthChartFromRecord } from '../../lib/healthChart';
 import { CheckIcon, ChevronIcon, CrossIcon, SearchIcon } from '../../components/Icons';
 import { duration, formatDate, ordinal, placementColor } from '../../lib/format';
@@ -208,6 +209,12 @@ function MatchDetail({ m }: { m: MatchRecord }) {
                 <span className="tl-muted tl-small">Not enough data</span>
               )}
             </div>
+            {m.apm && m.apm.length > 1 ? (
+              <div>
+                <span className="tl-label">APM{averageApm(m.apm) !== undefined ? ` · avg ${Math.round(averageApm(m.apm)!)}` : ''}</span>
+                <ApmChart turns={m.apm} width={230} height={64} />
+              </div>
+            ) : null}
             <div>
               <span className="tl-label">Tribes</span>
               <span className="tl-hist__tribes">

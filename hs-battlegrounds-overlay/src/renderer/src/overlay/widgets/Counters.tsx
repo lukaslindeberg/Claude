@@ -4,13 +4,14 @@ import { useApp } from '../../store/appStore';
 import { Tooltip } from '../../components/Tooltip';
 import { BeetleIcon, BloodGemIcon, ClockIcon, CoinIcon, RefreshIcon } from '../../components/Icons';
 import { DragHandle, FloatingWidget } from '../Widget';
+import { ApmChart } from '../../components/ApmChart';
 import { countersPlacement } from '../layout';
 
 interface Chip {
   key: string;
   icon: ReactNode;
   value: string;
-  tip: string;
+  tip: ReactNode;
   tone?: string;
 }
 
@@ -94,11 +95,21 @@ function useApmChip(apm: BgApm | undefined): Chip | undefined {
   const gameActions = apm.pastActions + (inShop ? apm.turnActions : 0);
   const game = perMinute(gameActions, gameMs);
   const label = inShop ? 'This shop' : `Turn ${apm.last?.turn ?? apm.turn} shop`;
+  const history = [...(apm.history ?? []), ...(inShop && turn.ms >= 5000 ? [{ turn: apm.turn, actions: turn.actions, ms: turn.ms }] : [])];
   return {
     key: 'apm',
     icon: <ClockIcon size={13} />,
     value: value === undefined ? '…' : `${value}`,
-    tip: `${label}: ${turn.actions} action${turn.actions === 1 ? '' : 's'} in ${fmtTime(turn.ms)}${value === undefined ? '' : ` (${value} APM)`}.${game === undefined ? '' : ` Game average: ${game} APM.`} Counts buys, sells, plays, Refreshes, Freezes, level-ups and Hero Power.`,
+    tip: (
+      <div className="tl-apmtip">
+        <div>
+          {label}: {turn.actions} action{turn.actions === 1 ? '' : 's'} in {fmtTime(turn.ms)}
+          {value === undefined ? '' : ` (${value} APM)`}.{game === undefined ? '' : ` Game average: ${game} APM.`}
+        </div>
+        {history.length > 1 ? <ApmChart turns={history} width={240} height={70} /> : null}
+        <div className="tl-muted tl-small">Counts buys, sells, plays, Refreshes, Freezes, level-ups and Hero Power.</div>
+      </div>
+    ),
     tone: 'is-apm',
   };
 }

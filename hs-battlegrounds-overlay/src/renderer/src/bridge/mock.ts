@@ -62,8 +62,10 @@ function sceneState(scene: string): BgGameState {
   if (new URLSearchParams(window.location.search).get('mode') === 'duos' && s.active && s.players.length) s = samples.duosState(s);
   if (new URLSearchParams(window.location.search).get('counters') === 'all' && s.active) s.counters = { ...samples.ALL_COUNTERS };
   // Shop actions for the APM counter (shop open in the recruit scene, last shop in combat).
+  if (s.phase === 'gameOver' && !s.apm)
+    s = { ...s, apm: { turn: s.turn, turnActions: 0, inShop: false, pastActions: 0, pastMs: 0, history: samples.APM_HISTORY.filter((h) => h.turn <= s.turn) } };
   if (s.active && (s.phase === 'recruit' || s.phase === 'combat') && !s.apm)
-    s = { ...s, apm: { turn: s.turn, turnActions: 9, inShop: s.phase === 'recruit', pastActions: 96, pastMs: 4.2 * 60000, last: { turn: s.turn - (s.phase === 'recruit' ? 1 : 0), actions: 17, ms: 31000 } } };
+    s = { ...s, apm: { turn: s.turn, turnActions: 9, inShop: s.phase === 'recruit', pastActions: 96, pastMs: 4.2 * 60000, last: { turn: s.turn - (s.phase === 'recruit' ? 1 : 0), actions: 17, ms: 31000 }, history: samples.APM_HISTORY.filter((h) => h.turn <= s.turn - (s.phase === 'recruit' ? 1 : 0)) } };
   // `&tribes=screen`: the lobby's tribes as read from the hero-pick screen.
   if (new URLSearchParams(window.location.search).get('tribes') === 'screen' && s.active)
     s = { ...s, availableTribes: ['BEAST', 'DEMON', 'DRAGON', 'PIRATE', 'QUILBOAR'], tribesSource: 'screen' };

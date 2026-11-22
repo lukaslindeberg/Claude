@@ -10,6 +10,7 @@ import { CheckIcon, CloseIcon, CrossIcon } from '../../components/Icons';
 import { duration, num, ordinal, placementColor } from '../../lib/format';
 import { outcomeLetter, predictedOutcome, sortByDate, summarize, todays } from '../../lib/stats';
 import { HealthChart } from '../../components/HealthChart';
+import { ApmChart, averageApm } from '../../components/ApmChart';
 import { healthChartFromGame } from '../../lib/healthChart';
 import { DragHandle, FloatingWidget } from '../Widget';
 import { bottomReserve } from '../layout';
@@ -100,6 +101,8 @@ function PostMatchBody({ handle, hovered }: { handle: Parameters<typeof DragHand
   const allTime = summarize(history);
   const title = place ? (TITLES[place] ?? `${ordinal(place)} place`) : 'Game over';
   const health = useMemo(() => healthChartFromGame(game), [game]);
+  const apmTurns = game.apm?.history ?? [];
+  const apmAvg = averageApm(apmTurns);
   const playerLabel = (pid: number, heroCardId: string) => {
     const p = game.players.find((x) => x.playerId === pid);
     const name = p?.name?.split('#')[0];
@@ -187,6 +190,16 @@ function PostMatchBody({ handle, hovered }: { handle: Parameters<typeof DragHand
               </span>
             </header>
             <HealthChart data={health} width={360} height={104} mineLabel={duos ? 'Your team' : 'You'} opponentLabel={(h) => playerLabel(h.opponentPlayerId, h.opponentHeroCardId)} />
+          </section>
+        ) : null}
+
+        {apmTurns.length > 1 ? (
+          <section className="tl-pm__section">
+            <header className="tl-pm__sechead">
+              <span className="tl-heading">APM</span>
+              <span className="tl-pm__note">shop actions per minute{apmAvg !== undefined ? ` · average ${Math.round(apmAvg)}` : ''}</span>
+            </header>
+            <ApmChart turns={apmTurns} width={360} height={84} />
           </section>
         ) : null}
 

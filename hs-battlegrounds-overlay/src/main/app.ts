@@ -707,6 +707,9 @@ export class TavernLensApp {
           this.broadcast(IPC.historyChanged, this.store.getHistory());
         }
         this.predictions.clear();
+        // Between games is a safe moment: look for a new version (Windows installer: it
+        // downloads in the background and installs when Tavern Lens quits).
+        setTimeout(() => void this.updater.check(), 5000);
       }
     }
     if (!this.demoActive) for (const e of events) this.broadcast(IPC.event, e);

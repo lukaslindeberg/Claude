@@ -884,6 +884,7 @@ export function sampleHistory(): MatchRecord[] {
       tierHistory,
       combats,
       healthHistory,
+      apm: APM_HISTORY.filter((h) => h.turn <= turns),
       lobby: lobbyPlayers,
       trinkets: turns >= 9 ? [HISTORY_TRINKETS[i % HISTORY_TRINKETS.length][0], HISTORY_TRINKETS[(i * 3 + 1) % HISTORY_TRINKETS.length][1]] : turns >= 6 ? [HISTORY_TRINKETS[i % HISTORY_TRINKETS.length][0]] : [],
       ratingBefore: 6400 + (n - i) * 9,
@@ -973,3 +974,21 @@ export function compGuides(): CompGuidesBundle {
     ],
   };
 }
+
+/** Demo shop actions per turn (APM graph). */
+export const APM_HISTORY = [
+  { turn: 1, actions: 3, ms: 22000 },
+  { turn: 2, actions: 5, ms: 28000 },
+  { turn: 3, actions: 7, ms: 30000 },
+  { turn: 4, actions: 9, ms: 33000 },
+  { turn: 5, actions: 8, ms: 35000 },
+  { turn: 6, actions: 14, ms: 38000 },
+  { turn: 7, actions: 12, ms: 36000 },
+  { turn: 8, actions: 17, ms: 31000 },
+  { turn: 9, actions: 21, ms: 40000 },
+  { turn: 10, actions: 26, ms: 42000 },
+  { turn: 11, actions: 24, ms: 39000 },
+  { turn: 12, actions: 31, ms: 44000 },
+  { turn: 13, actions: 22, ms: 41000 },
+  { turn: 14, actions: 19, ms: 38000 },
+];
