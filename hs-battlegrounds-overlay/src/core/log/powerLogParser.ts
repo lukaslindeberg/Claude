@@ -127,9 +127,17 @@ export interface BlockStartPacket extends PacketBase {
   target?: EntityRef;
   subOption: number;
   triggerKeyword?: string;
+  /**
+   * Nesting level from the line's indentation (0 = top level, +1 per 4 spaces). The game
+   * sometimes prints a BLOCK_START without its BLOCK_END (e.g. some Activate abilities), so a
+   * running counter drifts; the indentation does not.
+   */
+  level?: number;
 }
 export interface BlockEndPacket extends PacketBase {
   type: 'BlockEnd';
+  /** Nesting level from the line's indentation (0 = top level). */
+  level?: number;
 }
 export interface MetaDataPacket extends PacketBase {
   type: 'MetaData';
@@ -630,7 +638,7 @@ export class PowerLogParser {
       case 66: {
         // BLOCK_START / BLOCK_END
         if (p.startsWith('BLOCK_END')) {
-          out.push({ type: 'BlockEnd', ts });
+          out.push({ type: 'BlockEnd', ts, level: Math.floor((i - start) / 4) });
         } else if (p.startsWith('BLOCK_START')) {
           const m = BLOCK_START_RE.exec(p);
           if (m) {
@@ -645,6 +653,7 @@ export class PowerLogParser {
               target: target && !(target.kind === 'id' && target.id === 0) ? target : undefined,
               subOption: m[6] ? parseInt(m[6], 10) : -1,
               triggerKeyword: m[7],
+              level: Math.floor((i - start) / 4),
             });
           } else this.miss(line);
         }

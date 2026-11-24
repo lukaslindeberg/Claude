@@ -468,6 +468,9 @@ export class BgTracker {
         return;
       }
       case 'BlockStart': {
+        // Resync from the line's indentation: a BLOCK_START the game never closed would
+        // otherwise leave the depth too high for the rest of the session.
+        if (pk.level !== undefined) this.depth = pk.level;
         try {
           s.apply(pk);
           const g = this.g;
@@ -496,7 +499,7 @@ export class BgTracker {
         return;
       }
       case 'BlockEnd': {
-        this.depth--;
+        this.depth = pk.level !== undefined ? pk.level : this.depth - 1;
         const g = this.g;
         if (g?.isBg && g.combat && !g.ended) {
           const c = g.combat;
@@ -992,6 +995,14 @@ export class BgTracker {
   }
 
   private onChosen(g: GameCtx, pk: Extract<Packet, { type: 'EntitiesChosen' }>): void {
+    // APM: a Discover pick (Dark Gift, Triple Reward, Discover spell...) in the shop is an action.
+    if (g.apm.turnStartTs) {
+      const pl = this.store.resolve(pk.player, 'local');
+      if (pl === undefined || pl === this.store.localPlayer?.entityId) {
+        g.apm.turnActions++;
+        this.bump();
+      }
+    }
     const tc = g.trinketChoice;
     if (tc && pk.choiceId === tc.choiceId) {
       g.trinketChoice = undefined;
@@ -1103,8 +1114,9 @@ export class BgTracker {
   }
 
   private onBlockStart(g: GameCtx, pk: Extract<Packet, { type: 'BlockStart' }>): void {
-    // APM: every top-level PLAY (buy, sell, play, refresh, freeze, level up...) or POWER
-    // (Hero Power) by the local player while the shop is open.
+    // APM: every top-level PLAY (buy, sell, play, refresh, freeze, level up, Activate...) or
+    // POWER (Hero Power) by the local player while the shop is open; Discover picks count in
+    // onChosen.
     if (this.depth === 0 && g.apm.turnStartTs && (pk.blockType === 7 || pk.blockType === 3)) {
       const src = this.store.get(this.store.resolve(pk.entity));
       if (src && src.tags.get(T.CONTROLLER) === this.localController) {

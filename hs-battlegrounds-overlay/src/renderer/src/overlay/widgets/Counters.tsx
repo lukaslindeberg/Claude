@@ -107,7 +107,7 @@ function useApmChip(apm: BgApm | undefined): Chip | undefined {
           {value === undefined ? '' : ` (${value} APM)`}.{game === undefined ? '' : ` Game average: ${game} APM.`}
         </div>
         {history.length > 1 ? <ApmChart turns={history} width={240} height={70} /> : null}
-        <div className="tl-muted tl-small">Counts buys, sells, plays, Refreshes, Freezes, level-ups and Hero Power.</div>
+        <div className="tl-muted tl-small">Counts buys, sells, plays, Refreshes, Freezes, level-ups, Hero Power, Activates and Discover picks.</div>
       </div>
     ),
     tone: 'is-apm',
