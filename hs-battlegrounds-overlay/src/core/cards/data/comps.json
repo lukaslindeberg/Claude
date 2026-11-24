@@ -1,0 +1,548 @@
+{
+ "source": "HSReplay comp tier list (compiled November 2026)",
+ "updatedAt": "2026-11-20",
+ "comps": [
+  {
+   "id": "undead_apm",
+   "name": "APM Undead",
+   "tier": "S",
+   "difficulty": "Hard",
+   "objective": "Scale Undead Attack with infinite Gold",
+   "core": [
+    "BG25_010",
+    "BG33_823",
+    "BG33_825",
+    "BG34_692",
+    "BG36_515"
+   ],
+   "addon": [
+    "BG36_523",
+    "BG_LOE_077"
+   ],
+   "tribe": "UNDEAD",
+   "tip": "Rogers and Privateer pay for the setup; Escapee and Brann can make the Gold infinite and leave later for more Undead. Cycle free cards (Refreshing Anomaly too), then play Bounties with Forsaken Weaver to grow Undead Attack. Aim for a golden Handless Forsaken with Reborn, and feed Snazzy Phantom by destroying Reborn minions with Maw Caster or Disguised Graverobber.",
+   "whenToCommit": "A Bounty source (Sky Admiral Rogers) + Proud Privateer + Forsaken Weaver",
+   "enabler": [
+    "BG33_823"
+   ]
+  },
+  {
+   "id": "elemental_azerite",
+   "name": "Living Azerite",
+   "tier": "S",
+   "difficulty": "Medium",
+   "objective": "Buff the Elementals in the shop",
+   "core": [
+    "BG28_707",
+    "BG35_881",
+    "BG35_883",
+    "BG36_701",
+    "BG_LOE_077"
+   ],
+   "addon": [
+    "BG28_633",
+    "BG33_823",
+    "BG33_825",
+    "BGS_126"
+   ],
+   "tribe": "ELEMENTAL",
+   "tip": "Living Azerite grows the shop with every spell; Rogers and Privateer pay for many casts. The payoff is as many Arcane Absorptions (Leyline Surfacer's spell) as possible: Brann and Kelp Keeper make them, Balinda doubles them. Wildfire Elemental is the best Elemental to buff.",
+   "whenToCommit": "Brann Bronzebeard + Living Azerite with a good economy",
+   "enabler": [
+    "BG_LOE_077"
+   ]
+  },
+  {
+   "id": "quilboar_apm_shop",
+   "name": "APM Shop Buff",
+   "tier": "S",
+   "difficulty": "Hard",
+   "objective": "Cast spells, then consume a buffed shop",
+   "core": [
+    "BG28_633",
+    "BG35_883",
+    "BG_LOE_077"
+   ],
+   "addon": [
+    "BG30_121",
+    "BG33_823",
+    "BG33_825",
+    "BG35_155",
+    "BG36_370",
+    "BG36_523",
+    "BG36_640",
+    "BG36_762"
+   ],
+   "tribe": "QUILBOAR",
+   "tip": "Needs a huge economy, usually Brann + Rogers + Privateer around turn 9. Buff the shop by cycling Blood Gem buffers, Spell Power buffers and Gem Barrage cards (Veteran Brigand); Blood Gem generators like Fearless Foodie are great to cycle. Felboar or Twisted Wrathguard then eat the big shop again and again. Gatekeeper Amalgam and Devilish Distractor are good targets for targeted spells.",
+   "whenToCommit": "Early infinite Gold + Felboar",
+   "enabler": [
+    "BG_LOE_077"
+   ]
+  },
+  {
+   "id": "murloc_keyword",
+   "name": "Keyword Murlocs",
+   "tier": "S",
+   "difficulty": "Medium",
+   "objective": "Give Murlocs keywords and buff them",
+   "core": [
+    "BG31_148",
+    "BG33_318",
+    "BG36_700",
+    "BG36_701",
+    "BG_LOE_077"
+   ],
+   "addon": [
+    "BG22_403",
+    "BG31_149",
+    "BG32_336"
+   ],
+   "tribe": "MURLOC",
+   "tip": "Start putting keywords on one premium Murloc early with Sewer Escapee; Bile Spitter is the best one. Cycle Primalfin Lookout and Hackerfin with Brann, and use Kelp Keeper to repeat a strong Battlecry. Advanced: prepare Bubble Gunners in hand and summon them with a golden Diremuck Forager, or turn into a scam board around a Bile Spitter with every keyword.",
+   "whenToCommit": "Brann Bronzebeard + Sewer Escapee",
+   "enabler": [
+    "BG_LOE_077",
+    "BG36_700"
+   ]
+  },
+  {
+   "id": "beast_lobster",
+   "name": "Tasty Lobster",
+   "tier": "S",
+   "difficulty": "Easy",
+   "objective": "Trigger Tasty Lobster's Deathrattle to scale",
+   "core": [
+    "BG25_354",
+    "BG36_202",
+    "BG36_204",
+    "BG36_208"
+   ],
+   "addon": [
+    "BG25_016",
+    "BG36_201",
+    "BG36_210"
+   ],
+   "tribe": "BEAST",
+   "tip": "Trigger the Lobster's Deathrattle as often as you can: several Rally minions with Deathstrider and Titus trigger it on every Rally. In the shop, a golden Headhunter Gryphon plus Snarky Shark and Lurking Lionfish trigger it too. Give the Lobster Reborn and Taunt, and the Gryphon Windfury (Sprightly Scarab).",
+   "whenToCommit": "Headhunter Gryphon + Deathstrider",
+   "enabler": [
+    "BG36_204"
+   ]
+  },
+  {
+   "id": "mech_apm",
+   "name": "APM Magnetic",
+   "tier": "A",
+   "difficulty": "Hard",
+   "objective": "Attach ever bigger Magnetic minions",
+   "core": [
+    "BG36_367",
+    "BG33_825",
+    "BG33_823",
+    "BG36_851",
+    "BG26_149"
+   ],
+   "addon": [],
+   "tribe": "MECHANICAL"
+  },
+  {
+   "id": "undead_attack",
+   "name": "Attack Scaling Undead",
+   "tier": "A",
+   "difficulty": "Hard",
+   "objective": "Summon high-Attack Undead",
+   "core": [
+    "BG28_309",
+    "BG36_511",
+    "BG25_010",
+    "BG36_515",
+    "BG32_324"
+   ],
+   "addon": [],
+   "tribe": "UNDEAD"
+  },
+  {
+   "id": "beast_leviathan",
+   "name": "Leviathan",
+   "tier": "A",
+   "difficulty": "Easy",
+   "objective": "Create very high-Attack summons",
+   "core": [
+    "BG35_604",
+    "BG35_602",
+    "BG26_802",
+    "BG36_204"
+   ],
+   "addon": [],
+   "tribe": "BEAST"
+  },
+  {
+   "id": "menagerie",
+   "name": "Menagerie",
+   "tier": "A",
+   "difficulty": "Medium",
+   "objective": "Cast targeted spells to scale several tribes",
+   "core": [
+    "BG_LOE_077",
+    "BG35_883",
+    "BG36_640",
+    "BG30_121"
+   ],
+   "addon": []
+  },
+  {
+   "id": "demon_self_damage",
+   "name": "Self Damage",
+   "tier": "A",
+   "difficulty": "Hard",
+   "objective": "Use self-damage to scale",
+   "core": [
+    "BG_LOE_077",
+    "BG36_762",
+    "BG35_883",
+    "BG32_873",
+    "BG36_733"
+   ],
+   "addon": [],
+   "tribe": "DEMON"
+  },
+  {
+   "id": "demon_shop_buff",
+   "name": "Shop Buff Demons",
+   "tier": "A",
+   "difficulty": "Medium",
+   "objective": "Scale the shop and consume it",
+   "core": [
+    "BG28_633",
+    "BG36_731",
+    "BG36_762",
+    "BG35_883"
+   ],
+   "addon": [],
+   "tribe": "DEMON"
+  },
+  {
+   "id": "elemental_tempest",
+   "name": "Unbound Tempest",
+   "tier": "A",
+   "difficulty": "Hard",
+   "objective": "Play Elementals to scale from a big shop",
+   "core": [
+    "BG34_858",
+    "BG36_352",
+    "BGS_123",
+    "BG_LOE_077",
+    "BG36_701"
+   ],
+   "addon": [],
+   "tribe": "ELEMENTAL"
+  },
+  {
+   "id": "aberration_apm_deity",
+   "name": "APM Deity",
+   "tier": "A",
+   "difficulty": "Hard",
+   "objective": "Play cards to scale the Deity",
+   "core": [
+    "BG36_111",
+    "BG33_823",
+    "BG33_825",
+    "BG36_109"
+   ],
+   "addon": [],
+   "tribe": "ABERRATION"
+  },
+  {
+   "id": "beast_beetle",
+   "name": "Beetles",
+   "tier": "A",
+   "difficulty": "Easy",
+   "objective": "Summon big Beetles",
+   "core": [
+    "BG31_809",
+    "BG26_802",
+    "BG36_209",
+    "BG36_204"
+   ],
+   "addon": [],
+   "tribe": "BEAST"
+  },
+  {
+   "id": "demon_deathrattle",
+   "name": "Deathrattle Shop Buff",
+   "tier": "A",
+   "difficulty": "Easy",
+   "objective": "Scale and consume the shop with Deathrattles",
+   "core": [
+    "BG25_354",
+    "BG36_362",
+    "BG36_731"
+   ],
+   "addon": [],
+   "tribe": "DEMON"
+  },
+  {
+   "id": "aberration_deathrattle",
+   "name": "Deathrattle Spells",
+   "tier": "A",
+   "difficulty": "Hard",
+   "objective": "Play spells and trigger Deathrattles to scale the Deity",
+   "core": [
+    "BG36_204",
+    "BG25_354",
+    "BG36_208",
+    "BG36_318"
+   ],
+   "addon": [],
+   "tribe": "ABERRATION"
+  },
+  {
+   "id": "murloc_magicfin",
+   "name": "Magicfin",
+   "tier": "A",
+   "difficulty": "Hard",
+   "objective": "Teach spells to Murlocs and trigger them",
+   "core": [
+    "BG26_ICC_901",
+    "BG22_403",
+    "BG_LOE_077",
+    "BG33_890t",
+    "BG33_891",
+    "BG32_821"
+   ],
+   "addon": [],
+   "tribe": "MURLOC"
+  },
+  {
+   "id": "mech_spells",
+   "name": "Magnetic Spells",
+   "tier": "A",
+   "difficulty": "Easy",
+   "objective": "Cast spells on Mechs",
+   "core": [
+    "BG36_853",
+    "BG26_152",
+    "BG35_883",
+    "BG30_121"
+   ],
+   "addon": [],
+   "tribe": "MECHANICAL"
+  },
+  {
+   "id": "murloc_scam",
+   "name": "Venom Scam",
+   "tier": "A",
+   "difficulty": "Easy",
+   "objective": "Buy scam cards and hold your placement",
+   "core": [
+    "BG23_318",
+    "BG33_318",
+    "BG36_700"
+   ],
+   "addon": [],
+   "tribe": "MURLOC"
+  },
+  {
+   "id": "quilboar_choose_one",
+   "name": "Choose One",
+   "tier": "A",
+   "difficulty": "Easy",
+   "objective": "Play Choose One cards to scale",
+   "core": [
+    "BG36_331",
+    "BG34_684",
+    "BG31_326",
+    "BG31_323",
+    "BG33_885"
+   ],
+   "addon": [],
+   "tribe": "QUILBOAR"
+  },
+  {
+   "id": "pirate_apm_golden",
+   "name": "APM Golden",
+   "tier": "A",
+   "difficulty": "Hard",
+   "objective": "Use infinite Gold to scale Pirates",
+   "core": [
+    "BG33_823",
+    "BG36_344",
+    "BG36_523"
+   ],
+   "addon": [],
+   "tribe": "PIRATE"
+  },
+  {
+   "id": "quilboar_gem_barrage",
+   "name": "Gem Barrage",
+   "tier": "A",
+   "difficulty": "Medium",
+   "objective": "Grow the shop with Blood Gems",
+   "core": [
+    "BG34_684",
+    "BG34_682"
+   ],
+   "addon": [],
+   "tribe": "QUILBOAR"
+  },
+  {
+   "id": "dragon_copebringer",
+   "name": "Copebringer",
+   "tier": "B",
+   "difficulty": "Easy",
+   "objective": "Trigger Divine Shield interactions to scale",
+   "core": [
+    "BG36_849",
+    "BG36_364",
+    "BGS_040",
+    "BG29_813"
+   ],
+   "addon": [],
+   "tribe": "DRAGON"
+  },
+  {
+   "id": "undead_eternal_knight",
+   "name": "Eternal Knights",
+   "tier": "B",
+   "difficulty": "Easy",
+   "objective": "Summon many Eternal Knights",
+   "core": [
+    "BG25_009",
+    "BG34_403",
+    "BG25_008"
+   ],
+   "addon": [],
+   "tribe": "UNDEAD"
+  },
+  {
+   "id": "quilboar_gems_hand",
+   "name": "Gems from Hand",
+   "tier": "B",
+   "difficulty": "Easy",
+   "objective": "Add buffed Blood Gems to your hand",
+   "core": [
+    "BG28_583",
+    "BG30_121",
+    "BG36_370",
+    "BG33_885"
+   ],
+   "addon": [],
+   "tribe": "QUILBOAR"
+  },
+  {
+   "id": "aberration_sludge",
+   "name": "Sludge",
+   "tier": "B",
+   "difficulty": "Medium",
+   "objective": "Discard Sludges to scale",
+   "core": [
+    "BG26_ICC_901",
+    "BG32_821",
+    "BG36_115",
+    "BG36_320",
+    "BG36_104"
+   ],
+   "addon": [],
+   "tribe": "ABERRATION"
+  },
+  {
+   "id": "dragon_spell_power",
+   "name": "Spell Power Dragons",
+   "tier": "B",
+   "difficulty": "Easy",
+   "objective": "Use Spell Power to scale Dragons",
+   "core": [
+    "BG36_241",
+    "BG29_813",
+    "BG36_245",
+    "BG36_242",
+    "BG36_243",
+    "BG_LOE_077"
+   ],
+   "addon": [],
+   "tribe": "DRAGON"
+  },
+  {
+   "id": "elemental_ultraviolet",
+   "name": "Ultraviolet",
+   "tier": "B",
+   "difficulty": "Medium",
+   "objective": "Cycle Elementals to scale",
+   "core": [
+    "BG_LOE_077",
+    "BG31_810",
+    "BGS_123",
+    "BG36_701"
+   ],
+   "addon": [],
+   "tribe": "ELEMENTAL"
+  },
+  {
+   "id": "mech_volumizer",
+   "name": "Volumizer",
+   "tier": "B",
+   "difficulty": "Easy",
+   "objective": "Attach Magnetic minions to scale at end of turn",
+   "core": [
+    "BG26_152",
+    "BG26_ICC_901",
+    "BG34_171",
+    "BG36_366"
+   ],
+   "addon": [],
+   "tribe": "MECHANICAL"
+  },
+  {
+   "id": "murloc_tidecaller",
+   "name": "Tidecaller",
+   "tier": "B",
+   "difficulty": "Medium",
+   "objective": "Play spells to scale Murlocs",
+   "core": [
+    "BG_LOE_077",
+    "BG27_556",
+    "BG26_354",
+    "BG36_704",
+    "BG35_883",
+    "BG33_891"
+   ],
+   "addon": [],
+   "tribe": "MURLOC"
+  },
+  {
+   "id": "dragon_battlecry",
+   "name": "Battlecry Dragons",
+   "tier": "B",
+   "difficulty": "Medium",
+   "objective": "Cycle Battlecries to scale Dragons",
+   "core": [
+    "BGS_041",
+    "BG_LOE_077",
+    "BG29_813",
+    "BG34_633",
+    "BG36_849",
+    "BG36_701"
+   ],
+   "addon": [],
+   "tribe": "DRAGON"
+  },
+  {
+   "id": "beast_summons",
+   "name": "Beast Summons",
+   "tier": "B",
+   "difficulty": "Medium",
+   "objective": "Scale summoned Beasts during combat",
+   "core": [
+    "BGS_018",
+    "BG25_354",
+    "BG36_204",
+    "BG36_208",
+    "BG26_802",
+    "BG35_604"
+   ],
+   "addon": [],
+   "tribe": "BEAST"
+  }
+ ]
+}
